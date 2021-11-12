@@ -8,5 +8,5 @@ COPY requirements.txt .
 RUN /venv/bin/pip install -r requirements.txt
 
 # Run the application:
-COPY printAmnt .
-CMD . /venv/bin/activate && exec python printAmnt
+COPY printAmnt.py .
+CMD . /venv/bin/activate && exec python printAmnt.py
