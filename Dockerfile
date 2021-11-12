@@ -1,4 +1,4 @@
-FROM python:general
+FROM python:latest
 LABEL Name=spiderdoc Version=0.0.1
 WORKDIR /home/spiderdoc/spiderdoc
 COPY printAmnt.py ./
