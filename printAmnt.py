@@ -12,15 +12,16 @@ if account.trading_blocked:
 # Check how much money we can use to open new positions.
 print('${} is available as buying power.'.format(account.buying_power))
 
-# Get a list of all active assets.
-print("active assets:")
-active_assets = api.list_assets(status='active')
+# Get daily price data for AAPL over the last 5 trading days.
+barset = api.get_barset('AAPL', 'day', limit=5)
+aapl_bars = barset['AAPL']
 
-# Filter the assets down to just those on NASDAQ.
-nasdaq_assets = [a for a in active_assets if a.exchange == 'NASDAQ']
-print(nasdaq_assets)
+# Get daily price data for AAPL over the last 5 trading days.
+barset = api.get_barset('AAPL', 'day', limit=5)
+aapl_bars = barset['AAPL']
 
-# Check if AAPL is tradable on the Alpaca platform.
-aapl_asset = api.get_asset('AAPL')
-if aapl_asset.tradable:
-    print('We can trade AAPL.')
+# See how much AAPL moved in that timeframe.
+week_open = aapl_bars[0].o
+week_close = aapl_bars[-1].c
+percent_change = (week_close - week_open) / week_open * 100
+print('AAPL moved {}% over the last 5 days'.format(percent_change))
