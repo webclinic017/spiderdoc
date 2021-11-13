@@ -13,7 +13,8 @@ from itertools import islice
 #initialize
 position_is_open=False
 stock_to_trade = "AAPL"
-buy_command_array = df = pd.DataFrame(columns=['Action'])
+positions = pd.DataFrame(columns=['Action','price','Amount','TValue'])
+
 
 #api = tradeapi.REST('PK0GXVSBKQ0WO0B1CEUQ','CpcoieCzUchnKnRKWjjqLuVzGc5ECqrdvJGNnJrE','https://paper-api.alpaca.markets',)
 
@@ -40,33 +41,43 @@ close_relto_sma=curr_stock_historical['Close']-curr_stock_historical['SMA']
 close_relto_sma = pd.DataFrame(close_relto_sma)
 curr_stock_historical_close=pd.DataFrame(curr_stock_historical['Close'])
 curr_stock_historical_close.reindex()
-print(close_relto_sma)
 
-
-for index, row in islice(close_relto_sma.iterrows(), 2, None):
+stock_amnt=1000
+for index, row in islice(close_relto_sma.iterrows(), 1, None):
+    print(close_relto_sma.loc[index][0])
     prev_index = index - timedelta(minutes=1)
-     
-    closed_higher_then_prev =(curr_stock_historical_close.loc[index]>curr_stock_historical_close.loc[prev_index]).any()
-    above_sma =(row.values>0).any()
-    print(above_sma)
-    print(closed_higher_then_prev)
+    closed_higher_then_prev =(curr_stock_historical_close.loc[index]>curr_stock_historical_close.loc[prev_index])
+    above_sma =(close_relto_sma.loc[index]>0).all()
+    print('above SMA:',above_sma,'| pos open?:',position_is_open)
+    if ( (above_sma)& (position_is_open != True)):
+            print('^^^BUY^^^')
+    if ( above_sma & position_is_open==True) :
+            print('^^^SELL^^^')
     #above SMA & Closed above prev LONG (Buy then Sell)
-    if ( above_sma==True & (closed_higher_then_prev==True)) :
-       buy_command_array.loc[index, 'Action'] = 'buy'
-    #bellow SMA & Closed above prev SHORT (sell then buy)
-    if (above_sma==True & (closed_higher_then_prev==True)) :
-        buy_command_array.loc[index, 'Action'] = 'sell'
-        #above SMA & Closed below prev CLOSE LONG (Buy then Sell)
-    if (above_sma==False & (closed_higher_then_prev==False)) :
-        buy_command_array.loc[index, 'Action'] = 'sell'
-    #bellow SMA & Closed above prev CLOSE SHORT (sell then buy)
-    if (above_sma==False & (closed_higher_then_prev==False)) :
-        buy_command_array.loc[index, 'Action'] = 'buy' 
-print(buy_command_array)
-""" initial_datetime = datetime.strptime('2021-11-02 15:50:00-04:00', '%Y-%m-%d %H:%M:%S%z')
-final_datetime = initial_datetime - timedelta(minutes=1)
-
-print("currenr:",curr_stock_historical_close.loc[initial_datetime])
-print("previos:",curr_stock_historical_close.loc[final_datetime]) """
-plt.plot(curr_stock_historical['Close'])
-plt.show()
+    if(position_is_open==False):
+        if ( above_sma ) :
+            position_is_open=True
+            action='buy'
+            trans_value=curr_stock_historical_close.loc[index]['Close']*stock_amnt
+            positions.loc[index,'Action']=action
+            positions.loc[index,'TValue']=trans_value
+            positions.loc[index,'price']=curr_stock_historical_close.loc[index]['Close']
+            positions.loc[index,'Amount']=stock_amnt
+    if(position_is_open==True):
+        if ( above_sma==False & position_is_open) :
+            position_is_open=False
+            action='sell'
+            trans_value=curr_stock_historical_close.loc[index]['Close']*stock_amnt
+            positions.loc[index,'Action']=action
+            positions.loc[index,'Amount']=stock_amnt
+            positions.loc[index,'price']=curr_stock_historical_close.loc[index]['Close']
+            positions.loc[index,'TValue']=trans_value
+print(positions)
+total = 0
+for index, row in islice(positions.iterrows(), 0, None):
+    if positions.loc[index]["Action"] == "buy" :
+        total = total - positions.loc[index]["TValue"]
+    else:
+        total = total + positions.loc[index]["TValue"]
+print(total)
+def suborder:
