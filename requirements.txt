@@ -1,2 +1,6 @@
 # To ensure app dependencies are ported from your virtual environment/host machine into your container, run 'pip freeze > requirements.txt' in the terminal to overwrite this file
 alpaca_trade_api
+pandas
+ta
+matplotlib.pyplot
+yfinance
