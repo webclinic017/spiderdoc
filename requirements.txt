@@ -2,5 +2,5 @@
 alpaca_trade_api
 pandas
 ta
-matplotlib.pyplot
+matplotlib
 yfinance
