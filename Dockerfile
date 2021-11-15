@@ -8,5 +8,5 @@ COPY requirements.txt .
 RUN /venv/bin/pip install -r requirements.txt
 
 # Run the application:
-COPY printAmnt.py .
+COPY SMA.py .
 CMD . /venv/bin/activate && exec python SMA.py 'AAPL','2021-11-02','2021-11-03'
