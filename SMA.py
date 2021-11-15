@@ -10,6 +10,7 @@ from datetime import timedelta
 from datetime import time
 from itertools import islice
 import sys
+import os
 
 #var initialize
 get_rid_of_position = False
@@ -177,7 +178,14 @@ for index, row in islice(positions.iterrows(), 0, None):
         tranval= positions.loc[index]['TValue']
         intent = positions.loc[index]['Intent']
         update_pos_closed_short(index, action,amount,price,trans_value,intent)
-positions.to_csv('/outfile/position/'+stock_to_trade+'-X-'+start_date+'.csv')
+outname = '/outfile/position/'+stock_to_trade+'-X-'+start_date+'.csv'
+
+outdir = '/outfile/position/'
+if not os.path.exists(outdir):
+    os.mkdir(outdir)
+
+fullname = os.path.join(outdir, outname)  
+positions.to_csv(outname)
 print(total)
 plt.plot(curr_stock_historical["Close"])
 plt.plot(curr_stock_historical["SMA"])
