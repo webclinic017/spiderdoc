@@ -9,4 +9,5 @@ RUN mkdir /outfile/position
 RUN mkdir /outfile/total
 # Run the application:
 COPY SMA.py .
+COPY /outfile .
 ENTRYPOINT ["python","./SMA.py"]
