@@ -177,7 +177,7 @@ for index, row in islice(positions.iterrows(), 0, None):
         tranval= positions.loc[index]['TValue']
         intent = positions.loc[index]['Intent']
         update_pos_closed_short(index, action,amount,price,trans_value,intent)
-
+positions.to_csv('/outfile/'+stock_to_trade+'-X-'+start_date+'.csv')
 print(total)
 plt.plot(curr_stock_historical["Close"])
 plt.plot(curr_stock_historical["SMA"])
