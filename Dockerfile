@@ -8,6 +8,5 @@ RUN pip install -r requirements.txt
 RUN mkdir /outfile/position
 RUN mkdir /outfile/total
 # Run the application:
-COPY SMA.py .
-COPY /outfile .
+COPY SMA.py /
 ENTRYPOINT ["python","./SMA.py"]

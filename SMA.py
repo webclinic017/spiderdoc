@@ -182,7 +182,7 @@ for index, row in islice(positions.iterrows(), 0, None):
         update_pos_closed_short(index, action,amount,price,trans_value,intent)
 
 outname = stock_to_trade+'-X-'+start_date+'.csv'
-outdir = './outfile/position'
+outdir = 'C:\DEVOPS\python apps\spiderdoc\spiderdoc\outfile\position'
 
 fullname =  outdir + outname
 positions.to_csv(fullname)
