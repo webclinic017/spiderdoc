@@ -1,23 +1,26 @@
 #imports
+from ntpath import join
 import alpaca_trade_api as tradeapi
 import ta
 import pandas as pd
 import matplotlib.pyplot as plt 
 import numpy as np 
 import yfinance as yf
-from datetime import datetime
-from datetime import timedelta
-from datetime import time
+from datetime import datetime,timedelta,time
 from itertools import islice
-import sys
-import os
+import csv
 
 #var initialize
 get_rid_of_position = False
 position_is_open=False
-stock_to_trade = sys.argv[1]
+
+""" stock_to_trade = sys.argv[1]
 start_date = sys.argv[2]
-end_date = sys.argv[3]
+end_date = sys.argv[3] """
+stock_to_trade = 'AAPL'
+start_date = '2021-11-02'
+end_date = '2021-11-03'
+
 positions              = pd.DataFrame(columns=['Action','Amount','Price','TValue','Intent'])
 #for eval 
 positions_short        = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
@@ -70,22 +73,21 @@ curr_stock_historical.head()
 
 #calaculate SMA of 15 minutes
 curr_stock_historical['SMA']= ta.trend.sma_indicator(curr_stock_historical['Close'],window=15,fillna=True)
-
 #current price reletive to SMA 
 close_relto_sma=curr_stock_historical['Close']-curr_stock_historical['SMA']
 print(close_relto_sma)
 #cast into pandas df
-close_relto_sma = pd.DataFrame(close_relto_sma)
 curr_stock_historical_close=pd.DataFrame(curr_stock_historical['Close'])
 curr_stock_historical_close.reindex()
 
 #5min rolling sum of Close to SMA
-RS5m_close_relto_sma=  close_relto_sma[0].rolling(3).sum()
+RS5m_close_relto_sma=pd.DataFrame(close_relto_sma,columns=['CRS'])
+RS5m_close_relto_sma.rolling(3).sum()
 print(RS5m_close_relto_sma)
 
 #set stock amount to be traded
 stock_amnt=1000
-for index, row in islice(close_relto_sma.iterrows(), 1, None):
+for index, row in curr_stock_historical['Close'].iteritems():
     prev_index = index - timedelta(minutes=1)
     current_time = time(index.hour, index.minute, index.second)
     
@@ -103,13 +105,13 @@ for index, row in islice(close_relto_sma.iterrows(), 1, None):
         get_rid_of_position = True
     
     #if the difference between close and SMA is negetive its bellow SMA ,when higher then 0 its above
-    above_sma =close_relto_sma.loc[index][0] > 0
-    avg_above_sma =RS5m_close_relto_sma[index]> 0
+    above_sma =close_relto_sma.loc[index] > 0
+    avg_above_sma =RS5m_close_relto_sma['CRS']> 0
     
     #true when stock price is above SMA
     if(above_sma):
         #no open positions and its not closing time - BUY LONG
-        if(position_is_open == False and get_rid_of_position==False and avg_above_sma==True ):
+        if(position_is_open == False and get_rid_of_position==False and avg_above_sma.loc[index]==True ):
             position_is_open=True
             action='buy'
             intent = 'LONG'
@@ -133,7 +135,7 @@ for index, row in islice(close_relto_sma.iterrows(), 1, None):
             curr_price =curr_stock_historical.loc[index]['SMA']
             trans_value=curr_price*stock_amnt
             update_pos(index,action,curr_price,stock_amnt,trans_value,intent)
-        elif(position_is_open == False and get_rid_of_position==False and avg_above_sma == False):
+        elif(position_is_open == False and get_rid_of_position==False and avg_above_sma.loc[index] == False):
             position_is_open=True
             action='sell'
             intent = 'SHORT'
@@ -178,14 +180,12 @@ for index, row in islice(positions.iterrows(), 0, None):
         tranval= positions.loc[index]['TValue']
         intent = positions.loc[index]['Intent']
         update_pos_closed_short(index, action,amount,price,trans_value,intent)
-outname = '/outfile/position/'+stock_to_trade+'-X-'+start_date+'.csv'
 
-outdir = '/outfile/position/'
-if not os.path.exists(outdir):
-    os.mkdir(outdir)
+outname = stock_to_trade+'-X-'+start_date+'.csv'
+outdir = './outfile/position'
 
-fullname = os.path.join(outdir, outname)  
-positions.to_csv(outname)
+fullname =  outdir + outname
+positions.to_csv(fullname)
 print(total)
 plt.plot(curr_stock_historical["Close"])
 plt.plot(curr_stock_historical["SMA"])
