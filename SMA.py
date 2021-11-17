@@ -181,7 +181,7 @@ for index, row in islice(positions.iterrows(), 0, None):
         intent = positions.loc[index]['Intent']
         update_pos_closed_short(index, action,amount,price,trans_value,intent)
 
-outname = 'SMA'+stock_to_trade+'-X-'+start_date+'.csv'
+outname = 'SMA-'+stock_to_trade+'-X-'+start_date+'.csv'
 outdir = '/outfile/position/'
 
 fullname =  outdir + outname
