@@ -1,0 +1,5 @@
+#!/bin/bash
+for i in `cat Symbols`
+do
+   docker run -v /output/position:/outfile/position printamnt:1.0.0  $i '2021-11-02' '2021-11-03'
+done
