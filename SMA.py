@@ -14,12 +14,12 @@ import sys
 get_rid_of_position = False
 position_is_open=False
 
-stock_to_trade = sys.argv[1]
+""" stock_to_trade = sys.argv[1]
 start_date = sys.argv[2]
-end_date = sys.argv[3] 
-""" stock_to_trade = 'AAPL'
+end_date = sys.argv[3]  """
+stock_to_trade = 'AAPL'
 start_date = '2021-11-02'
-end_date = '2021-11-03' """
+end_date = '2021-11-03'
 
 positions              = pd.DataFrame(columns=['Action','Amount','Price','TValue','Intent'])
 #for eval 
@@ -82,7 +82,7 @@ curr_stock_historical_close.reindex()
 
 #5min rolling sum of Close to SMA
 RS5m_close_relto_sma=pd.DataFrame(close_relto_sma,columns=['CRS'])
-RS5m_close_relto_sma.rolling(3).sum()
+RS5m_close_relto_sma.rolling(5).sum()
 print(RS5m_close_relto_sma)
 
 #set stock amount to be traded
@@ -142,55 +142,12 @@ for index, row in curr_stock_historical['Close'].iteritems():
             curr_price =curr_stock_historical.loc[index]['Close']
             trans_value=curr_price*stock_amnt
             update_pos(index,action,curr_price,stock_amnt,trans_value,intent)
-print(positions)
-total = 0
-for index, row in islice(positions.iterrows(), 0, None):
-    if positions.loc[index]["Action"] == "buy" :
-        total = total - positions.loc[index]["TValue"]
-    else:
-        total = total + positions.loc[index]["TValue"]
-#for eval
-for index, row in islice(positions.iterrows(), 0, None):
-    if positions.loc[index]["Intent"] == "LONG" :
-        action= positions.loc[index]['Action']
-        price=curr_stock_historical.loc[index]['Close']
-        amount = positions.loc[index]['Amount']
-        tranval= positions.loc[index]['TValue']
-        intent = positions.loc[index]['Intent']
-        update_pos_long(index, action,amount,price,trans_value,intent)
-        
-    elif positions.loc[index]["Intent"] == "CLOSE_LONG" :
-        action= positions.loc[index]['Action']
-        price=curr_stock_historical.loc[index]['SMA']
-        amount = positions.loc[index]['Amount']
-        tranval= positions.loc[index]['TValue']
-        intent = positions.loc[index]['Intent']
-        update_pos_closed_long(index, action,amount,price,trans_value,intent)
-    elif positions.loc[index]["Intent"] == "SHORT" :
-        action= positions.loc[index]['Action']
-        price=curr_stock_historical.loc[index]['Close']
-        amount = positions.loc[index]['Amount']
-        tranval= positions.loc[index]['TValue']
-        intent = positions.loc[index]['Intent']
-        update_pos_short(index, action,amount,price,trans_value,intent)
-    elif positions.loc[index]["Intent"] == "CLOSE_SHORT" :
-        action= positions.loc[index]['Action']
-        price=curr_stock_historical.loc[index]['SMA']
-        amount = positions.loc[index]['Amount']
-        tranval= positions.loc[index]['TValue']
-        intent = positions.loc[index]['Intent']
-        update_pos_closed_short(index, action,amount,price,trans_value,intent)
 
-outname = 'SMA-'+stock_to_trade+'-X-'+start_date+'.csv'
-outdir = '/outfile/position/'
 
+outname = 'SMA2-'+stock_to_trade+'-X-'+start_date+'.csv'
+#outdir = '/outfile/position/'
+outdir = 'C:\DEVOPS\python apps\spiderdoc\spiderdoc\outfile\positions\''
 fullname =  outdir + outname
 positions.to_csv(fullname)
-print(total)
-plt.plot(curr_stock_historical["Close"])
-plt.plot(curr_stock_historical["SMA"])
-plt.scatter(positions_long.index,positions_long['Price'],marker='^',color="green")
-plt.scatter(positions_closed_longs.index,positions_closed_longs['Price'],marker='^',color="red")
-plt.scatter(positions_short.index,positions_short['Price'],marker='v',color="green")
-plt.scatter(positions_closed_short.index,positions_closed_short['Price'],marker='v',color="red")
-plt.show()
+
+
