@@ -1,5 +1,21 @@
 #!/bin/bash
-for i in `cat Symbols`
-do
-   docker run -v /output/position:/outfile/position printamnt:1.0.0  $i '2021-11-02' '2021-11-03'
+input_start=2015-1-1
+input_end=2015-2-23
+
+startdate=$(date -I -d "$input_start") || exit -1
+enddate=$(date -I -d "$input_end") 
+
+sd="$startdate"
+while [ "$sd" != "$enddate" ]; do
+    nd = $(date -I -d "$d + 1 day")
+    if [[ $(date +%u) -ne 1 ] && [ $(date +%u) -ne 7 ]]; then
+    for i in `cat Symbols`
+    do
+        docker run -v /output/position:/outfile/position printamnt:1.0.0  $i $sd $nd
+    done
+    fi
+    $sd=$(date -I -d "$d + 1 day")
+  # mac option for d decl (the +1d is equivalent to + 1 day)
+  # d=$(date -j -v +1d -f "%Y-%m-%d" "2020-12-12" +%Y-%m-%d)
 done
+
