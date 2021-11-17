@@ -14,12 +14,12 @@ import sys
 get_rid_of_position = False
 position_is_open=False
 
-""" stock_to_trade = sys.argv[1]
+stock_to_trade = sys.argv[1]
 start_date = sys.argv[2]
-end_date = sys.argv[3]  """
-stock_to_trade = 'AAPL'
+end_date = sys.argv[3] 
+""" stock_to_trade = 'AAPL'
 start_date = '2021-11-02'
-end_date = '2021-11-03'
+end_date = '2021-11-03' """
 
 positions              = pd.DataFrame(columns=['Action','Amount','Price','TValue','Intent'])
 #for eval 
@@ -145,8 +145,8 @@ for index, row in curr_stock_historical['Close'].iteritems():
 
 
 outname = 'SMA2-'+stock_to_trade+'-X-'+start_date+'.csv'
-#outdir = '/outfile/position/'
-outdir = 'C:\DEVOPS\python apps\spiderdoc\spiderdoc\outfile\positions\''
+outdir = '/outfile/position/'
+#outdir = 'C:\DEVOPS\python apps\spiderdoc\spiderdoc\outfile\positions\''
 fullname =  outdir + outname
 positions.to_csv(fullname)
 
