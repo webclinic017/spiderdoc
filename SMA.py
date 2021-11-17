@@ -8,18 +8,18 @@ import numpy as np
 import yfinance as yf
 from datetime import datetime,timedelta,time
 from itertools import islice
-import csv
+import sys
 
 #var initialize
 get_rid_of_position = False
 position_is_open=False
 
-""" stock_to_trade = sys.argv[1]
+stock_to_trade = sys.argv[1]
 start_date = sys.argv[2]
-end_date = sys.argv[3] """
-stock_to_trade = 'AAPL'
+end_date = sys.argv[3] 
+""" stock_to_trade = 'AAPL'
 start_date = '2021-11-02'
-end_date = '2021-11-03'
+end_date = '2021-11-03' """
 
 positions              = pd.DataFrame(columns=['Action','Amount','Price','TValue','Intent'])
 #for eval 
