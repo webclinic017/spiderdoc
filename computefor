@@ -3,15 +3,18 @@ input_start=2021-11-02
 input_end=2021-11-16s
 
 startdate=$(date -I -d "$input_start") || exit -1
-enddate=$(date -I -d "$input_end") 
+enddate=$(date -I -d "$input_end") || exit -1
 
 sd="$startdate"
 while [ "$sd" != "$enddate" ]; do
-    nd = $(date -I -d "$d + 1 day")
-    if [[ $(date +%u) -ne 1 ] && [ $(date +%u) -ne 7 ]]; then
+    nd=$(date -I -d "$d + 1 day")
+    current_day=$(date +%u)
+    fromdate=$(date -d "$sd" +%Y%m%d)
+    todate=$(date -d "$nd" +%Y%m%d)
+    if [ $current_day -ne 1 ] && [ $current_day -ne 7 ]; then
     for i in `cat Symbols`
     do
-        docker run -v /output/position:/outfile/position printamnt:1.0.0  $i $sd $nd
+        docker run -v /output/position:/outfile/position printamnt:1.0.0  $i $fromdate $todate
     done
     fi
     $sd=$(date -I -d "$d + 1 day")
