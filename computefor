@@ -1,6 +1,6 @@
 #!/bin/bash
-input_start=2015-1-1
-input_end=2015-2-23
+input_start=2021-11-02
+input_end=2021-11-16s
 
 startdate=$(date -I -d "$input_start") || exit -1
 enddate=$(date -I -d "$input_end") 
