@@ -55,7 +55,7 @@
 
    - name: Create docker group
      group:
-     name: "docker"
+      name: "docker"
      state: present
 
    - name: Adding user {{ USER }} to docker group
