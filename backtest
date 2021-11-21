@@ -1,0 +1,27 @@
+#!/bin/bash
+file=$1
+input_start=$2
+input_end=$3
+startdate=$(date -I -d "$input_start") || exit -1
+enddate=$(date -I -d "$input_end") || exit -1
+
+sd="$startdate"
+while [ "$sd" != "$enddate" ]; do
+    nd=$(date -I -d "$sd + 1 day")
+    current_day=$(date -d "$nd" +%u)
+    echo $current_day
+    fromdate=$(date -d "$sd" +%Y-%m-%d)
+    echo $fromdate
+    echo $nd
+    echo $current_day
+    todate=$(date -d "$nd" +%Y-%m-%d)
+    if [ "$current_day" != 1 ] && [ "$current_day" != 7 ] ; then
+    for i in "cat $file"
+    do
+        docker run -v /output/position:/outfile/position printamnt:1.0.0  $i $fromdate $todate
+    done
+    fi
+    sd=$(date -I -d "$sd + 1 day")
+  # mac option for d decl (the +1d is equivalent to + 1 day)
+  # d=$(date -j -v +1d -f "%Y-%m-%d" "2020-12-12" +%Y-%m-%d)
+done

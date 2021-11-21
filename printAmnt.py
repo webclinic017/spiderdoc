@@ -80,4 +80,3 @@ for index, row in islice(positions.iterrows(), 0, None):
     else:
         total = total + positions.loc[index]["TValue"]
 print(total)
-def suborder:
