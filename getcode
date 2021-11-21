@@ -1,0 +1,9 @@
+#!/bin/bash
+#clean the current src
+rm -rf spiderdoc
+#get new src
+git clone git@github.com:finance-dataspider/spiderdoc
+#build docker image
+docker build -t printamnt:1.0.0 /home/spiderdoc/spiderdoc
+#change permissions
+chmod 760 ./spiderdoc/computefor
