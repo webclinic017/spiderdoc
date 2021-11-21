@@ -31,5 +31,5 @@ i=1
 for host in active_hosts:
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     ssh.connect(hostname=host, username='ubuntu', pkey=k)
-    ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command('/appcode/spiderdoc/computefor '+'Sym'+i+".txt "+start_date+" "+end_date)
+    ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command('/appcode/spiderdoc/backtest '+'Sym'+i+".txt "+start_date+" "+end_date)
     i += 1
