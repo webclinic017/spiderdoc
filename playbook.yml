@@ -10,7 +10,7 @@
    - curl
    - gnupg-agent
    - software-properties-common
-   
+
   tasks:
    - name: install_git
      yum:
@@ -53,3 +53,30 @@
      shell: "docker run hello-world"
      register: hello_world_output
 
+   - name: Create docker group
+     group:
+     name: "docker"
+     state: present
+
+   - name: Adding user {{ USER }} to docker group
+     user:
+      name: "{{ USER }}"
+     groups: "docker"
+     append: "yes"
+
+   - name: Install Docker Compose
+     get_url:
+      url: https://github.com/docker/compose/releases/download/{{ DOCKER_COMPOSE_VERSION }}/docker-compose-Linux-x86_64
+     dest: "/usr/local/bin/docker-compose"
+     mode: 0755
+
+   - name: Install Ctop
+     get_url:
+      url: https://github.com/bcicen/ctop/releases/download/v{{ CTOP_VERSION }}/ctop-{{ CTOP_VERSION }}-linux-amd64
+     dest: "/usr/local/bin/ctop"
+     mode: 0755
+
+   - name: Reboot server in order for changes to take place
+     shell: "sleep 1 && reboot"
+     async: 1
+     poll: 0
