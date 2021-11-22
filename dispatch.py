@@ -1,5 +1,8 @@
 import os
 import paramiko
+from fsplit.filesplit import Filesplit
+
+fs = Filesplit()
 active_hosts=0
 hostnames = ["BT-1","BT-2","BT-3","BT-4"]
 active_hosts = []
@@ -13,20 +16,10 @@ for host in hostnames:
          pingstatus = "Network Error"
 i=len(active_hosts)
 #n servers are up . create from "Symbols" n files : Sym1,Sym2..Symn
-lines_per_file = num_lines = (int(sum(1 for line in open('Symbols'))) / i)+1
+size_per_file = int((os.stat('C:\\Python27\\Lib\\genericpath.py').st_size) / i)+1
 smallfile = None
 filenum=1
-with open('Symbols') as bigfile:
-    for lineno, line in enumerate(bigfile):
-        if lineno % lines_per_file == 0:
-            if smallfile:
-                smallfile.close()
-            small_filename = '/appcode/input/tmp/symbols/sym'+str(filenum).format(lineno + lines_per_file)
-            smallfile = open(small_filename, "w")
-        smallfile.write(line)
-    if smallfile:
-        smallfile.close()
-        filenum += 1
+fs.split(file="/appcode/spiderdoc/Symbols", split_size=size_per_file, output_dir="/appcode/input/tmp/symbols", newline=True,)
 #get date range Arg / Prompt
 start_date = str('2021-11-02')
 end_date = str('2021-11-12')
@@ -45,5 +38,5 @@ for host in active_hosts:
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     ssh.connect(hostname=host, username='ubuntu', pkey=k)
     print("got here 2")
-    ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command('/appcode/spiderdoc/backtest /appcode/input/tmp/symbols/sym'+str(i)+" "+start_date+" "+end_date)
+    ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command('/appcode/spiderdoc/backtest /appcode/input/tmp/symbols/Symbols_'+str(i)+" "+start_date+" "+end_date)
     i += 1
