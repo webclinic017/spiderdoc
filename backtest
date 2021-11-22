@@ -18,7 +18,7 @@ while [ "$sd" != "$enddate" ]; do
     if [ "$current_day" != 1 ] && [ "$current_day" != 7 ] ; then
     for i in "cat $file"
     do
-        docker run -v /output/position:/outfile/position printamnt:1.0.0  $i $fromdate $todate
+        docker run -v /appcode/output/position:/outfile/position algo1d:1.0.0  $i $fromdate $todate
     done
     fi
     sd=$(date -I -d "$sd + 1 day")

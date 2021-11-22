@@ -16,7 +16,7 @@ for host in hostnames:
          pingstatus = "Network Error"
 i=len(active_hosts)
 #n servers are up . create from "Symbols" n files : Sym1,Sym2..Symn
-size_per_file = int((os.stat('C:\\Python27\\Lib\\genericpath.py').st_size) / i)+1
+size_per_file = int((os.stat('Symbols').st_size) / i)+1
 smallfile = None
 filenum=1
 fs.split(file="/appcode/spiderdoc/Symbols", split_size=size_per_file, output_dir="/appcode/input/tmp/symbols", newline=True,)
@@ -32,7 +32,7 @@ i=1
 ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 ssh.connect(hostname=host, username='ubuntu', pkey=k)
 for host in active_hosts:
-    ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command('docker build -t SMA:1.0.0 /appcode/spiderdoc')
+    ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command('docker build -t algo1d:1.0.0 /appcode/spiderdoc')
     print("GOT 1!")
 for host in active_hosts:
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
