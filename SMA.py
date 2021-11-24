@@ -144,9 +144,9 @@ for index, row in curr_stock_historical['Close'].iteritems():
             update_pos(index,action,curr_price,stock_amnt,trans_value,intent)
 
 
-outname = 'SMA2-'+stock_to_trade+'-X-'+start_date+'.csv'
-#outdir = '/outfile/position/'
-outdir = 'C:\DEVOPS\python apps\spiderdoc\spiderdoc\outfile\positions\''
+outname = 'SMA-'+stock_to_trade+'-X-'+start_date+'.csv'
+outdir = '/outfile/position/'
+#outdir = 'C:\DEVOPS\python apps\spiderdoc\spiderdoc\outfile\positions\''
 fullname =  outdir + outname
 positions.to_csv(fullname)
 
