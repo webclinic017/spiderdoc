@@ -43,12 +43,8 @@ end_date = str('2021-11-12')
 #use RSA private key to connect
 i=1
 for host in active_hosts:
-    res=cmd_over_ssh(host,'mkdir lookatme')
+    res=cmd_over_ssh(host,'docker build -t backtest:1.0.0 /appcode/spiderdoc')
     print("GOT 1!")
-""" for host in active_hosts:
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(hostname=host, username='ubuntu', pkey=k)
-    print("got here 2")
-    ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command('/appcode/spiderdoc/backtest /appcode/input/tmp/symbols/Symbols_'+str(i)+" "+start_date+" "+end_date)
-    i += 1
- """
+for host in active_hosts:
+    res=cmd_over_ssh(host,'/appcode/spiderdoc/backtest /appcode/input/tmp/Symbols_'+i+' '+start_date+' '+end_date)
+    print("GOT 1!")
