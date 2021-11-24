@@ -4,7 +4,7 @@ input_start=$2
 input_end=$3
 startdate=$(date -I -d "$input_start") || exit -1
 enddate=$(date -I -d "$input_end") || exit -1
-file = '/appcode/input/tmp/symbols/'+$1
+file='/appcode/input/tmp/symbols/'$1
 sd="$startdate"
 while [ "$sd" != "$enddate" ]; do
     nd=$(date -I -d "$sd + 1 day")
@@ -16,7 +16,7 @@ while [ "$sd" != "$enddate" ]; do
     echo $current_day
     todate=$(date -d "$nd" +%Y-%m-%d)
     if [ "$current_day" != 1 ] && [ "$current_day" != 7 ] ; then
-    for i in "cat $file"
+    for i in $(cat $file)
     do
         docker run -v /appcode/output/positions:/outfile/position backtest:1.0.0  $i $fromdate $todate
     done
