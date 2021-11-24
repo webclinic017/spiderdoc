@@ -51,16 +51,10 @@ for host in active_hosts:
 
     print("GOT 1!")
 
-
-""" for host in active_hosts:
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    res = loop.create_task(cmd_over_ssh(host,'/appcode/spiderdoc/backtest Symbols_'+str(i)+' '+start_date+' '+end_date))
-    print("GOT 1!")
-    i =+1 """
 for host in active_hosts:
     p = multiprocessing.Process(target=cmd_over_ssh, args=(host,'/appcode/spiderdoc/backtest Symbols_'+str(i)+' '+start_date+' '+end_date))
     Pros.append(p)
     p.start()
+    i += 1
  
  
