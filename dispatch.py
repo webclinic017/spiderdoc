@@ -5,7 +5,7 @@ import subprocess
 from fsplit.filesplit import Filesplit
 ################################################################################################
                             #functions
-def cmd_over_ssh (hosname,cmd):
+async def cmd_over_ssh (hosname,cmd):
     ssh = subprocess.Popen(["ssh", "%s" % hosname, cmd],
                        shell=False,
                        stdout=subprocess.PIPE,
