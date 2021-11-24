@@ -3,9 +3,11 @@ import asyncio
 import sys
 import subprocess
 from fsplit.filesplit import Filesplit
+
+import multiprocessing.process
 ################################################################################################
                             #functions
-async def cmd_over_ssh (hosname,cmd):
+def cmd_over_ssh (hosname,cmd):
     ssh = subprocess.Popen(["ssh", "%s" % hosname, cmd],
                        shell=False,
                        stdout=subprocess.PIPE,
@@ -15,12 +17,14 @@ async def cmd_over_ssh (hosname,cmd):
         error = ssh.stderr.readlines()
         print >>sys.stderr, "ERROR: %s" % error
     else:
-        return result                         
+        return result
+                    
 ################################################################################################
 fs = Filesplit()
 active_hosts=0
 hostnames = ["BT-1","BT-2","BT-3","BT-4"]
 active_hosts = []
+Pros=[]
 #see how many servers are up
 for host in hostnames:
     response = os.system("ping -c 1 " + host)
@@ -46,9 +50,17 @@ for host in active_hosts:
     res= cmd_over_ssh(host,'docker build -t backtest:1.0.0 /appcode/spiderdoc')
 
     print("GOT 1!")
-for host in active_hosts:
+
+
+""" for host in active_hosts:
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    res = loop.run_until_complete(cmd_over_ssh(host,'/appcode/spiderdoc/backtest Symbols_'+str(i)+' '+start_date+' '+end_date))
+    res = loop.create_task(cmd_over_ssh(host,'/appcode/spiderdoc/backtest Symbols_'+str(i)+' '+start_date+' '+end_date))
     print("GOT 1!")
-    i =+1
+    i =+1 """
+for host in active_hosts:
+    p = multiprocessing.Process(target=cmd_over_ssh, args=(host,'/appcode/spiderdoc/backtest Symbols_'+str(i)+' '+start_date+' '+end_date))
+    Pros.append(p)
+    p.start()
+ 
+ 
