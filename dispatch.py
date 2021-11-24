@@ -42,9 +42,6 @@ fs.split(file="/appcode/spiderdoc/Symbols", split_size=size_per_file, output_dir
 #get date range Arg / Prompt
 start_date = str('2021-11-02')
 end_date = str('2021-11-12')
-#run computefor with args:start-date end-date Sym file suffix.
-
-#use RSA private key to connect
 i=1
 for host in active_hosts:
     res= cmd_over_ssh(host,'docker build -t backtest:1.0.0 /appcode/spiderdoc')
@@ -55,6 +52,7 @@ for host in active_hosts:
     p = multiprocessing.Process(target=cmd_over_ssh, args=(host,'/appcode/spiderdoc/backtest Symbols_'+str(i)+' '+start_date+' '+end_date))
     Pros.append(p)
     p.start()
+    print("started backtest on :" + host)
     i += 1
  
  
