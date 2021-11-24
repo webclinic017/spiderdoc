@@ -1,5 +1,5 @@
 import os
-import paramiko
+import asyncio
 import sys
 import subprocess
 from fsplit.filesplit import Filesplit
@@ -43,9 +43,12 @@ end_date = str('2021-11-12')
 #use RSA private key to connect
 i=1
 for host in active_hosts:
-    res=cmd_over_ssh(host,'docker build -t backtest:1.0.0 /appcode/spiderdoc')
+    res= cmd_over_ssh(host,'docker build -t backtest:1.0.0 /appcode/spiderdoc')
+
     print("GOT 1!")
 for host in active_hosts:
-    res=cmd_over_ssh(host,'/appcode/spiderdoc/backtest Symbols_'+str(i)+' '+start_date+' '+end_date)
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    res = loop.run_until_complete(cmd_over_ssh(host,'/appcode/spiderdoc/backtest Symbols_'+str(i)+' '+start_date+' '+end_date))
     print("GOT 1!")
     i =+1
