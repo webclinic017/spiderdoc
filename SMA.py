@@ -75,7 +75,6 @@ curr_stock_historical.head()
 curr_stock_historical['SMA']= ta.trend.sma_indicator(curr_stock_historical['Close'],window=15,fillna=True)
 #current price reletive to SMA 
 close_relto_sma=curr_stock_historical['Close']-curr_stock_historical['SMA']
-print(close_relto_sma)
 #cast into pandas df
 curr_stock_historical_close=pd.DataFrame(curr_stock_historical['Close'])
 curr_stock_historical_close.reindex()
@@ -83,7 +82,6 @@ curr_stock_historical_close.reindex()
 #5min rolling sum of Close to SMA
 RS5m_close_relto_sma=pd.DataFrame(close_relto_sma,columns=['CRS'])
 RS5m_close_relto_sma.rolling(5).sum()
-print(RS5m_close_relto_sma)
 
 #set stock amount to be traded
 stock_amnt=1000
