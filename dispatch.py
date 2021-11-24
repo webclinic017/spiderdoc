@@ -46,6 +46,6 @@ for host in active_hosts:
     res=cmd_over_ssh(host,'docker build -t backtest:1.0.0 /appcode/spiderdoc')
     print("GOT 1!")
 for host in active_hosts:
-    res=cmd_over_ssh(host,'/appcode/spiderdoc/backtest /appcode/input/tmp/Symbols_'+str(i)+' '+start_date+' '+end_date)
+    res=cmd_over_ssh(host,'/appcode/spiderdoc/backtest Symbols_'+str(i)+' '+start_date+' '+end_date)
     print("GOT 1!")
-    i +=1
+    i =+1
