@@ -6,8 +6,7 @@ import pandas as pd
 import matplotlib.pyplot as plt 
 import numpy as np 
 import yfinance as yf
-from datetime import datetime,timedelta,time
-from itertools import islice
+from datetime import timedelta,time
 import sys
 
 #var initialize
