@@ -81,7 +81,7 @@ def update_stock_amnt (balance,stock_price):
 #initialize position dataframe with null's ans 0's
 update_pos('0000-00-00 00:00:00-00:00','NA',0,0,0,'NA')
 balance=10000
-stock_amnt=update_stock_amnt(balance)
+
 #get historical data from yfinance
 curr_stock_historical = yf.download(stock_to_trade,start_date,end_date,interval='1m')
 curr_stock_historical.head()
@@ -120,7 +120,8 @@ for index, row in curr_stock_historical['Close'].iteritems():
     #if the difference between close and SMA is negetive its bellow SMA ,when higher then 0 its above
     above_sma =close_relto_sma.loc[index] > 0
     avg_above_sma =RS5m_close_relto_sma['CRS']> 0
-    
+    curr_price =curr_stock_historical.loc[index]['Close']
+    stock_amnt=update_stock_amnt(balance,curr_price)
     #true when stock price is above SMA
     if(above_sma):
         #no open positions and its not closing time - BUY LONG
