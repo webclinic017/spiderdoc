@@ -14,7 +14,7 @@ while [ "$sd" != "$enddate" ]; do
     todate=$(date -d "$nd" +%Y-%m-%d)
     if [ "$current_day" != 1 ] && [ "$current_day" != 7 ] ; then
     symbols=$(cat $file)
-    echo "$data" | while read line1; read line2; read line3; read line4;
+    echo "$symbols" | while read line1; read line2; read line3; read line4;
     do
         docker run -v /appcode/output/positions:/outfile/position backtest:1.0.0  $line1 $fromdate $todate $run_type
         docker run -v /appcode/output/positions:/outfile/position backtest:1.0.0  $line3 $fromdate $todate $run_type
