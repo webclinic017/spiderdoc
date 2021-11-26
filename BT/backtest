@@ -13,18 +13,14 @@ while [ "$sd" != "$enddate" ]; do
     fromdate=$(date -d "$sd" +%Y-%m-%d)
     todate=$(date -d "$nd" +%Y-%m-%d)
     if [ "$current_day" != 1 ] && [ "$current_day" != 7 ] ; then
-    for i in $(cat $file)
+    symbols=$(cat $file)
+    echo "$data" | while read line1; read line2; read line3; read line4;
     do
-        docker run -v /appcode/output/positions:/outfile/position backtest:1.0.0  $i $fromdate $todate $run_type
-        fromdate=$(date -I -d "$fromdate + 1 day")
-        todate=$(date -I -d "$todate + 1 day")
-        docker run -v /appcode/output/positions:/outfile/position backtest:1.0.0  $i $fromdate $todate $run_type
-        fromdate=$(date -I -d "$fromdate + 1 day")
-        todate=$(date -I -d "$todate + 1 day")
-        docker run -v /appcode/output/positions:/outfile/position backtest:1.0.0  $i $fromdate $todate $run_type
-        fromdate=$(date -I -d "$fromdate + 1 day")
-        todate=$(date -I -d "$todate + 1 day")
-        docker run -v /appcode/output/positions:/outfile/position backtest:1.0.0  $i $fromdate $todate $run_type
+        docker run -v /appcode/output/positions:/outfile/position backtest:1.0.0  $line1 $fromdate $todate $run_type
+        docker run -v /appcode/output/positions:/outfile/position backtest:1.0.0  $line3 $fromdate $todate $run_type
+        docker run -v /appcode/output/positions:/outfile/position backtest:1.0.0  $line2 $fromdate $todate $run_type
+        docker run -v /appcode/output/positions:/outfile/position backtest:1.0.0  $line4 $fromdate $todate $run_type
+
     done
     fi
     sd=$(date -I -d "$sd + 4 day")
