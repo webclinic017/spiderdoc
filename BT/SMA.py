@@ -134,8 +134,7 @@ for index, row in curr_stock_historical['Close'].iteritems():
             update_pos(index,action,curr_price,stock_amnt,trans_value,intent)
             if run_type == 'ADJ' or 'REAL' :
                 balance=update_balance(balance,trans_value,action)
-                stock_amnt=update_stock_amnt(balance)
-                                
+                stock_amnt=update_stock_amnt(balance,curr_price)                                
         #open position with a short intent = CLOSE SHORT
         elif(position_is_open == True and last_intent=="SHORT"):
             position_is_open=False
@@ -146,7 +145,7 @@ for index, row in curr_stock_historical['Close'].iteritems():
             update_pos(index,action,curr_price,stock_amnt,trans_value,intent)
             if run_type == 'ADJ' or 'REAL' :
                 balance=update_balance(balance,trans_value,action)
-                stock_amnt=update_stock_amnt(balance)
+                stock_amnt=update_stock_amnt(balance,curr_price)
     #
     elif( above_sma==False):
         if(position_is_open == True and last_intent=="LONG"):
@@ -158,7 +157,7 @@ for index, row in curr_stock_historical['Close'].iteritems():
             update_pos(index,action,curr_price,stock_amnt,trans_value,intent)
             if run_type == 'ADJ' or 'REAL' :
                 balance=update_balance(balance,trans_value,action)
-                stock_amnt=update_stock_amnt(balance)
+                stock_amnt=update_stock_amnt(balance,curr_price)
         elif(position_is_open == False and get_rid_of_position==False and avg_above_sma.loc[index] == False):
             position_is_open=True
             action='sell'
@@ -168,7 +167,7 @@ for index, row in curr_stock_historical['Close'].iteritems():
             update_pos(index,action,curr_price,stock_amnt,trans_value,intent)
             if run_type == 'ADJ' or 'REAL' :
                 balance=update_balance(balance,trans_value,action)
-                stock_amnt=update_stock_amnt(balance)
+                stock_amnt=update_stock_amnt(balance,curr_price)
 
 
 outname = 'SMA-'+stock_to_trade+'-X-'+start_date+'.csv'
