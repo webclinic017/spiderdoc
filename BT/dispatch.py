@@ -3,7 +3,7 @@ import sys
 import subprocess
 from fsplit.filesplit import Filesplit
 import multiprocessing.process
-import numpy as np
+
 
 ################################################################################################
                             #functions
@@ -16,7 +16,6 @@ def cmd_over_ssh (hosname,cmd):
     result = ssh.stdout.readlines()
     if result == []:
         error = ssh.stderr.readlines()
-        print >>sys.stderr, "ERROR: %s" % error
     else:
         return result
                     
@@ -45,10 +44,8 @@ i=len(active_hosts)
 size_per_file = int((os.stat('Symbols').st_size) / i)+256
 smallfile = None
 filenum=1
-fs.split(file="/appcode/spiderdoc/Symbols", split_size=size_per_file, output_dir="/appcode/input/tmp/symbols", newline=True,)
+fs.split(file="/appcode/spiderdoc/BT/Symbols", split_size=size_per_file, output_dir="/appcode/input/tmp/symbols", newline=True,)
 #get date range Arg / Prompt
-start_date = str('2021-11-02')
-end_date = str('2021-11-12')
 i=1
 for host in active_hosts:
     res= cmd_over_ssh(host,'docker build -t backtest:1.0.0 /appcode/spiderdoc/BT')
