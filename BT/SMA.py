@@ -6,21 +6,23 @@ import pandas as pd
 import matplotlib.pyplot as plt 
 import numpy as np 
 import yfinance as yf
-from datetime import timedelta,time
+from datetime import timedelta,time,datetime
 import sys
 
 #var initialize
 get_rid_of_position = False
 position_is_open=False
 
-stock_to_trade = sys.argv[1]
-start_date = sys.argv[2]
-end_date = sys.argv[3]
-# FLT - no balance ,constatnt stock amount | ADJ - adjusts balance and stock amount each trade | REAL - Saves balance next day 
-run_type = sys.argv[4]
-""" stock_to_trade = 'AAPL'
-start_date = '2021-11-02'
-end_date = '2021-11-03' """
+""" stock_to_trade = sys.argv[1]
+start_date_range = sys.argv[2]
+end_date_range = sys.argv[3]
+run_type = sys.argv[4] """
+#run_type : FLT - no balance ,constatnt stock amount | ADJ - adjusts balance and stock amount each trade | REAL - Saves balance next day 
+
+stock_to_trade = 'AAPL'
+start_date_range = '2021-11-02'
+end_date_range = '2021-11-22'
+run_type = 'ADJ'
 
 positions              = pd.DataFrame(columns=['Action','Amount','Price','TValue','Intent'])
 #for eval 
@@ -28,8 +30,14 @@ positions_short        = pd.DataFrame(columns=['Action','Price','Amount','TValue
 positions_closed_short = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
 positions_long         = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
 positions_closed_longs = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
+date_format = "%Y-%m-%d"
+a = datetime.strptime(start_date_range, date_format)
+b = datetime.strptime(end_date_range, date_format)
+delta_date = b - a
+########################################################################################################################
+#                                           FUNCTIONS
+########################################################################################################################
 
-####################################################################################################################################
 def update_pos(index,action,price,amount,tvalue,intent) :
     positions.loc[index,'Action']=action
     positions.loc[index,'Amount']=amount
@@ -75,105 +83,135 @@ def update_balance (balance,trans_value,action):
 def update_stock_amnt (balance,stock_price):
     stock_amnt=balance / stock_price
     return stock_amnt
-    
-    
-#####################################################################################################################################
+
+########################################################################################################################
+#                                      Data and Metrics for this day are calculated Here
+#                                     ===================================================
+########################################################################################################################
 #initialize position dataframe with null's ans 0's
-update_pos('0000-00-00 00:00:00-00:00','NA',0,0,0,'NA')
-balance=10000
+curr_date = start_date_range
+curr_date = datetime. strptime(curr_date, '%Y-%m-%d')
+curr_date=curr_date - timedelta(days=1) 
+balance = 10000
+for day in range(delta_date.days):
+    #########################################################################################################################
+    #                                           New Day initilazion
+    #                                           ==================
+    #########################################################################################################################                                            
+    positions              = pd.DataFrame(columns=['Action','Amount','Price','TValue','Intent'])
+    #for eval 
+    positions_short        = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
+    positions_closed_short = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
+    positions_long         = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
+    positions_closed_longs = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
+    curr_date=curr_date + timedelta(days=1) 
+    ########################################################################################################################
+    update_pos('0000-00-00 00:00:00-00:00','NA',0,0,0,'NA')
+    if run_type != 'REAL' :
+        balance=10000
+    tommorow_date =curr_date + timedelta(days=1) 
+    #skips loop run if staurday
+    if curr_date.weekday() == 5 or curr_date.weekday() == 6 :
+        continue
+    #get historical data from yfinance for this day
+    curr_stock_historical = yf.download(stock_to_trade,curr_date,tommorow_date,interval='1m')
+    curr_stock_historical.head()
+    #calaculate SMA of 15 minutes for this day
+    curr_stock_historical['SMA']= ta.trend.sma_indicator(curr_stock_historical['Close'],window=15,fillna=True)
+    #current price reletive to SMA this day
+    close_relto_sma=curr_stock_historical['Close']-curr_stock_historical['SMA']
+    #cast into pandas df
+    curr_stock_historical_close=pd.DataFrame(curr_stock_historical['Close'])
+    curr_stock_historical_close.reindex()
 
-#get historical data from yfinance
-curr_stock_historical = yf.download(stock_to_trade,start_date,end_date,interval='1m')
-curr_stock_historical.head()
+    #5min rolling sum of Close to SMA
+    RS5m_close_relto_sma=pd.DataFrame(close_relto_sma,columns=['CRS'])
+    RS5m_close_relto_sma.rolling(5).sum()
 
-#calaculate SMA of 15 minutes
-curr_stock_historical['SMA']= ta.trend.sma_indicator(curr_stock_historical['Close'],window=15,fillna=True)
-#current price reletive to SMA 
-close_relto_sma=curr_stock_historical['Close']-curr_stock_historical['SMA']
-#cast into pandas df
-curr_stock_historical_close=pd.DataFrame(curr_stock_historical['Close'])
-curr_stock_historical_close.reindex()
+    #set stock amount to be traded
+    stock_amnt=1000
+    ########################################################################################################################
+                                                 #STRATEGY#
+                                                 #========#
+    ########################################################################################################################
+    for index, row in curr_stock_historical['Close'].iteritems():
+        prev_index = index - timedelta(minutes=1)
+        current_time = time(index.hour, index.minute, index.second)
+        
+        #set when to stop opening positions 
+        close_time = time(hour=15,minute=30,second=00)
+        
+        #what was the intent of the previos trade in positions
+        last_intent = positions.iloc[-1]['Intent']
+        
+        #return int index instead of datetime
+        index_int=(np.where(close_relto_sma.index==index)[0]).astype(int)
 
-#5min rolling sum of Close to SMA
-RS5m_close_relto_sma=pd.DataFrame(close_relto_sma,columns=['CRS'])
-RS5m_close_relto_sma.rolling(5).sum()
+        #checks if its closing time       
+        if(close_time<current_time):
+            get_rid_of_position = True
+        
+        #if the difference between close and SMA is negetive its bellow SMA ,when higher then 0 its above
+        above_sma =close_relto_sma.loc[index] > 0
+        avg_above_sma =RS5m_close_relto_sma['CRS']> 0
+        curr_price =curr_stock_historical.loc[index]['Close']
+        stock_amnt=update_stock_amnt(balance,curr_price)
+        #true when stock price is above SMA
+        if(above_sma):
+            #no open positions and its not closing time - BUY LONG
+            if(position_is_open == False and get_rid_of_position==False and avg_above_sma.loc[index]==True ):
+                position_is_open=True
+                action='buy'
+                intent = 'LONG'
+                curr_price =curr_stock_historical.loc[index]['Close']
+                trans_value=curr_price*stock_amnt
+                update_pos(index,action,curr_price,stock_amnt,trans_value,intent)
+                if run_type == 'ADJ' or 'REAL' :
+                    balance=update_balance(balance,trans_value,action)
+                    stock_amnt=update_stock_amnt(balance,curr_price)                                
+            #open position with a short intent = CLOSE SHORT
+            elif(position_is_open == True and last_intent=="SHORT"):
+                position_is_open=False
+                action='buy'
+                intent = 'CLOSE_SHORT'
+                curr_price =curr_stock_historical.loc[index]['SMA']
+                trans_value=curr_price*stock_amnt
+                update_pos(index,action,curr_price,stock_amnt,trans_value,intent)
+                if run_type == 'ADJ' or 'REAL' :
+                    balance=update_balance(balance,trans_value,action)
+                    stock_amnt=update_stock_amnt(balance,curr_price)
+        #
+        elif( above_sma==False):
+            if(position_is_open == True and last_intent=="LONG"):
+                position_is_open=False
+                action='sell'
+                intent = 'CLOSE_LONG'
+                curr_price =curr_stock_historical.loc[index]['SMA']
+                trans_value=curr_price*stock_amnt
+                update_pos(index,action,curr_price,stock_amnt,trans_value,intent)
+                if run_type == 'ADJ' or 'REAL' :
+                    balance=update_balance(balance,trans_value,action)
+                    stock_amnt=update_stock_amnt(balance,curr_price)
+            elif(position_is_open == False and get_rid_of_position==False and avg_above_sma.loc[index] == False):
+                position_is_open=True
+                action='sell'
+                intent = 'SHORT'
+                curr_price =curr_stock_historical.loc[index]['Close']
+                trans_value=curr_price*stock_amnt
+                update_pos(index,action,curr_price,stock_amnt,trans_value,intent)
+                if run_type == 'ADJ' or 'REAL' :
+                    balance=update_balance(balance,trans_value,action)
+                    stock_amnt=update_stock_amnt(balance,curr_price)
 
-#set stock amount to be traded
-stock_amnt=1000
-for index, row in curr_stock_historical['Close'].iteritems():
-    prev_index = index - timedelta(minutes=1)
-    current_time = time(index.hour, index.minute, index.second)
-    
-    #set when to stop opening positions 
-    close_time = time(hour=15,minute=30,second=00)
-    
-    #what was the intent of the previos trade in positions
-    last_intent = positions.iloc[-1]['Intent']
-    
-    #return int index instead of datetime
-    index_int=(np.where(close_relto_sma.index==index)[0]).astype(int)
+    ########################################################################################################################
+    #                                             Output positions to csv
+    #                                             =======================
+    ########################################################################################################################
+    outname = 'SMA-'+stock_to_trade+'-X-'+datetime.strftime(curr_date,"%Y-%m-%d")+'.csv'
+    #outdir = '/outfile/position/'
+    outdir = 'C:\DEVOPS\python apps\spiderdoc\spiderdoc\outfile\positions\''
+    fullname =  outdir + outname
+    positions.to_csv(fullname)
 
-     #checks if its closing time       
-    if(close_time<current_time):
-        get_rid_of_position = True
-    
-    #if the difference between close and SMA is negetive its bellow SMA ,when higher then 0 its above
-    above_sma =close_relto_sma.loc[index] > 0
-    avg_above_sma =RS5m_close_relto_sma['CRS']> 0
-    curr_price =curr_stock_historical.loc[index]['Close']
-    stock_amnt=update_stock_amnt(balance,curr_price)
-    #true when stock price is above SMA
-    if(above_sma):
-        #no open positions and its not closing time - BUY LONG
-        if(position_is_open == False and get_rid_of_position==False and avg_above_sma.loc[index]==True ):
-            position_is_open=True
-            action='buy'
-            intent = 'LONG'
-            curr_price =curr_stock_historical.loc[index]['Close']
-            trans_value=curr_price*stock_amnt
-            update_pos(index,action,curr_price,stock_amnt,trans_value,intent)
-            if run_type == 'ADJ' or 'REAL' :
-                balance=update_balance(balance,trans_value,action)
-                stock_amnt=update_stock_amnt(balance,curr_price)                                
-        #open position with a short intent = CLOSE SHORT
-        elif(position_is_open == True and last_intent=="SHORT"):
-            position_is_open=False
-            action='buy'
-            intent = 'CLOSE_SHORT'
-            curr_price =curr_stock_historical.loc[index]['SMA']
-            trans_value=curr_price*stock_amnt
-            update_pos(index,action,curr_price,stock_amnt,trans_value,intent)
-            if run_type == 'ADJ' or 'REAL' :
-                balance=update_balance(balance,trans_value,action)
-                stock_amnt=update_stock_amnt(balance,curr_price)
-    #
-    elif( above_sma==False):
-        if(position_is_open == True and last_intent=="LONG"):
-            position_is_open=False
-            action='sell'
-            intent = 'CLOSE_LONG'
-            curr_price =curr_stock_historical.loc[index]['SMA']
-            trans_value=curr_price*stock_amnt
-            update_pos(index,action,curr_price,stock_amnt,trans_value,intent)
-            if run_type == 'ADJ' or 'REAL' :
-                balance=update_balance(balance,trans_value,action)
-                stock_amnt=update_stock_amnt(balance,curr_price)
-        elif(position_is_open == False and get_rid_of_position==False and avg_above_sma.loc[index] == False):
-            position_is_open=True
-            action='sell'
-            intent = 'SHORT'
-            curr_price =curr_stock_historical.loc[index]['Close']
-            trans_value=curr_price*stock_amnt
-            update_pos(index,action,curr_price,stock_amnt,trans_value,intent)
-            if run_type == 'ADJ' or 'REAL' :
-                balance=update_balance(balance,trans_value,action)
-                stock_amnt=update_stock_amnt(balance,curr_price)
-
-
-outname = 'SMA-'+stock_to_trade+'-X-'+start_date+'.csv'
-outdir = '/outfile/position/'
-#outdir = 'C:\DEVOPS\python apps\spiderdoc\spiderdoc\outfile\positions\''
-fullname =  outdir + outname
-positions.to_csv(fullname)
 
 

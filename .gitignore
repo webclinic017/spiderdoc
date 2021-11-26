@@ -1,3 +1,5 @@
 venv
 ./outfile/
 ./appcode
+sandbox.py
+bashbox
