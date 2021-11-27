@@ -1,11 +1,13 @@
 import subprocess
 import sys
 
+from yfinance.utils import back_adjust
+
 file = sys.argv[1]
 start_date_range = sys.argv[2]
 end_date_range = sys.argv[3]
 run_type = sys.argv[4]  
-
+bla back_adjustdasd
 """ file = 'Symbols_1'
 start_date_range = '2021-11-02'
 end_date_range = '2021-11-03'
