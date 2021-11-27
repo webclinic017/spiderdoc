@@ -1,7 +1,5 @@
 import subprocess
 import sys
-import docker
-import os
 
 file = sys.argv[1]
 start_date_range = sys.argv[2]
