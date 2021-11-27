@@ -12,8 +12,9 @@ def run_command(line):
     global start_date_range
     global end_date_range
     global run_type 
-    command = "docker run -v /appcode/output/positions:/outfile/position backtest:1.0.0 "+line+' '+start_date_range+' '+ end_date_range+' '+ run_type
-    subprocess.Popen(command, shell=True) 
+    #command = "docker run -v /appcode/output/positions:/outfile/position backtest:1.0.0 "+line+' '+start_date_range+' '+ end_date_range+' '+ run_type
+    #subprocess.Popen(command, shell=True)
+    print(line+' '+start_date_range+' '+end_date_range+' '+run_type)
 
 file = 'Symbols_1'
 start_date_range = '2021-11-02'
@@ -30,5 +31,5 @@ while True:
     for line_num in range(container_amnt) :
         line = f.readline()
         lines.append(line.rstrip('\n'))
-    pool = multiprocessing.Pool(processes=container_amnt)
+    pool = multiprocessing.Pool(container_amnt)
     pool.starmap(run_command,lines)
