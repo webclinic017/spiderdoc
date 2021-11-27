@@ -13,16 +13,16 @@ import sys
 get_rid_of_position = False
 position_is_open=False
 
-""" stock_to_trade = sys.argv[1]
+stock_to_trade = sys.argv[1]
 start_date_range = sys.argv[2]
 end_date_range = sys.argv[3]
-run_type = sys.argv[4] """
+run_type = sys.argv[4] 
 #run_type : FLT - no balance ,constatnt stock amount | ADJ - adjusts balance and stock amount each trade | REAL - Saves balance next day 
 
-stock_to_trade = 'AAPL'
+""" stock_to_trade = 'AAPL'
 start_date_range = '2021-11-02'
 end_date_range = '2021-11-22'
-run_type = 'ADJ'
+run_type = 'ADJ' """
 
 positions              = pd.DataFrame(columns=['Action','Amount','Price','TValue','Intent'])
 #for eval 
@@ -84,10 +84,7 @@ def update_stock_amnt (balance,stock_price):
     stock_amnt=balance / stock_price
     return stock_amnt
 
-########################################################################################################################
-#                                      Data and Metrics for this day are calculated Here
-#                                     ===================================================
-########################################################################################################################
+
 #initialize position dataframe with null's ans 0's
 curr_date = start_date_range
 curr_date = datetime. strptime(curr_date, '%Y-%m-%d')
@@ -105,7 +102,6 @@ for day in range(delta_date.days):
     positions_long         = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
     positions_closed_longs = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
     curr_date=curr_date + timedelta(days=1) 
-    ########################################################################################################################
     update_pos('0000-00-00 00:00:00-00:00','NA',0,0,0,'NA')
     if run_type != 'REAL' :
         balance=10000
@@ -113,6 +109,10 @@ for day in range(delta_date.days):
     #skips loop run if staurday
     if curr_date.weekday() == 5 or curr_date.weekday() == 6 :
         continue
+    ########################################################################################################################
+    #                                      Data and Metrics for this day are calculated Here
+    #                                     ===================================================
+    ########################################################################################################################
     #get historical data from yfinance for this day
     curr_stock_historical = yf.download(stock_to_trade,curr_date,tommorow_date,interval='1m')
     curr_stock_historical.head()
@@ -208,8 +208,8 @@ for day in range(delta_date.days):
     #                                             =======================
     ########################################################################################################################
     outname = 'SMA-'+stock_to_trade+'-X-'+datetime.strftime(curr_date,"%Y-%m-%d")+'.csv'
-    #outdir = '/outfile/position/'
-    outdir = 'C:\DEVOPS\python apps\spiderdoc\spiderdoc\outfile\positions\''
+    outdir = '/outfile/position/'
+    #outdir = 'C:\DEVOPS\python apps\spiderdoc\spiderdoc\outfile\positions\''
     fullname =  outdir + outname
     positions.to_csv(fullname)
 
