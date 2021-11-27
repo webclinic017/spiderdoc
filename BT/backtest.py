@@ -34,5 +34,5 @@ while True:
     if not line4: break
     p = multiprocessing.Process(subprocess.Popen(["docker", "run", "-v","/appcode/output/positions:/outfile/position", "backtest:1.0.0", line4.rstrip('\n'),start_date_range,end_date_range,run_type]))
     pros.append(p)
-    
+    p.start()
     
