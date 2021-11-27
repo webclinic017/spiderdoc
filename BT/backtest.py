@@ -8,10 +8,10 @@ start_date_range = sys.argv[2]
 end_date_range = sys.argv[3]
 run_type = sys.argv[4]  
 
-file = 'Symbols_1'
+""" file = 'Symbols_1'
 start_date_range = '2021-11-02'
 end_date_range = '2021-11-03'
-run_type = 'ADJ' 
+run_type = 'ADJ'  """
 
 file='/appcode/input/tmp/symbols/'+file
 f = open(file, "r")
