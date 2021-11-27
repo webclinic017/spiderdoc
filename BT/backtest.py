@@ -11,6 +11,7 @@ start_date_range = '2021-11-02'
 end_date_range = '2021-11-03'
 run_type = 'ADJ' """
 
+file=' /appcode/input/tmp/symbols/'+file
 f = open(file, "r")
 while True:
     line1 = f.readline()
