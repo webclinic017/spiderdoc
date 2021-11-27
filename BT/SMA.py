@@ -105,7 +105,8 @@ for day in range(delta_date.days):
     update_pos('0000-00-00 00:00:00-00:00','NA',0,0,0,'NA')
     if run_type != 'REAL' :
         balance=10000
-    tommorow_date =curr_date + timedelta(days=1) 
+    tommorow_date =curr_date + timedelta(days=1)
+    get_rid_of_position = False 
     #skips loop run if staurday
     if curr_date.weekday() == 5 or curr_date.weekday() == 6 :
         continue
