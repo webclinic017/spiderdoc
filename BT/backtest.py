@@ -12,17 +12,27 @@ start_date_range = '2021-11-02'
 end_date_range = '2021-11-03'
 run_type = 'ADJ'  """
 pros = []
-lines = []
 file='/appcode/input/tmp/symbols/'+file
 f = open(file, "r")
-container_amnt=8
 while True:
-    for line_num in range(container_amnt):
-        lines.append(f.readline())
-        for line in lines:
-            p = multiprocessing.Process(subprocess.call(["docker", "run", "-v","/appcode/output/positions:/outfile/position", "backtest:1.0.0", line.rstrip('\n'),start_date_range,end_date_range,run_type]))
-            pros.append(p)
-            p.start()
-        if len(lines) < container_amnt:
-            break
-        lines=[]
+    line1 = f.readline()
+    if not line1: break
+    p = multiprocessing.Process(subprocess.Popen(["docker", "run", "-v","/appcode/output/positions:/outfile/position", "backtest:1.0.0", line1.rstrip('\n'),start_date_range,end_date_range,run_type]))
+    pros.append(p)
+    p.start()
+    line2 = f.readline()
+    if not line2: break
+    p = multiprocessing.Process(subprocess.Popen(["docker", "run", "-v","/appcode/output/positions:/outfile/position", "backtest:1.0.0", line2.rstrip('\n'),start_date_range,end_date_range,run_type]))
+    pros.append(p)
+    p.start()
+    line3 = f.readline()
+    if not line3: break
+    p = multiprocessing.Process(subprocess.Popen(["docker", "run", "-v","/appcode/output/positions:/outfile/position", "backtest:1.0.0", line3.rstrip('\n'),start_date_range,end_date_range,run_type]))
+    pros.append(p)
+    p.start()
+    line4 = f.readline()
+    if not line4: break
+    p = multiprocessing.Process(subprocess.Popen(["docker", "run", "-v","/appcode/output/positions:/outfile/position", "backtest:1.0.0", line4.rstrip('\n'),start_date_range,end_date_range,run_type]))
+    pros.append(p)
+    
+    
