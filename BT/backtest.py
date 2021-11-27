@@ -20,7 +20,7 @@ while True:
     for line_num in range(container_amnt):
         lines.append(f.readline())
         for line in lines:
-            p = multiprocessing.Process(subprocess.call(["docker", "run", "-v","/appcode/output/positions:/outfile/position", "backtest:1.0.0", line1.rstrip('\n'),start_date_range,end_date_range,run_type]))
+            p = multiprocessing.Process(subprocess.call(["docker", "run", "-v","/appcode/output/positions:/outfile/position", "backtest:1.0.0", line.rstrip('\n'),start_date_range,end_date_range,run_type]))
             pros.append(p)
             p.start()
         if len(lines) < container_amnt:
