@@ -53,7 +53,7 @@ for host in active_hosts:
     print("GOT 1!")
 
 for host in active_hosts:
-    p = multiprocessing.Process(target=cmd_over_ssh, args=(host,'/appcode/spiderdoc/BT/backtest.py Symbols_'+str(i)+' '+start_date+' '+end_date+' '+run_type))
+    p = multiprocessing.Process(target=cmd_over_ssh, args=(host,'python3 /appcode/spiderdoc/BT/backtest.py Symbols_'+str(i)+' '+start_date+' '+end_date+' '+run_type))
     Pros.append(p)
     p.start()
     print("started backtest on :" + host)
