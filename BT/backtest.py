@@ -17,19 +17,12 @@ file = 'Symbols_1'
 start_date_range = '2021-11-02'
 end_date_range = '2021-11-20'
 run_type = 'ADJ' 
-pros = []
-lines = []
-file='/home/ubuntu/testsym'
+
+file='/appcode/input/tmp/symbols/'+file
 f = open(file, "r")
 container_amnt = 4
+
+pool = multiprocessing.Pool(processes=container_amnt)
 while True:
-    for line_num in range(container_amnt):
-        pros=[]
-        lines.append(f.readline())
-        if __name__ == '__main__':
-            for line in lines:
-                with multiprocessing.Pool(processes=container_amnt) as pool:
-                    pool.starmap(start_container,line)
-        if len(lines) < container_amnt:
-            break
-        lines=[]
+    line=f.readline()
+    pool.map_async(start_container,line)
