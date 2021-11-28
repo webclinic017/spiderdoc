@@ -6,7 +6,7 @@ def start_container (line):
     global start_date_range
     global end_date_range
     global run_type
-    subprocess.call(["docker", "run", "-v","/appcode/output/positions:/outfile/position", "backtest:1.0.0", line,start_date_range,end_date_range,run_type])
+    subprocess.call(["docker", "run", "-v","/appcode/output/positions:/outfile/position", "backtest:1.0.0","--cpuset","1", line,start_date_range,end_date_range,run_type])
 
 """ file = sys.argv[1]
 start_date_range = sys.argv[2]
