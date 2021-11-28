@@ -17,7 +17,7 @@ pros = []
 lines = []
 file='/appcode/input/tmp/symbols/'+file
 f = open(file, "r")
-container_amnt=8
+container_amnt=4
 while True:
     for line_num in range(container_amnt):
         pros=[]
