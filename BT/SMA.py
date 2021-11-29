@@ -23,8 +23,9 @@ run_type = sys.argv[4]
 start_date_range = '2021-11-02'
 end_date_range = '2021-11-22'
 run_type = 'ADJ' """
-
-file = open('/input/'+symbols_file,'r')
+file_path = '/input/'+symbols_file
+print(file_path+'<<<<<<<<<<<<<<<<<<<<<<')
+file = open(file_path,"r")
 
 
 positions              = pd.DataFrame(columns=['Action','Amount','Price','TValue','Intent'])
@@ -98,7 +99,7 @@ curr_date = start_date_range
 curr_date = datetime. strptime(curr_date, '%Y-%m-%d')
 curr_date=curr_date - timedelta(days=1) 
 balance = 10000
-for stock_to_trade in file.readlines():
+for stock_to_trade in file:
     for day in range(delta_date.days):
         #########################################################################################################################
         #                                           New Day initilazion
