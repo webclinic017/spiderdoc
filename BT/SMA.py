@@ -12,8 +12,7 @@ import sys
 #var initialize
 get_rid_of_position = False
 position_is_open=False
-
-stock_to_trade = sys.argv[1]
+symbols_file = sys.argv[1]
 start_date_range = sys.argv[2]
 end_date_range = sys.argv[3]
 run_type = sys.argv[4] 
@@ -23,7 +22,7 @@ run_type = sys.argv[4]
 start_date_range = '2021-11-02'
 end_date_range = '2021-11-22'
 run_type = 'ADJ' """
-
+print(symbols_file)
 positions              = pd.DataFrame(columns=['Action','Amount','Price','TValue','Intent'])
 #for eval 
 positions_short        = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
@@ -84,13 +83,18 @@ def update_stock_amnt (balance,stock_price):
     stock_amnt=balance / stock_price
     return stock_amnt
 
-
+def write_csv(stock_to_trade,curr_date,positions):
+    outname = 'SMA-'+stock_to_trade+'-X-'+datetime.strftime(curr_date,"%Y-%m-%d")+'.csv'
+    outdir = '/output/'
+    #outdir = 'C:\DEVOPS\python apps\spiderdoc\spiderdoc\outfile\positions\''
+    fullname =  outdir + outname
+    positions.to_csv(fullname)
 #initialize position dataframe with null's ans 0's
 curr_date = start_date_range
 curr_date = datetime. strptime(curr_date, '%Y-%m-%d')
 curr_date=curr_date - timedelta(days=1) 
 balance = 10000
-for day in range(delta_date.days):
+""" for day in range(delta_date.days):
     #########################################################################################################################
     #                                           New Day initilazion
     #                                           ==================
@@ -208,11 +212,7 @@ for day in range(delta_date.days):
     #                                             Output positions to csv
     #                                             =======================
     ########################################################################################################################
-    outname = 'SMA-'+stock_to_trade+'-X-'+datetime.strftime(curr_date,"%Y-%m-%d")+'.csv'
-    outdir = '/outfile/position/'
-    #outdir = 'C:\DEVOPS\python apps\spiderdoc\spiderdoc\outfile\positions\''
-    fullname =  outdir + outname
-    positions.to_csv(fullname)
+    write_csv(stock_to_trade,curr_date,positions)
 
-
+ """
 
