@@ -30,7 +30,7 @@ start_date = input('enter start date in YYYY-mm-dd format : ')
 end_date = input('enter end date in YYYY-mm-dd format : ')
 print('FLT - no balance ,constatnt stock amount | ADJ - adjusts balance and stock amount each trade | REAL - Saves balance next day ')
 run_type = input('enter run type(FLT|ADJ|REAL) : ')
-containers_per_serv=2
+containers_per_serv=input('how many containers on each server : ')
 #see how many servers are up
 for host in hostnames:
     response = os.system("ping -c 1 " + host)
