@@ -128,11 +128,8 @@ def run_simulation(stock_to_trade):
         #                                     ===================================================
         ########################################################################################################################
         #get historical data from yfinance for this day
-        try:
-            curr_stock_historical = yf.download(stock_to_trade,curr_date,tommorow_date,interval='1m')
-            curr_stock_historical.head()
-        except:
-            break
+        curr_stock_historical = yf.download(stock_to_trade,curr_date,tommorow_date,interval='1m')
+        curr_stock_historical.head()
         #calaculate SMA of 15 minutes for this day
         curr_stock_historical['SMA']= ta.trend.sma_indicator(curr_stock_historical['Close'],window=15,fillna=True)
         #current price reletive to SMA this day
