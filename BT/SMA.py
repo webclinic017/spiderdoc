@@ -9,23 +9,14 @@ import numpy as np
 import yfinance as yf
 from datetime import timedelta,time,datetime
 import sys
+import multiprocessing
 
-#var initialize
 get_rid_of_position = False
 position_is_open=False
 symbols_file = sys.argv[1]
 start_date_range = sys.argv[2]
 end_date_range = sys.argv[3]
-run_type = sys.argv[4] 
-#run_type : FLT - no balance ,constatnt stock amount | ADJ - adjusts balance and stock amount each trade | REAL - Saves balance next day 
-
-""" stock_to_trade = 'AAPL'
-start_date_range = '2021-11-02'
-end_date_range = '2021-11-22'
-run_type = 'ADJ' """
-file_path = '/input/'+symbols_file
-print(file_path+'<<<<<<<<<<<<<<<<<<<<<<')
-file = open(file_path,"r")
+run_type = sys.argv[4]
 
 
 positions              = pd.DataFrame(columns=['Action','Amount','Price','TValue','Intent'])
@@ -34,10 +25,9 @@ positions_short        = pd.DataFrame(columns=['Action','Price','Amount','TValue
 positions_closed_short = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
 positions_long         = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
 positions_closed_longs = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
-date_format = "%Y-%m-%d"
-a = datetime.strptime(start_date_range, "%Y-%m-%d")
-b = datetime.strptime(end_date_range, "%Y-%m-%d")
-delta_date = b - a
+
+#assign before referance
+
 ########################################################################################################################
 #                                           FUNCTIONS
 ########################################################################################################################
@@ -89,23 +79,36 @@ def update_stock_amnt (balance,stock_price):
     return stock_amnt
 
 def write_csv(stock_to_trade,curr_date,positions):
-    outname = 'SMA-'+stock_to_trade+'-X-'+datetime.strftime(curr_date,"%Y-%m-%d")+'.csv'
+    outname = "SMA-"+stock_to_trade+"-X-"+datetime.strftime(curr_date,"%Y-%m-%d")+".csv"
     outdir = '/output/'
     #outdir = 'C:\DEVOPS\python apps\spiderdoc\spiderdoc\outfile\positions\''
     fullname =  outdir + outname
     positions.to_csv(fullname)
-#initialize position dataframe with null's ans 0's
-curr_date = start_date_range
-curr_date = datetime. strptime(curr_date, '%Y-%m-%d')
-curr_date=curr_date - timedelta(days=1) 
-balance = 10000
-for stock_to_trade in file:
+
+def run_simulation(stock_to_trade):
+    get_rid_of_position = False
+    position_is_open=False
+    global delta_date
+    global start_date_range 
+    global end_date_range 
+    global run_type 
+    stock_to_trade=stock_to_trade.strip('\n')
+    date_format = "%Y-%m-%d"
+    a = datetime.strptime(start_date_range, "%Y-%m-%d")
+    b = datetime.strptime(end_date_range, "%Y-%m-%d")
+    delta_date = b - a
+    #initialize position dataframe with null's ans 0's
+    curr_date = start_date_range
+    curr_date = datetime. strptime(curr_date, '%Y-%m-%d')
+    curr_date=curr_date - timedelta(days=1) 
+    balance = 10000
+
     for day in range(delta_date.days):
-        #########################################################################################################################
-        #                                           New Day initilazion
-        #                                           ==================
-        #########################################################################################################################                                            
-        positions              = pd.DataFrame(columns=['Action','Amount','Price','TValue','Intent'])
+    #########################################################################################################################
+    #                                           New Day initilazion
+    #                                           ==================
+    #########################################################################################################################                                            
+        positions              = pd.DataFrame(index=['Timestamp'],columns=['Action','Amount','Price','TValue','Intent'])
         #for eval 
         positions_short        = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
         positions_closed_short = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
@@ -125,8 +128,11 @@ for stock_to_trade in file:
         #                                     ===================================================
         ########################################################################################################################
         #get historical data from yfinance for this day
-        curr_stock_historical = yf.download(stock_to_trade,curr_date,tommorow_date,interval='1m')
-        curr_stock_historical.head()
+        try:
+            curr_stock_historical = yf.download(stock_to_trade,curr_date,tommorow_date,interval='1m')
+            curr_stock_historical.head()
+        except:
+            break
         #calaculate SMA of 15 minutes for this day
         curr_stock_historical['SMA']= ta.trend.sma_indicator(curr_stock_historical['Close'],window=15,fillna=True)
         #current price reletive to SMA this day
@@ -219,5 +225,19 @@ for stock_to_trade in file:
         ########################################################################################################################
         write_csv(stock_to_trade,curr_date,positions)
 
+#var initialize
+
+#run_type : FLT - no balance ,constatnt stock amount | ADJ - adjusts balance and stock amount each trade | REAL - Saves balance next day 
+
+""" stock_to_trade = 'AAPL'
+start_date_range = '2021-11-02'
+end_date_range = '2021-11-22'
+run_type = 'ADJ' """
+file_path = '/input/'+symbols_file
+print(file_path+'<<<<<<<<<<<<<<<<<<<<<<')
+file = open(file_path,"r")
+
+for stock_to_trade in file:
+    run_simulation(stock_to_trade)
 
 
