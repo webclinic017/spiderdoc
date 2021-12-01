@@ -232,9 +232,22 @@ start_date_range = '2021-11-02'
 end_date_range = '2021-11-22'
 run_type = 'ADJ' """
 file_path = '/input/'+symbols_file
-file = open(file_path,"r")
+Sym_file = open(file_path,"r")
 
-for stock_to_trade in file:
-    run_simulation(stock_to_trade)
+''' for stock_to_trade in file:
+    run_simulation(stock_to_trade) '''
+
+if __name__ == '__main__':
+    # start 4 worker processes
+    with multiprocessing.Pool(processes=32) as pool:
+        pool.map_async(run_simulation,iterable=Sym_file).get()
 
 
+
+
+
+'''     
+    p = multiprocessing.Process(target=run_simulation, args=[stock_to_trade])
+    Pros.append(p)
+    p.start()
+ '''
