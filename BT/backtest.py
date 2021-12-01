@@ -9,10 +9,9 @@ def start_container (symbols_file):
     global end_date_range
     global run_type
     global containers_up
-    subprocess.Popen(["docker", "run", "-v","/containers/output:/output", "backtest:1.0.0", symbols_file,start_date_range,end_date_range,run_type])
     containers_up += 1
-    if containers_up >= 4 :
-        exit
+    subprocess.Popen(["docker", "run", "-v","/containers/output:/output", "backtest:1.0.0", symbols_file,start_date_range,end_date_range,run_type])
+
 file = sys.argv[1]
 start_date_range = sys.argv[2]
 end_date_range = sys.argv[3]
@@ -38,6 +37,11 @@ for sufx in range(1,container_amnt+1):
 print(sym_list)    
 pool = multiprocessing.Pool(processes=container_amnt)
 containers_up=0
-if __name__ == '__main__' :
-    while True :
-        pool.starmap_async(start_container,sym_list) 
+Pros=[]
+#pool.map_async(start_container,sym_list) 
+for sym in sym_list:
+    p = multiprocessing.Process(target=start_container, args=[sym])
+    Pros.append(p)
+    p.start()
+    print("started container for file :" + sym)
+    

@@ -78,13 +78,6 @@ def update_stock_amnt (balance,stock_price):
     stock_amnt=balance / stock_price
     return stock_amnt
 
-def write_csv(stock_to_trade,curr_date,positions):
-    outname = "SMA-"+stock_to_trade+"-X-"+datetime.strftime(curr_date,"%Y-%m-%d")+".csv"
-    outdir = '/output/'
-    #outdir = 'C:\DEVOPS\python apps\spiderdoc\spiderdoc\outfile\positions\''
-    fullname =  outdir + outname
-    positions.to_csv(fullname)
-
 def run_simulation(stock_to_trade):
     get_rid_of_position = False
     position_is_open=False
@@ -223,7 +216,12 @@ def run_simulation(stock_to_trade):
         #                                             Output positions to csv
         #                                             =======================
         ########################################################################################################################
-        write_csv(stock_to_trade,curr_date,positions)
+        #write_csv(stock_to_trade,curr_date,positions)
+        outname = "SMA-"+stock_to_trade+"-X-"+datetime.strftime(curr_date,"%Y-%m-%d")+".csv"
+        outdir = '/output/'
+        #outdir = 'C:\DEVOPS\python apps\spiderdoc\spiderdoc\outfile\positions\''
+        fullname =  outdir + outname
+        positions.to_csv(fullname)
 
 #var initialize
 
