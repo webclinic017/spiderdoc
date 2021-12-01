@@ -39,5 +39,5 @@ containers_up=0
 Pros=[]
 #pool.map_async(start_container,sym_list) 
 for sym in sym_list:
-    start_container(sym_list)
+    start_container(sym)
     
