@@ -9,16 +9,17 @@ def start_container (symbols_file):
     global end_date_range
     global run_type
     global containers_up
-    containers_up += 1
-    subprocess.call(["docker", "run", "-v","/containers/output:/output", "backtest:1.0.0", symbols_file,start_date_range,end_date_range,run_type])
+    global prallel_proc_amnt
+    subprocess.call(["docker", "run", "-v","/containers/output:/output", "backtest:1.0.0", symbols_file,start_date_range,end_date_range,run_type,prallel_proc_amnt])
 
 file = sys.argv[1]
 start_date_range = sys.argv[2]
 end_date_range = sys.argv[3]
 run_type = sys.argv[4]  
 container_amnt = sys.argv[5]
-container_amnt=int(container_amnt) 
-
+container_amnt=int(container_amnt)
+prallel_proc_amnt = sys.argv[6]
+prallel_proc_amnt=int(prallel_proc_amnt)
 ''' file = 'Symbols_1'
 start_date_range = '2021-11-02'
 end_date_range = '2021-11-20'

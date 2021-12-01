@@ -17,6 +17,7 @@ symbols_file = sys.argv[1]
 start_date_range = sys.argv[2]
 end_date_range = sys.argv[3]
 run_type = sys.argv[4]
+prallel_proc_amnt = sys.argv[5]
 
 
 positions              = pd.DataFrame(columns=['Action','Amount','Price','TValue','Intent'])
@@ -234,20 +235,9 @@ run_type = 'ADJ' """
 file_path = '/input/'+symbols_file
 Sym_file = open(file_path,"r")
 
-''' for stock_to_trade in file:
-    run_simulation(stock_to_trade) '''
 
 if __name__ == '__main__':
     # start 4 worker processes
-    with multiprocessing.Pool(processes=32) as pool:
+    with multiprocessing.Pool(processes=prallel_proc_amnt) as pool:
         pool.map_async(run_simulation,iterable=Sym_file).get()
 
-
-
-
-
-'''     
-    p = multiprocessing.Process(target=run_simulation, args=[stock_to_trade])
-    Pros.append(p)
-    p.start()
- '''
