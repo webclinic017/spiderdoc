@@ -33,12 +33,13 @@ positions_closed_longs = pd.DataFrame(columns=['Action','Price','Amount','TValue
 ########################################################################################################################
 
 def update_pos(index,action,price,amount,tvalue,intent) :
+    global positions
     positions.loc[index,'Action']=action
     positions.loc[index,'Amount']=amount
     positions.loc[index,'Price']=price
     positions.loc[index,'TValue']=tvalue
     positions.loc[index,'Intent']=intent
-    
+
 def update_pos_long(index,action,amount,price,tvalue,intent) :
     positions_long .loc[index,'Action']=action
     positions_long.loc[index,'Amount']=amount
@@ -78,22 +79,15 @@ def update_stock_amnt (balance,stock_price):
     stock_amnt=balance / stock_price
     return stock_amnt
 
-def write_csv(stock_to_trade,curr_date,positions):
-    outname = "SMA-"+stock_to_trade+"-X-"+datetime.strftime(curr_date,"%Y-%m-%d")+".csv"
-    outdir = '/output/'
-    #outdir = 'C:\DEVOPS\python apps\spiderdoc\spiderdoc\outfile\positions\''
-    fullname =  outdir + outname
-    positions.to_csv(fullname)
-
 def run_simulation(stock_to_trade):
     get_rid_of_position = False
     position_is_open=False
-    global delta_date
+    stock_not_avail = False
     global start_date_range 
     global end_date_range 
     global run_type 
     stock_to_trade=stock_to_trade.strip('\n')
-    date_format = "%Y-%m-%d"
+   
     a = datetime.strptime(start_date_range, "%Y-%m-%d")
     b = datetime.strptime(end_date_range, "%Y-%m-%d")
     delta_date = b - a
@@ -108,7 +102,8 @@ def run_simulation(stock_to_trade):
     #                                           New Day initilazion
     #                                           ==================
     #########################################################################################################################                                            
-        positions              = pd.DataFrame(index=['Timestamp'],columns=['Action','Amount','Price','TValue','Intent'])
+        global positions
+        positions              = pd.DataFrame(columns=['Action','Amount','Price','TValue','Intent'])
         #for eval 
         positions_short        = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
         positions_closed_short = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
@@ -128,8 +123,12 @@ def run_simulation(stock_to_trade):
         #                                     ===================================================
         ########################################################################################################################
         #get historical data from yfinance for this day
-        curr_stock_historical = yf.download(stock_to_trade,curr_date,tommorow_date,interval='1m')
-        curr_stock_historical.head()
+        try:
+            curr_stock_historical = yf.download(stock_to_trade,curr_date,tommorow_date,interval='1m')
+            curr_stock_historical.head()
+        except:
+            stock_not_avail = True
+            break
         #calaculate SMA of 15 minutes for this day
         curr_stock_historical['SMA']= ta.trend.sma_indicator(curr_stock_historical['Close'],window=15,fillna=True)
         #current price reletive to SMA this day
@@ -156,9 +155,6 @@ def run_simulation(stock_to_trade):
             
             #what was the intent of the previos trade in positions
             last_intent = positions.iloc[-1]['Intent']
-            
-            #return int index instead of datetime
-            index_int=(np.where(close_relto_sma.index==index)[0]).astype(int)
 
             #checks if its closing time       
             if(close_time<current_time):
@@ -193,7 +189,6 @@ def run_simulation(stock_to_trade):
                     if run_type == 'ADJ' or 'REAL' :
                         balance=update_balance(balance,trans_value,action)
                         stock_amnt=update_stock_amnt(balance,curr_price)
-            #
             elif( above_sma==False):
                 if(position_is_open == True and last_intent=="LONG"):
                     position_is_open=False
@@ -220,8 +215,14 @@ def run_simulation(stock_to_trade):
         #                                             Output positions to csv
         #                                             =======================
         ########################################################################################################################
-        write_csv(stock_to_trade,curr_date,positions)
-
+        #write_csv(stock_to_trade,curr_date,positions)
+        outname = "SMA-"+stock_to_trade+"-X-"+datetime.strftime(curr_date,"%Y-%m-%d")+".csv"
+        outdir = '/output/'
+        #outdir = 'C:\DEVOPS\python apps\spiderdoc\spiderdoc\outfile\positions\''
+        fullname =  outdir + outname
+        positions.to_csv(fullname)
+    if (stock_not_avail):
+        return
 #var initialize
 
 #run_type : FLT - no balance ,constatnt stock amount | ADJ - adjusts balance and stock amount each trade | REAL - Saves balance next day 
@@ -231,7 +232,6 @@ start_date_range = '2021-11-02'
 end_date_range = '2021-11-22'
 run_type = 'ADJ' """
 file_path = '/input/'+symbols_file
-print(file_path+'<<<<<<<<<<<<<<<<<<<<<<')
 file = open(file_path,"r")
 
 for stock_to_trade in file:
