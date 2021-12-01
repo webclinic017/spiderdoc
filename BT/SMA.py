@@ -104,7 +104,7 @@ def run_simulation(stock_to_trade):
     #                                           ==================
     #########################################################################################################################                                            
         global positions
-        positions              = pd.DataFrame(columns=['Action','Amount','Price','TValue','Intent'])
+        positions              = pd.DataFrame(columns=['Action','Amount','Price','TValue','Intent'],index=['Timestamp'])
         #for eval 
         positions_short        = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
         positions_closed_short = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
