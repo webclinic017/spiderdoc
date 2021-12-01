@@ -18,7 +18,7 @@ start_date_range = sys.argv[2]
 end_date_range = sys.argv[3]
 run_type = sys.argv[4]
 prallel_proc_amnt = sys.argv[5]
-
+prallel_proc_amnt=int(prallel_proc_amnt)
 
 positions              = pd.DataFrame(columns=['Action','Amount','Price','TValue','Intent'])
 #for eval 

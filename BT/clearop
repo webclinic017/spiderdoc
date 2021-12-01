@@ -1,0 +1,5 @@
+#!/bin/bash
+rm -Rf  /containers/output/
+mkdir /containers/output/
+chmod 777 /containers/output/
+

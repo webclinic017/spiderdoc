@@ -3,6 +3,7 @@ import subprocess
 from fsplit.filesplit import Filesplit
 import multiprocessing.process
 import shutil
+import socket
 
 
 ################################################################################################
@@ -18,25 +19,13 @@ def cmd_over_ssh (hosname,cmd):
         error = ssh.stderr.readlines()
     else:
         return result
-
-def clear_dir(dirs):
-    for dir in dirs:
-        shutil.rmtree(dir,ignore_errors=True)
-        os.mkdir(dir)
-        subprocess.call(['chmod', '0666', dir])
-    return    
-                    
 ################################################################################################
 #var inits
 fs = Filesplit()
 active_hosts=0
-dirs_to_clear = ["/appcode/input/tmp/symbols","/appcode/spiderdoc/BT/input/"]
 hostnames = ["BT-1","BT-2","BT-3","BT-4"]
 active_hosts = []
 Pros=[]
-
-#clean up
-clear_dir(dirs_to_clear)
 
 #promts for run parms
 start_date = input('enter start date in YYYY-mm-dd format : ')
@@ -56,19 +45,11 @@ for host in hostnames:
          pingstatus = "Network Error"
 host_amnt=len(active_hosts)
 
-
-
 #n servers are up . create from "Symbols" n files : Symbols_1,Symbols_2..Symbols_n
 size_per_file = int((os.stat('Symbols').st_size) / host_amnt)+256
-fs.split(file="/appcode/spiderdoc/BT/Symbols", split_size=size_per_file, output_dir="/appcode/input/tmp/symbols", newline=True)
+fs.split(file="/appcode/spiderdoc/BT/Symbols", split_size=size_per_file, output_dir="/appcode/spiderdoc/BT/input/", newline=True)
 
-#build containers on eatch server
-for host in active_hosts:
-    try:
-        res= cmd_over_ssh(host,'docker build -t backtest:1.0.0 /appcode/spiderdoc/BT')
-        print("Imaged Build Successfuly on Server : "+host)
-    except:
-        print("Build Failed On Server : "+host)
+
 #start backtest.py on all active hosts at the same time with appropriate args
 i=1
 for host in active_hosts:

@@ -1,0 +1,10 @@
+#!/bin/bash
+
+rm -Rf /appcode/spiderdoc/BT/input/S*
+rm -Rf /appcode/input/tmp/symbols/S*
+rmdir -Rf /containers/output
+
+chmod 666 /appcode/spiderdoc/BT/input/*
+chmod 666 /appcode/input/tmp/symbols/*
+chmod 666 /containers/output/*
+
