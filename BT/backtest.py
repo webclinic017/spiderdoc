@@ -30,21 +30,16 @@ run_type = 'ADJ'
 container_amnt = 4 '''
 
 
-#inits
-fs = Filesplit()
-
-#split Server-specific Symbol file into smaller packets for each container
-large_file_path='/appcode/spiderdoc/BT/input/'+file
-size_per_file = int((os.stat(large_file_path).st_size) / container_amnt)+8
-fs.split(file=large_file_path, split_size=size_per_file, output_dir="/appcode/spiderdoc/BT/input/", newline=True)
-
 sym_list =[]
 #used to specify for dest container which Symbols_n_m is his
 for sufx in range(1,container_amnt+1):
     sym_list.append(file+'_'+str(sufx))   
 containers_up=0
 Pros=[]
+
+#build new docker image
 subprocess.call(["docker","build","-t", "backtest:1.0.0", "/appcode/spiderdoc/BT"])
+
 #start containers serialy (to save RAM as CPU is at its maxUtil anyway)
 pool = multiprocessing.Pool(1)
 for sym in sym_list:

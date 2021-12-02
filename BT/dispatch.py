@@ -32,7 +32,7 @@ start_date = input('enter start date in YYYY-mm-dd format : ')
 end_date = input('enter end date in YYYY-mm-dd format : ')
 print('FLT - no balance ,constatnt stock amount | ADJ - adjusts balance and stock amount each trade | REAL - Saves balance next day ')
 run_type = input('enter run type(FLT|ADJ|REAL) : ')
-containers_per_serv=input('how many containers on each server : ')
+container_amnt=input('how many containers on each server : ')
 prallel_proc_amnt=input('how many parallel proces on each container : ')
 
 #see how many servers are up
@@ -45,10 +45,15 @@ for host in hostnames:
          pingstatus = "Network Error"
 host_amnt=len(active_hosts)
 
-#n servers are up . create from "Symbols" n files : Symbols_1,Symbols_2..Symbols_n
+#n servers are up . create from "Symbols" n files : Symbols_1,Symbols_2..Symbols_n | n-active_hosts
 size_per_file = int((os.stat('Symbols').st_size) / host_amnt)+256
 fs.split(file="/appcode/spiderdoc/BT/Symbols", split_size=size_per_file, output_dir="/appcode/spiderdoc/BT/input/", newline=True)
 
+#m containers per server . create from "Symbols_n" m files : Symbols_n_1,Symbols_n_2..Symbols_n_m | n-active_hosts m-container amnt
+for sym_suffix_host in range(len(active_hosts)):
+    large_file_path='/appcode/spiderdoc/BT/input/Symbols_'+str(sym_suffix_host)
+    size_per_file = int((os.stat(large_file_path).st_size) / container_amnt)+8
+    fs.split(file=large_file_path, split_size=size_per_file, output_dir="/appcode/spiderdoc/BT/input/", newline=True)
 
 #start backtest.py on all active hosts at the same time with appropriate args
 i=1
