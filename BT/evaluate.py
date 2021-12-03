@@ -5,54 +5,74 @@ from itertools import islice
 from datetime import datetime,timedelta,time
 import matplotlib.pyplot as plt 
 
-delta=pd.DataFrame(columns=['Value'])
+delta_positions=pd.DataFrame(columns=['Value'])
 
-#get all data from csv into a single df - 0 rows deleted - open positions deleted
-path = 'C:\\Users\\Denis\\Desktop\\Project Money Printer\\money printer\\positions\\' # CHANGE PATH TO RELEVANT PATH FOR PROJECT
-all_files = glob.glob(path + "*.csv")
-print(all_files)
-print(path)
-li = []
-
-for filename in all_files:
-    positions = pd.read_csv(filename)  #read single file
-
-    positions.drop(index=positions.index[0],axis=0, inplace=True)  #drop 0 rows
-
-    if(not positions.empty):
-        if(positions.iloc[-1]['Intent'] == "SHORT" or positions.iloc[-1]['Intent'] == "LONG") :  #drop open positions
-           positions.drop(index=positions.index[-1],axis=0, inplace=True)
-
-    li.append(positions)  #add file to list
-   
-
-positions = pd.concat(li, axis=0, ignore_index=True)  #combine all files to single df
+def concat_positions():
+    #get all data from csv into a single df - 0 rows deleted - open positions deleted
+    path = "C:\\Users\\nolys\\Desktop\\position\\" # TODO:CHANGE PATH TO RELEVANT PATH FOR PROJECT
+    all_files = glob.glob(path + "*.csv")
+    li = []
+    for filename in all_files:
+        positions = pd.read_csv(filename)  #read single file
+        positions = positions.iloc[2: , :]  #selects df from second row onward TODO: fix SMA.py so indexing is correct and is named "Timestamp"
+        if(not positions.empty):
+            if(positions.iloc[-1]['Intent'] == "SHORT" or positions.iloc[-1]['Intent'] == "LONG") :  #drop open positions at EOD
+                positions.drop(index=positions.index[-1],axis=0, inplace=True)
+        li.append(positions)  #add file contance to list
+    
+    positions = pd.concat(li, axis=0, ignore_index=True)  #combine all files to single df
+    return positions
+def gen_delta_position():
+    global positions
+    global delta_positions
+    delta_index= 0 
+    for index, row in islice(positions.iterrows(), 0, None):
+        if positions.loc[index]["Intent"] == "CLOSE_LONG" :
+            delta_positions.loc[delta_index]["Value"] = positions.loc[index]['TValue'] - positions.loc[index-1]['TValue']
+            print(delta_positions.loc[delta_index]["value"])
+            delta_index += 1
+        if positions.loc[index]["Intent"] == "CLOSE_SHORT" :
+            delta_positions.loc[delta_index] =positions.loc[index-1]['TValue'] - positions.loc[index]['TValue'] 
+            delta_index += 1
+    return delta_positions
+def calc_gross_profit():
+    global delta_positions
+    global positions_won
+    gross_profit =0
+    for index, row in islice(delta_positions.iterrows(), 0, None):
+        if delta_positions.loc[index]["Value"] >= 0:
+            gross_profit = gross_profit + delta_positions.loc[index]["Value"]
+            positions_won +=1
+    return gross_profit
+def calc_gross_loss():
+    global delta_positions
+    global positions_lost
+    gross_loss =0    
+    for index, row in islice(delta_positions.iterrows(), 0, None):
+        if delta_positions.loc[index]["Value"] < 0:
+            gross_loss = gross_loss - delta_positions.loc[index]["Value"]
+            positions_lost += 1
+    return gross_loss
 
 #######end
-    
-#gross profit
-total = 0
-for index, row in islice(positions.iterrows(), 0, None):
-    if positions.loc[index]["Action"] == "buy" :
-        total = total - positions.loc[index]["TValue"]
-    else:
-        total = total + positions.loc[index]["TValue"]
-print(total)
-#end
 
-#for eval
-delta_index= 0 
-for index, row in islice(positions.iterrows(), 0, None):
-    if positions.loc[index]["Intent"] == "CLOSE_LONG" :
-        delta.loc[delta_index] = positions.loc[index]['TValue'] - positions.loc[index-1]['TValue']
-        delta_index += 1
-    if positions.loc[index]["Intent"] == "CLOSE_SHORT" :
-        delta.loc[delta_index] =positions.loc[index-1]['TValue'] - positions.loc[index]['TValue'] 
-        delta_index += 1
+positions_won =0 #updates in calc_gross_profit
+positions_lost =0 #updates in calc_gross_loss
+positions = concat_positions()
+""" print(positions)
+delta_positions = gen_delta_position()
+delta_amount = len(delta_positions.index)
+gross_profit = calc_gross_profit()
+gross_loss = calc_gross_loss()
+avg_profit = gross_profit / positions_won
+avg_loss = gross_loss / positions_lost
+percent_won = (delta_amount / positions_won) * 100 
+percent_loss = (delta_amount / positions_lost) * 100
 
 
-delta.reset_index().plot.scatter(x = 'index', y = 'Value')
+
+delta_positions.reset_index().plot.scatter(x = 'index', y = 'Value')
 plt.grid(True)
 plt.show()
-print(delta)        
+print(delta_positions)         """
  
