@@ -70,17 +70,17 @@ def update_pos_closed_short(index,action,amount,price,tvalue,intent) :
     positions_closed_short.loc[index,'TValue']=tvalue
     positions_closed_short.loc[index,'Intent']=intent
 
-def update_balance (balance,trans_value,action,intent):
-    if (action == "buy" and intent=="LONG") or (action == "sell" and intent == "SHORT") :
+def update_balance (balance,trans_value,action,intent):  
+    if (action == 'buy') :
         balance = balance - trans_value
     else:
         balance = balance + trans_value
     return balance
-
-def update_stock_amnt (balance,stock_price):
+def update_stock_amnt (balance,stock_price,action):
     tmp_mod=balance % stock_price
     tmp_balace=balance-tmp_mod
     stock_amnt=tmp_balace / stock_price
+
     return stock_amnt
 
 def run_simulation(stock_to_trade):
@@ -168,7 +168,8 @@ def run_simulation(stock_to_trade):
             above_sma =close_relto_sma.loc[index] > 0
             avg_above_sma =RS5m_close_relto_sma['CRS']> 0
             curr_price =curr_stock_historical.loc[index]['Close']
-            stock_amnt=update_stock_amnt(balance,curr_price)
+            action='NaN'
+            stock_amnt=update_stock_amnt(balance,curr_price,action)
             #true when stock price is above SMA
             if(above_sma):
                 #no open positions and its not closing time - BUY LONG
@@ -177,7 +178,7 @@ def run_simulation(stock_to_trade):
                     action='buy'
                     intent = 'LONG'
                     curr_price =curr_stock_historical.loc[index]['Close']
-                    stock_amnt=update_stock_amnt(balance,curr_price)
+                    stock_amnt=update_stock_amnt(balance,curr_price,action)
                     trans_value=curr_price*stock_amnt
                     if run_type == 'ADJ' or 'REAL' :
                         balance=update_balance(balance,trans_value,action,intent)
@@ -210,7 +211,7 @@ def run_simulation(stock_to_trade):
                     action='sell'
                     intent = 'SHORT'
                     curr_price =curr_stock_historical.loc[index]['Close']
-                    stock_amnt=update_stock_amnt(balance,curr_price)
+                    stock_amnt=update_stock_amnt(balance,curr_price,action)
                     trans_value=curr_price*stock_amnt
                     if run_type == 'ADJ' or 'REAL' :
                         balance=update_balance(balance,trans_value,action,intent)

@@ -9,18 +9,20 @@ delta_positions=pd.DataFrame(columns=['Value'])
 
 def concat_positions():
     #get all data from csv into a single df - 0 rows deleted - open positions deleted
-    path = "C:\\Users\\nolys\\Desktop\\position\\" # TODO:CHANGE PATH TO RELEVANT PATH FOR PROJECT
+    path = "C:\\DEVOPS\\python apps\\spiderdoc\\spiderdoc\BT\\container\\output\\" # TODO:CHANGE PATH TO RELEVANT PATH FOR PROJECT
     all_files = glob.glob(path + "*.csv")
     li = []
     for filename in all_files:
-        positions = pd.read_csv(filename)  #read single file
+        positions = pd.read_csv(filename,index_col=[0])  #read single file
+        positions = positions.drop('Timestamp', 1)
         positions = positions.iloc[2: , :]  #selects df from second row onward TODO: fix SMA.py so indexing is correct and is named "Timestamp"
+        print(positions)
         if(not positions.empty):
             if(positions.iloc[-1]['Intent'] == "SHORT" or positions.iloc[-1]['Intent'] == "LONG") :  #drop open positions at EOD
                 positions.drop(index=positions.index[-1],axis=0, inplace=True)
         li.append(positions)  #add file contance to list
     
-    positions = pd.concat(li, axis=0, ignore_index=True)  #combine all files to single df
+    positions = pd.concat(li, axis=0)  #combine all files to single df
     return positions
 def gen_delta_position():
     global positions
@@ -30,10 +32,10 @@ def gen_delta_position():
         prev_index = index - 1
         if positions.loc[index]["Intent"] == "CLOSE_LONG" :
             delta_positions.iloc[delta_index]["Value"] = positions.loc[index]['TValue'] - positions.loc[prev_index]['TValue']
-            print(delta_positions.loc[delta_index]["value"])
+            print(delta_positions.loc[delta_index]["Value"])
             delta_index += 1
         if positions.loc[index]["Intent"] == "CLOSE_SHORT" :
-            delta_positions.loc[delta_index] =positions.loc[prev_index]['TValue'] - positions.loc[index]['TValue'] 
+            delta_positions.loc[delta_index]["Value"] =positions.loc[prev_index]['TValue'] - positions.loc[index]['TValue'] 
             delta_index += 1
     return delta_positions
 def calc_gross_profit():
