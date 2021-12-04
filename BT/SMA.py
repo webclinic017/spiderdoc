@@ -20,26 +20,27 @@ run_type = sys.argv[4]
 prallel_proc_amnt = sys.argv[5]
 prallel_proc_amnt=int(prallel_proc_amnt)
 
-positions              = pd.DataFrame(columns=['Action','Amount','Price','TValue','Intent'])
+positions              = pd.DataFrame(columns=['Timestamp','Action','Amount','Price','TValue','Intent','Balance'])
 #for eval 
 positions_short        = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
 positions_closed_short = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
 positions_long         = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
 positions_closed_longs = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
-
+positions.set_index('Timestamp')
 #assign before referance
 
 ########################################################################################################################
 #                                           FUNCTIONS
 ########################################################################################################################
 
-def update_pos(index,action,price,amount,tvalue,intent) :
+def update_pos(index,action,price,amount,tvalue,intent,balance) :
     global positions
     positions.loc[index,'Action']=action
     positions.loc[index,'Amount']=amount
     positions.loc[index,'Price']=price
     positions.loc[index,'TValue']=tvalue
     positions.loc[index,'Intent']=intent
+    positions.loc[index,'Balance']=balance
 
 def update_pos_long(index,action,amount,price,tvalue,intent) :
     positions_long .loc[index,'Action']=action
@@ -69,15 +70,17 @@ def update_pos_closed_short(index,action,amount,price,tvalue,intent) :
     positions_closed_short.loc[index,'TValue']=tvalue
     positions_closed_short.loc[index,'Intent']=intent
 
-def update_balance (balance,trans_value,action):
-    if action == "buy" :
+def update_balance (balance,trans_value,action,intent):
+    if (action == "buy" and intent=="LONG") or (action == "sell" and intent == "SHORT") :
         balance = balance - trans_value
     else:
         balance = balance + trans_value
     return balance
 
 def update_stock_amnt (balance,stock_price):
-    stock_amnt=balance / stock_price
+    tmp_mod=balance % stock_price
+    tmp_balace=balance-tmp_mod
+    stock_amnt=tmp_balace / stock_price
     return stock_amnt
 
 def run_simulation(stock_to_trade):
@@ -104,14 +107,14 @@ def run_simulation(stock_to_trade):
     #                                           ==================
     #########################################################################################################################                                            
         global positions
-        positions              = pd.DataFrame(columns=['Action','Amount','Price','TValue','Intent'],index=['Timestamp'])
+        positions              = pd.DataFrame(columns=['Timestamp','Action','Amount','Price','TValue','Intent'])
         #for eval 
         positions_short        = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
         positions_closed_short = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
         positions_long         = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
         positions_closed_longs = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
         curr_date=curr_date + timedelta(days=1) 
-        update_pos('0000-00-00 00:00:00-00:00','NA',0,0,0,'NA')
+        update_pos('0000-00-00 00:00:00-00:00','NA',0,0,0,'NA',balance)
         if run_type != 'REAL' :
             balance=10000
         tommorow_date =curr_date + timedelta(days=1)
@@ -174,43 +177,44 @@ def run_simulation(stock_to_trade):
                     action='buy'
                     intent = 'LONG'
                     curr_price =curr_stock_historical.loc[index]['Close']
+                    stock_amnt=update_stock_amnt(balance,curr_price)
                     trans_value=curr_price*stock_amnt
-                    update_pos(index,action,curr_price,stock_amnt,trans_value,intent)
                     if run_type == 'ADJ' or 'REAL' :
-                        balance=update_balance(balance,trans_value,action)
-                        stock_amnt=update_stock_amnt(balance,curr_price)                                
+                        balance=update_balance(balance,trans_value,action,intent)
+                    update_pos(index,action,curr_price,stock_amnt,trans_value,intent,balance)    
                 #open position with a short intent = CLOSE SHORT
                 elif(position_is_open == True and last_intent=="SHORT"):
                     position_is_open=False
                     action='buy'
                     intent = 'CLOSE_SHORT'
                     curr_price =curr_stock_historical.loc[index]['SMA']
+                    stock_amnt =positions.iloc[-1]['Amount']
                     trans_value=curr_price*stock_amnt
-                    update_pos(index,action,curr_price,stock_amnt,trans_value,intent)
                     if run_type == 'ADJ' or 'REAL' :
-                        balance=update_balance(balance,trans_value,action)
-                        stock_amnt=update_stock_amnt(balance,curr_price)
+                        balance=update_balance(balance,trans_value,action,intent)
+                    update_pos(index,action,curr_price,stock_amnt,trans_value,intent,balance)    
             elif( above_sma==False):
                 if(position_is_open == True and last_intent=="LONG"):
                     position_is_open=False
                     action='sell'
                     intent = 'CLOSE_LONG'
                     curr_price =curr_stock_historical.loc[index]['SMA']
+                    stock_amnt=positions.iloc[-1]['Amount']
                     trans_value=curr_price*stock_amnt
-                    update_pos(index,action,curr_price,stock_amnt,trans_value,intent)
                     if run_type == 'ADJ' or 'REAL' :
-                        balance=update_balance(balance,trans_value,action)
-                        stock_amnt=update_stock_amnt(balance,curr_price)
+                        balance=update_balance(balance,trans_value,action,intent)
+                    update_pos(index,action,curr_price,stock_amnt,trans_value,intent,balance)    
+                        
                 elif(position_is_open == False and get_rid_of_position==False and avg_above_sma.loc[index] == False):
                     position_is_open=True
                     action='sell'
                     intent = 'SHORT'
                     curr_price =curr_stock_historical.loc[index]['Close']
+                    stock_amnt=update_stock_amnt(balance,curr_price)
                     trans_value=curr_price*stock_amnt
-                    update_pos(index,action,curr_price,stock_amnt,trans_value,intent)
                     if run_type == 'ADJ' or 'REAL' :
-                        balance=update_balance(balance,trans_value,action)
-                        stock_amnt=update_stock_amnt(balance,curr_price)
+                        balance=update_balance(balance,trans_value,action,intent)
+                    update_pos(index,action,curr_price,stock_amnt,trans_value,intent,balance)    
 
         ########################################################################################################################
         #                                             Output positions to csv
