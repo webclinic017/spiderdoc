@@ -27,12 +27,13 @@ def gen_delta_position():
     global delta_positions
     delta_index= 0 
     for index, row in islice(positions.iterrows(), 0, None):
+        prev_index = index - 1
         if positions.loc[index]["Intent"] == "CLOSE_LONG" :
-            delta_positions.loc[delta_index]["Value"] = positions.loc[index]['TValue'] - positions.loc[index-1]['TValue']
+            delta_positions.iloc[delta_index]["Value"] = positions.loc[index]['TValue'] - positions.loc[prev_index]['TValue']
             print(delta_positions.loc[delta_index]["value"])
             delta_index += 1
         if positions.loc[index]["Intent"] == "CLOSE_SHORT" :
-            delta_positions.loc[delta_index] =positions.loc[index-1]['TValue'] - positions.loc[index]['TValue'] 
+            delta_positions.loc[delta_index] =positions.loc[prev_index]['TValue'] - positions.loc[index]['TValue'] 
             delta_index += 1
     return delta_positions
 def calc_gross_profit():
@@ -59,9 +60,10 @@ def calc_gross_loss():
 positions_won =0 #updates in calc_gross_profit
 positions_lost =0 #updates in calc_gross_loss
 positions = concat_positions()
-""" print(positions)
+print(positions)
 delta_positions = gen_delta_position()
-delta_amount = len(delta_positions.index)
+print(delta_positions)
+"""delta_amount = len(delta_positions.index)
 gross_profit = calc_gross_profit()
 gross_loss = calc_gross_loss()
 avg_profit = gross_profit / positions_won
