@@ -5,7 +5,7 @@ from itertools import islice
 from datetime import datetime,timedelta,time
 import matplotlib.pyplot as plt 
 
-delta_positions=pd.DataFrame(columns=['Value'])
+delta_positions=pd.DataFrame(columns=['Timestamp_start','Timestamp_end','Value','Intent'])
 
 def concat_positions():
     #get all data from csv into a single df - 0 rows deleted - open positions deleted
@@ -13,30 +13,41 @@ def concat_positions():
     all_files = glob.glob(path + "*.csv")
     li = []
     for filename in all_files:
-        positions = pd.read_csv(filename,index_col=[0])  #read single file
+        positions = pd.read_csv(filename)  #read single file
         positions = positions.drop('Timestamp', 1)
-        positions = positions.iloc[2: , :]  #selects df from second row onward TODO: fix SMA.py so indexing is correct and is named "Timestamp"
-        print(positions)
+        positions = positions.iloc[1: , :]  #selects df from second row onward TODO: fix SMA.py so indexing is correct and is named "Timestamp"
+        positions.rename(columns = {'Unnamed: 0':'Timestamp'}, inplace = True)
         if(not positions.empty):
             if(positions.iloc[-1]['Intent'] == "SHORT" or positions.iloc[-1]['Intent'] == "LONG") :  #drop open positions at EOD
                 positions.drop(index=positions.index[-1],axis=0, inplace=True)
         li.append(positions)  #add file contance to list
     
     positions = pd.concat(li, axis=0)  #combine all files to single df
+    positions= positions.reset_index(drop=True)
     return positions
 def gen_delta_position():
     global positions
     global delta_positions
     delta_index= 0 
-    for index, row in islice(positions.iterrows(), 0, None):
-        prev_index = index - 1
+    for index, row in positions.iterrows():
+        print("LOOK!!!!!!!!!!!!!!!!!")
+        print('index :'+str(index)+' prev_index : '+str(index-1))
+        if index > 1 :
+            print(positions.loc[index-1]["TValue"])
         if positions.loc[index]["Intent"] == "CLOSE_LONG" :
-            delta_positions.iloc[delta_index]["Value"] = positions.loc[index]['TValue'] - positions.loc[prev_index]['TValue']
-            print(delta_positions.loc[delta_index]["Value"])
+            delta_positions.loc[delta_index,'Timestamp_start'] = positions.iloc[index-1]['Timestamp']
+            delta_positions.loc[delta_index,'Timestamp_end'] = positions.iloc[index]['Timestamp']
+            delta_positions.loc[delta_index,'Value'] = positions.iloc[index]['TValue'] - positions.iloc[index-1]['TValue']
+            delta_positions.loc[delta_index,'Intent'] = 'LONG'
             delta_index += 1
-        if positions.loc[index]["Intent"] == "CLOSE_SHORT" :
-            delta_positions.loc[delta_index]["Value"] =positions.loc[prev_index]['TValue'] - positions.loc[index]['TValue'] 
+        elif positions.iloc[index]["Intent"] == "CLOSE_SHORT" :
+            delta_positions.loc[delta_index,'Timestamp_start'] = positions.iloc[index-1]['Timestamp']
+            delta_positions.loc[delta_index,'Timestamp_end'] = positions.iloc[index]['Timestamp']
+            delta_positions.loc[delta_index,'Value'] = positions.iloc[index-1]['TValue'] - positions.iloc[index]['TValue']
+            delta_positions.loc[delta_index,'Intent'] = 'SHORT'
             delta_index += 1
+        else:
+            continue
     return delta_positions
 def calc_gross_profit():
     global delta_positions
