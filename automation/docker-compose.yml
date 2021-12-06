@@ -23,6 +23,6 @@ services:
       - '5000:5000'
     volumes:
       - type: bind
-        source: ./logstash_pipeline/
+        source: /ELK/logstash_pipeline/
         target: /usr/share/logstash/pipeline
         read_only: true
