@@ -57,15 +57,7 @@ def calc_gross_profit():
         if delta_positions.loc[index]["Value"] >= 0:
             gross_profit = gross_profit + delta_positions.loc[index]["Value"]
     return gross_profit
-#deprecated , somewhat inefficient ....
-""" def calc_gross_loss():
-    global delta_positions
-    global positions_lost
-    gross_loss =0    
-    for index, row in islice(delta_positions.iterrows(), 0, None):
-        if delta_positions.loc[index]["Value"] < 0:
-            gross_loss = gross_loss + delta_positions.loc[index]["Value"]
-    return gross_loss """
+
     #my own attempt
 def win_calc_streak():
     #save ram
@@ -77,8 +69,7 @@ def win_calc_streak():
     data['Streak_id'] = data.Start_of_streak.cumsum()
     data['Streak_counter'] = data.groupby('Streak_id').cumcount() + 1
     data['Cumm_val'] = data['Value'].cumsum()
-    streaks = pd.concat([delta_positions, data['Streak_counter'],data['Result']], axis=1)
-    print(streaks)
+    streaks = pd.concat([delta_positions,data['Result']], axis=1)
     streaks["Streak_start"] = data['Streak_counter'] == 1
     streaks["Streak_end"] = streaks["Streak_start"].shift(-1, fill_value=True)
     streaks.loc[streaks['Streak_start'], 'Start_time'] = streaks['Timestamp_start']
@@ -86,35 +77,13 @@ def win_calc_streak():
     streaks.loc[streaks['Streak_end'], 'End_time'] = streaks['Timestamp_start']
     streaks = streaks[streaks["Streak_end"] == True]
     save_first_cumm=streaks['Cumm_val'].iloc[0]
-
     streaks['Cumm_val'] = streaks['Cumm_val'] - streaks['Cumm_val'].shift() 
     streaks =streaks.fillna(save_first_cumm)
     streaks["Value"] =  streaks['Cumm_val']
-    streaks = streaks.drop(columns=["Timestamp_start","Timestamp_end","Result" ,"Streak_start", "Streak_end","Cumm_val"])
-    print(streaks)
+    streaks = streaks.drop(columns=["Timestamp_start","Timestamp_end","Result" ,"Streak_start", "Streak_end","Cumm_val","Start_of_streak"])
+    streaks = streaks.reset_index(drop = True)
     return streaks 
-def streak_summary():
-    global win_streak
-    
-    return
-    ## conditional for loop method (somewhat inefficient ...)
-"""     for index,row in islice(delta_positions.iterrows(), 1, None):
-        if delta_positions.loc[index]['Value'] > 0 :
-            if delta_positions[index-1]['Value'] > 0:
-                #raise win streak flag
-                continue
-            else :
-                #lower win steak flag
-                continue
-        else :
-            if delta_positions[index-1]['Value'] <= 0:
-                #rais lose flag
-                continue
-            else:
-                #lower streak flag
-                continue """
-                
-#######end
+
 
 
 positions = concat_positions()
@@ -142,12 +111,11 @@ delta_short_position = delta_positions[delta_positions['Intent'] == 'SHORT']
 delta_long_position = delta_positions[delta_positions['Intent'] == 'LONG']
 #delta_long_position = delta_long_position.reset_index(drop=True)
 # ================= STREAKS =========================
-win_streak = win_calc_streak()
-print(win_streak)
-streak = streak_summary()
+streak = win_calc_streak()
+
 #print(delta_positions)
 #print(trades_won)
-print("==================WIM STREAK!================")
+print("==================STREAK SUMMERY  (Value is even Cummulative!)================")
 print(streak)
 ############################################## PRINTS ########################################
 print('========= MONEY STATUS ============')
