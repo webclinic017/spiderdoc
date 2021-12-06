@@ -60,13 +60,18 @@ def calc_gross_profit():
 
     #my own attempt
 def win_calc_streak():
-    #save ram
+    # save ram !
     global delta_positions 
-    #final obj is df streak index_start index_end timestemp_s timestemp_e 
+    # final obj is df streak index_start index_end timestemp_s timestemp_e
+    # create helper columns Results to set True\False if Winner (faster then putting it in for loop by a lot) 
     delta_positions["Result"] = delta_positions['Value'] > 0
+    # instead of working on positions delta it self, we make a copy and work withit insted
     data = delta_positions
+    # the helper row is used to find streaks by bools (comapres and checks if the next row does not have the same result)(winner and next is loser and vice versa is a streak reset )
     data['Start_of_streak'] = data['Result'].ne(data['Result'].shift())
+    # helper row used in grouby later
     data['Streak_id'] = data.Start_of_streak.cumsum()
+    
     data['Streak_counter'] = data.groupby('Streak_id').cumcount() + 1
     data['Cumm_val'] = data['Value'].cumsum()
     streaks = pd.concat([delta_positions,data['Result']], axis=1)
@@ -80,7 +85,8 @@ def win_calc_streak():
     streaks['Cumm_val'] = streaks['Cumm_val'] - streaks['Cumm_val'].shift() 
     streaks =streaks.fillna(save_first_cumm)
     streaks["Value"] =  streaks['Cumm_val']
-    streaks = streaks.drop(columns=["Timestamp_start","Timestamp_end","Result" ,"Streak_start", "Streak_end","Cumm_val","Start_of_streak"])
+    streaks=streaks[streaks["Streak_counter"] != 1]  
+    streaks = streaks.drop(columns=["Timestamp_start","Timestamp_end","Result" ,"Streak_start", "Streak_end","Cumm_val","Start_of_streak"])    
     streaks = streaks.reset_index(drop = True)
     return streaks 
 
@@ -88,35 +94,69 @@ def win_calc_streak():
 
 positions = concat_positions()
 delta_positions = gen_delta_position()
-delta_amount    = len(delta_positions.index)
 
-trades_won   = delta_positions[delta_positions["Value"] > 0]
-trades_lost  = delta_positions[delta_positions["Value"] <= 0]
 
-gross_profit = trades_won['Value'].sum()
-gross_loss   = trades_lost['Value'].sum()
-net_profit =   gross_profit + gross_loss
-avg_profit =   trades_won['Value'].mean()
-avg_loss   =   trades_lost['Value'].mean()
-max_profit =   trades_won['Value'].max()
-max_loss   =   trades_lost['Value'].max()
-min_profit =   trades_won['Value'].min()
-min_loss   =   trades_lost['Value'].min()
-print(trades_won)
+
+delta_short_positions     = delta_positions[delta_positions['Intent'] == 'SHORT']
+delta_long_positions      = delta_positions[delta_positions['Intent'] == 'LONG']
+trades_won                = delta_positions[delta_positions["Value"] > 0]
+trades_lost               = delta_positions[delta_positions["Value"] <= 0]
+delta_long_positions_won  = delta_long_positions[delta_long_positions['Value'] > 0]
+delta_short_positions_won = delta_short_positions[delta_short_positions['Value'] > 0]
+## ================= MONEY =====================
+
+gross_profit              = trades_won['Value'].sum()
+gross_loss                = trades_lost['Value'].sum()
+net_profit                = gross_profit + gross_loss
+avg_profit                = trades_won['Value'].mean()
+avg_loss                  = trades_lost['Value'].mean()
+max_profit                = trades_won['Value'].max()
+max_loss                  = trades_lost['Value'].max()
+min_profit                = trades_won['Value'].min()
+min_loss                  = trades_lost['Value'].min()
 ## ================= ACCURACY =====================
-percent_won  = ( len(trades_won.index)  / delta_amount ) * 100 
-percent_loss = ( len(trades_lost.index) / delta_amount ) * 100
-delta_short_position = delta_positions[delta_positions['Intent'] == 'SHORT']
 #delta_short_position = delta_short_position.reset_index(drop=True) - reindex from 0 to m | left with original index values from deleta_position for streak calculation.
-delta_long_position = delta_positions[delta_positions['Intent'] == 'LONG']
 #delta_long_position = delta_long_position.reset_index(drop=True)
-# ================= STREAKS =========================
-streak = win_calc_streak()
+delta_amount              = len(delta_positions.index)
+short_amount              = len(delta_short_positions.index)
+long_amount               = len(delta_long_positions.index)
+trades_won_amnt           = len(trades_won.index)
+trades_lost_amnt          = len(trades_lost.index)
+longs_won                 = len(delta_long_positions_won.index)
+shorts_won                = len(delta_short_positions_won.index)
 
+percent_won               = (trades_won_amnt  / delta_amount ) * 100 
+percent_loss              = (trades_lost_amnt / delta_amount ) * 100
+percent_shrots_won        = (shorts_won / short_amount ) * 100
+percent_longs_won         = (longs_won / long_amount ) * 100
+# ================= STREAKS =========================
+streaks = win_calc_streak()
+win_streaks = streaks[streaks["Value"] > 0 ]
+lose_streaks = streaks[streaks["Value"] <= 0 ]
+
+win_streak_amount      = len(win_streaks.index)
+lose_streak_amount     = len(lose_streaks.index)
+#   PROFITS / LOSESS
+avg_streak_profit      =   win_streaks['Value'].mean()
+avg_streak_loss        =   lose_streaks['Value'].mean()
+max_streak_profit      =   win_streaks['Value'].max()
+max_streak_loss        =   lose_streaks['Value'].max()
+min_streak_profit      =   win_streaks['Value'].min()
+min_streak_loss        =   lose_streaks['Value'].min()
+ #  TOTAL
+avg_streak_length      = streaks['Streak_counter'].mean()
+max_streak_length      = streaks['Streak_counter'].max()
+min_streak_length      = streaks['Streak_counter'].min()
+ #  WIN
+avg_win_streak_length  = win_streaks['Streak_counter'].mean()
+max_win_streak_length  = win_streaks['Streak_counter'].max()
+min_win_streak_length  = win_streaks['Streak_counter'].min()
+ #  LOSE :
+avg_lose_streak_length = lose_streaks['Streak_counter'].mean()
+max_lose_streak_length = lose_streaks['Streak_counter'].max()
+min_lose_streak_length = lose_streaks['Streak_counter'].min()
 #print(delta_positions)
 #print(trades_won)
-print("==================STREAK SUMMERY  (Value is even Cummulative!)================")
-print(streak)
 ############################################## PRINTS ########################################
 print('========= MONEY STATUS ============')
 print("gross profits : "+str(gross_profit))
@@ -130,8 +170,34 @@ print("Trades total :"+str(len(delta_positions.index)))
 print("Trades won : " + str(len(trades_won.index))+"("+str(percent_won)+"%)")
 print("Trades lost : " + str(len(trades_lost.index))+"("+str(percent_loss)+"%)")
 print("========= extra acuuracy info =======")
-print("")
+       
+print(str(shorts_won) +" ("+str(percent_shrots_won)+"%)")
+print(str(longs_won) +" ("+str(percent_longs_won)+"%)"  )
 
+
+
+print(" ================STREA KS=================")
+print("win_streak_amount      "+     str(win_streak_amount) )
+print("lose_streak_amount     "+     str(lose_streak_amount))
+ 
+print("avg_streak_profit      : "+   str(avg_streak_profit) )
+print("avg_streak_loss        : "+   str(avg_streak_loss)   )
+print("max_streak_profit      : "+   str(max_streak_profit) )
+print("max_streak_loss        : "+   str(max_streak_loss)   )
+print("min_streak_profit      : "+   str(min_streak_profit) )
+print("min_streak_loss        : "+   str(min_streak_loss)   )
+print(" ===========================================")
+print("avg_streak_length      : "+   str(avg_streak_length) )
+print("max_streak_length      : "+   str(max_streak_length) )
+print("min_streak_length      : "+   str(min_streak_length) )
+print("     ===========================================")
+print("avg_win_streak_length  : "+    str(avg_win_streak_length))
+print("max_win_streak_length  : "+    str(max_win_streak_length))
+print("min_win_streak_length  : "+    str(min_win_streak_length))
+print("    ============================================")
+print("avg_lose_strak_length  : " +   str(avg_lose_streak_length))
+print("min_lose_streak_length : "+     str(min_lose_streak_length))
+print("max_lose_streak_length : "+     str(max_lose_streak_length))
 
 """
 delta_positions.reset_index().plot.scatter(x = 'index', y = 'Value')
