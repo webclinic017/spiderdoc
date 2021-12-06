@@ -6,4 +6,5 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 # Run the application:
 COPY SMA.py /
+COPY /input /input
 ENTRYPOINT ["python","./SMA.py"]

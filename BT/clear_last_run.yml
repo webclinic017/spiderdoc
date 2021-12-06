@@ -1,0 +1,19 @@
+---
+- name: initial_installs
+  hosts: BTServers
+  remote_user: ubuntu
+  become: true
+  tasks:
+  - name: clear out put
+    file:
+      path: /containers/output
+      state: absent
+  - name: modify permissions and properties of a directory (or create it if it doesn't exist)
+    file:
+      path: /containers/output/
+      state: directory
+      owner: ubuntu
+      group: docker
+      mode: 0766
+
+
