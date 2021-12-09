@@ -38,7 +38,7 @@ containers_up=0
 Pros=[]
 
 #build new docker image
-subprocess.call(["docker","build","-t", "backtest:1.0.0", "/appcode/spiderdoc/BT"])
+subprocess.call(["docker","build","-t", "backtest:1.0.0", "/appcode/spiderdoc/BT/containers/SMA_container"])
 
 #start containers serialy (to save RAM as CPU is at its maxUtil anyway)
 pool = multiprocessing.Pool(1)

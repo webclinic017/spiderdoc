@@ -57,22 +57,21 @@ host_amnt = len(active_hosts)
 subprocess.call(["ansible-playbook","clear_last_run.yml"])
 
 #clear ./input before spliting the master 'Symbols' file
-shutil.rmtree('/appcode/spiderdoc/BT/input')
-subprocess.call(["mkdir","./input/"])
+
 #n servers are up . create from "Symbols" n files : Symbols_1,Symbols_2..Symbols_n | n-active_hosts
-size_per_file = int((os.stat('Symbols').st_size) / host_amnt)+256
-fs.split(file="/appcode/spiderdoc/BT/Symbols", split_size=size_per_file, output_dir="/appcode/spiderdoc/BT/input/", newline=True)
+size_per_file = int((os.stat('/appcode/spiderdoc/BT/Symbols').st_size) / host_amnt)+256
+fs.split(file="/appcode/spiderdoc/BT/Symbols", split_size=size_per_file, output_dir="/appcode/spiderdoc/BT/containers/tmp/", newline=True)
 
 #m containers per server . create from "Symbols_n" m files : Symbols_n_1,Symbols_n_2..Symbols_n_m | n-active_hosts m-container amnt
 for sym_suffix_host in range(1,len(active_hosts)+1):
-    large_file_path='/appcode/spiderdoc/BT/input/Symbols_'+str(sym_suffix_host)
+    large_file_path='/appcode/spiderdoc/BT/containers/tmp/Symbols_'+str(sym_suffix_host)
     size_per_file = int((os.stat(large_file_path).st_size) / int(container_amnt))+8
-    fs.split(file=large_file_path, split_size=size_per_file, output_dir="/appcode/spiderdoc/BT/input/", newline=True)
+    fs.split(file=large_file_path, split_size=size_per_file, output_dir="/appcode/spiderdoc/BT/containers/tmp/", newline=True)
 
 #start backtest.py on all active hosts at the same time with appropriate args
 i=1
 for host in active_hosts:
-    p = multiprocessing.Process(target=cmd_over_ssh, args=(host,'python3 /appcode/spiderdoc/BT/backtest.py Symbols_'+str(i)+' '+start_date+' '+end_date+' '+run_type+' '+container_amnt+' '+prallel_proc_amnt))
+    p = multiprocessing.Process(target=cmd_over_ssh, args=(host,'python3 /appcode/spiderdoc/BT/containers/strategy/luanchers/Backtest/backtest.py Symbols_'+str(i)+' '+start_date+' '+end_date+' '+run_type+' '+container_amnt+' '+prallel_proc_amnt))
     Pros.append(p)
     p.start()
     print("started backtest on :" + host)
