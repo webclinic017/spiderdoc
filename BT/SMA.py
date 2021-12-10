@@ -242,7 +242,7 @@ Sym_file = open(file_path,"r")
 
 
 if __name__ == '__main__':
-    # start 4 worker processes
+    # start n worker processes
     with multiprocessing.Pool(processes=prallel_proc_amnt) as pool:
         pool.map_async(run_simulation,iterable=Sym_file).get()
 
