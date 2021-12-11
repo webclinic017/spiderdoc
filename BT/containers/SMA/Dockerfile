@@ -1,5 +1,5 @@
 FROM python:latest
-LABEL Name=spiderdoc Version=0.0.1
+LABEL Name=SMA Version=1.0.0
 WORKDIR /
 # Install dependencies:
 COPY ./requierments/SMA_req.txt .
