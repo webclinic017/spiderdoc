@@ -38,11 +38,11 @@ containers_up=0
 Pros=[]
 
 #build new docker image
-subprocess.call(["docker","build","-t", "backtest:1.0.0", "/appcode/spiderdoc/BT/containers/SMA_container"])
-subprocess.call(["docker","build","-t", "filebeat:17.6.0", "/appcode/spiderdoc/BT/containers/Filebeat"])
-#build filebeat image
-subprocess.call(["docker"," pull", "docker.elastic.co/beats/filebeat:7.16.0"])
-subprocess.call(["docker"," run"," -d"," --name=","filebeat"," --user=","root"," --volume=","/containers/output:/output"," docker.elastic.co/beats/filebeat:7.16.0", "filebeat", "-e" ,"-strict.perms=","false ","-E"," output.logstash.hosts=","[BT-M:9600]"])
+subprocess.call(["docker","build","-t", "backtest:1.0.0", "/appcode/spiderdoc/BT/containers/SMA/."])
+subprocess.call(["docker","build","-t", "filebeat:17.6.0", "/appcode/spiderdoc/BT/containers/Filebeat/."])
+
+#run filebeat image
+subprocess.call(["docker", "run","-v","/containers/output:/var/log/trades/", "filebeat:17.6.0"])
 #start containers serialy (to save RAM as CPU is at its maxUtil anyway)
 pool = multiprocessing.Pool(1)
 for sym in sym_list:
