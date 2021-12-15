@@ -136,15 +136,6 @@ def run_simulation(stock_to_trade):
         except:
             stock_not_avail = True
             break
-    curr_stock_historical = yf.download("TSLA","2021-11-22","2021-11-23",interval='1m')
-
-    #create figure
-    plt.figure()
-
-    #define width of candlestick elements
-    width = .0002
-    width2 = .00002
-
     #define up and down prices
     up = curr_stock_historical[curr_stock_historical.Close>=curr_stock_historical.Open]
     down = curr_stock_historical[curr_stock_historical.Close<curr_stock_historical.Open] 
@@ -156,7 +147,10 @@ def run_simulation(stock_to_trade):
     curr_stock_historical['ema_med']= ta.trend.sma_indicator(curr_stock_historical['Close'],window=30,fillna=False)
     #ema 10
     curr_stock_historical['ema_thin']= ta.trend.sma_indicator(curr_stock_historical['Close'],window=10,fillna=False)
-    max_resistance=[]
+    
+    curr_stock_historical["up_trend"] = (curr_stock_historical["Close"] > curr_stock_historical["ema_thin"] and curr_stock_historical["ema_thin"] > curr_stock_historical["ema_med"] and curr_stock_historical["ema_med"] > curr_stock_historical["ema_wide"]).all()
+    curr_stock_historical["down_trend"] = (curr_stock_historical["Close"] < curr_stock_historical["ema_thin"] and curr_stock_historical["ema_thin"] < curr_stock_historical["ema_med"] and curr_stock_historical["ema_med"] < curr_stock_historical["ema_wide"]).all()
+    max_resistance = []
     min_support = []
     k=2
     n = 7  # number of points to be checked before and after (TODO: change n based on volitility)           
@@ -183,6 +177,7 @@ def run_simulation(stock_to_trade):
     print(curr_stock_historical_max)
     print("VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV")
     print(curr_stock_historical_min)
+    
     #define colors to use
     #bar and minmax colors
 
@@ -195,6 +190,13 @@ def run_simulation(stock_to_trade):
     col4 = 'orange'
     #THIN
     col5 = 'cyan'
+    
+    #create figure
+    plt.figure()
+
+    #define width of candlestick elements
+    width = .0002
+    width2 = .00002
     #plot up prices
     plt.bar(up.index,up.Close-up.Open,width,bottom=up.Open,color=col1)
     plt.bar(up.index,up.High-up.Close,width2,bottom=up.Close,color=col1)
@@ -213,6 +215,18 @@ def run_simulation(stock_to_trade):
     #display candlestick chart ,EMA_[wide,med,thin] ,first n local min/max of 1st period of the day,
     plt.show()
     curr_stock_historical=curr_stock_historical.iloc[60:,:]
+    for index, row in curr_stock_historical['Close'].iteritems():
+        current_time = time(index.hour, index.minute, index.second)
+        
+        #set when to stop opening positions 
+        close_time = time(hour=15,minute=30,second=00)
+        
+        #what was the intent of the previos trade in positions
+        last_intent = positions.iloc[-1]['Intent']
+
+        #checks if its closing time       
+        if(close_time<current_time):
+            get_rid_of_position = True
     
 stock_to_trade = 'AAPL'
 start_date_range = '2021-12-13'
