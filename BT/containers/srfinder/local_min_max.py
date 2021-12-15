@@ -11,11 +11,7 @@ from sklearn.cluster import KMeans
 
 
 
-def k_clusters(k,df):
-    cluster_list = []
-    kmeans = KMeans(n_clusters=k).fit(df.array.reshape(-1,1))
-    centroids = kmeans.cluster_centers_
-    return centroids  
+
 def run_sim():
     curr_stock_historical = yf.download("TSLA","2021-11-22","2021-11-23",interval='1m')
 
@@ -37,33 +33,9 @@ def run_sim():
     curr_stock_historical['ema_med']= ta.trend.sma_indicator(curr_stock_historical['Close'],window=30,fillna=False)
     #ema 10
     curr_stock_historical['ema_thin']= ta.trend.sma_indicator(curr_stock_historical['Close'],window=10,fillna=False)
-    max_resistance=[]
-    min_support = []
-    k=2
-    n = 7  # number of points to be checked before and after (TODO: change n based on volitility)           
-    curr_stock_historical_min = curr_stock_historical_1.iloc[argrelextrema(curr_stock_historical_1.Close.values, np.less_equal,
-                    order=n)[0]]['Close']
-    curr_stock_historical_max = curr_stock_historical_1.iloc[argrelextrema(curr_stock_historical_1.Close.values, np.greater_equal,
-                    order=n)[0]]['Close']
-    mxr=k_clusters(k,curr_stock_historical_max)
-    mns=k_clusters(k,curr_stock_historical_min)
-    max_resistance.append(mxr)
-    min_support.append(mns)
-    for y_val in max_resistance[-1]:
-        plt.axhline(y = y_val, color ='r')
-    for y_val in min_support[-1]:
-        plt.axhline(y = y_val, color ='r')
-    plt.scatter(curr_stock_historical_min.index, curr_stock_historical_min, c='r')
-    plt.scatter(curr_stock_historical_max.index, curr_stock_historical_max, c='g')
-
     print("========================================================")
     print(curr_stock_historical)
 
-    print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-
-    print(curr_stock_historical_max)
-    print("VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV")
-    print(curr_stock_historical_min)
     #define colors to use
     #bar and minmax colors
 
@@ -93,4 +65,4 @@ def run_sim():
 
     #display candlestick chart ,EMA_[wide,med,thin] ,first n local min/max of 1st period of the day,
     plt.show()
-    
+run_sim()
