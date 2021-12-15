@@ -16,30 +16,34 @@ def k_clusters(k,df):
     kmeans = KMeans(n_clusters=k).fit(df.array.reshape(-1,1))
     centroids = kmeans.cluster_centers_
     return centroids  
-curr_stock_historical = yf.download("TSLA","2021-11-22","2021-11-23",interval='1m')
+def run_sim():
+    curr_stock_historical = yf.download("TSLA","2021-11-22","2021-11-23",interval='1m')
 
-#create figure
-plt.figure()
+    #create figure
+    plt.figure()
 
-#define width of candlestick elements
-width = .0002
-width2 = .00002
+    #define width of candlestick elements
+    width = .0002
+    width2 = .00002
 
-#define up and down prices
-up = curr_stock_historical[curr_stock_historical.Close>=curr_stock_historical.Open]
-down = curr_stock_historical[curr_stock_historical.Close<curr_stock_historical.Open] 
+    #define up and down prices
+    up = curr_stock_historical[curr_stock_historical.Close>=curr_stock_historical.Open]
+    down = curr_stock_historical[curr_stock_historical.Close<curr_stock_historical.Open] 
 
-n = 7  # number of points to be checked before and after (TODO: change n based on volitility)
-x = np.array_split(curr_stock_historical,3)
-for curr_stock_historical in x : 
-    #set basic subset run parms
+    curr_stock_historical_1 =curr_stock_historical.iloc[0:59,:]
+    #ema 60
+    curr_stock_historical['ema_wide']= ta.trend.sma_indicator(curr_stock_historical['Close'],window=60,fillna=False)
+    #ema 30
+    curr_stock_historical['ema_med']= ta.trend.sma_indicator(curr_stock_historical['Close'],window=30,fillna=False)
+    #ema 10
+    curr_stock_historical['ema_thin']= ta.trend.sma_indicator(curr_stock_historical['Close'],window=10,fillna=False)
     max_resistance=[]
     min_support = []
     k=2
     n = 7  # number of points to be checked before and after (TODO: change n based on volitility)           
-    curr_stock_historical_min = curr_stock_historical.iloc[argrelextrema(curr_stock_historical.Close.values, np.less_equal,
+    curr_stock_historical_min = curr_stock_historical_1.iloc[argrelextrema(curr_stock_historical_1.Close.values, np.less_equal,
                     order=n)[0]]['Close']
-    curr_stock_historical_max = curr_stock_historical.iloc[argrelextrema(curr_stock_historical.Close.values, np.greater_equal,
+    curr_stock_historical_max = curr_stock_historical_1.iloc[argrelextrema(curr_stock_historical_1.Close.values, np.greater_equal,
                     order=n)[0]]['Close']
     mxr=k_clusters(k,curr_stock_historical_max)
     mns=k_clusters(k,curr_stock_historical_min)
@@ -61,9 +65,17 @@ for curr_stock_historical in x :
     print("VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV")
     print(curr_stock_historical_min)
     #define colors to use
+    #bar and minmax colors
+
     col1 = 'green'
     col2 = 'red'
-
+    #Ema
+    #WIDE
+    col3 = 'purple'
+    #MED
+    col4 = 'orange'
+    #THIN
+    col5 = 'cyan'
     #plot up prices
     plt.bar(up.index,up.Close-up.Open,width,bottom=up.Open,color=col1)
     plt.bar(up.index,up.High-up.Close,width2,bottom=up.Close,color=col1)
@@ -73,9 +85,12 @@ for curr_stock_historical in x :
     plt.bar(down.index,down.Close-down.Open,width,bottom=down.Open,color=col2)
     plt.bar(down.index,down.High-down.Open,width2,bottom=down.Open,color=col2)
     plt.bar(down.index,down.Low-down.Close,width2,bottom=down.Close,color=col2)
-
+    plt.plot(curr_stock_historical.index,curr_stock_historical["ema_wide"],color=col3)
+    plt.plot(curr_stock_historical.index,curr_stock_historical["ema_med"],color=col4)
+    plt.plot(curr_stock_historical.index,curr_stock_historical["ema_thin"],color=col5)
     #rotate x-axis tick labels
     plt.xticks(rotation=45, ha='right')
 
-    #display candlestick chart
+    #display candlestick chart ,EMA_[wide,med,thin] ,first n local min/max of 1st period of the day,
     plt.show()
+    
