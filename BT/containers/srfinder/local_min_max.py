@@ -86,6 +86,19 @@ def k_clusters(k,df):
     kmeans = KMeans(n_clusters=k).fit(df.array.reshape(-1,1))
     centroids = kmeans.cluster_centers_
     return centroids  
+def get_pair(close,snr):
+    global curr_stock_historical
+    df = pd.DataFrame(columns=["level","delta"])
+    print("++++++++++++++++++")
+    print(snr)
+    print(curr_stock_historical)
+    for level in snr:
+        abs_delta=abs(close-level)
+        a_row=[level,abs_delta]
+        df_row=pd.DataFrame([a_row])
+        df = pd. concat([df_row, df], ignore_index=True)
+        df.sort_values(by=['delta'])
+        print(df)    
 def run_simulation(stock_to_trade):
     get_rid_of_position = False
     position_is_open=False
@@ -93,6 +106,8 @@ def run_simulation(stock_to_trade):
     global start_date_range 
     global end_date_range 
     global run_type 
+    global snr
+    global curr_stock_historical
     stock_to_trade=stock_to_trade.strip('\n')
    
     a = datetime.strptime(start_date_range, "%Y-%m-%d")
@@ -125,6 +140,8 @@ def run_simulation(stock_to_trade):
         #skips loop run if staurday
         if curr_date.weekday() == 5 or curr_date.weekday() == 6 :
             continue
+            #define up and down prices
+
         ########################################################################################################################
         #                                      Data and Metrics for this day are calculated Here
         #                                     ===================================================
@@ -136,97 +153,109 @@ def run_simulation(stock_to_trade):
         except:
             stock_not_avail = True
             break
-    #define up and down prices
-    up = curr_stock_historical[curr_stock_historical.Close>=curr_stock_historical.Open]
-    down = curr_stock_historical[curr_stock_historical.Close<curr_stock_historical.Open] 
+        up = curr_stock_historical[curr_stock_historical.Close>=curr_stock_historical.Open]
+        down = curr_stock_historical[curr_stock_historical.Close<curr_stock_historical.Open] 
 
-    curr_stock_historical_1 =curr_stock_historical.iloc[0:59,:]
-    #ema 60
-    curr_stock_historical['ema_wide']= ta.trend.sma_indicator(curr_stock_historical['Close'],window=60,fillna=False)
-    #ema 30
-    curr_stock_historical['ema_med']= ta.trend.sma_indicator(curr_stock_historical['Close'],window=30,fillna=False)
-    #ema 10
-    curr_stock_historical['ema_thin']= ta.trend.sma_indicator(curr_stock_historical['Close'],window=10,fillna=False)
-    
-    curr_stock_historical["up_trend"] = (curr_stock_historical["Close"] > curr_stock_historical["ema_thin"] and curr_stock_historical["ema_thin"] > curr_stock_historical["ema_med"] and curr_stock_historical["ema_med"] > curr_stock_historical["ema_wide"]).all()
-    curr_stock_historical["down_trend"] = (curr_stock_historical["Close"] < curr_stock_historical["ema_thin"] and curr_stock_historical["ema_thin"] < curr_stock_historical["ema_med"] and curr_stock_historical["ema_med"] < curr_stock_historical["ema_wide"]).all()
-    max_resistance = []
-    min_support = []
-    k=2
-    n = 7  # number of points to be checked before and after (TODO: change n based on volitility)           
-    curr_stock_historical_min = curr_stock_historical_1.iloc[argrelextrema(curr_stock_historical_1.Close.values, np.less_equal,
-                    order=n)[0]]['Close']
-    curr_stock_historical_max = curr_stock_historical_1.iloc[argrelextrema(curr_stock_historical_1.Close.values, np.greater_equal,
-                    order=n)[0]]['Close']
-    mxr=k_clusters(k,curr_stock_historical_max)
-    mns=k_clusters(k,curr_stock_historical_min)
-    max_resistance.append(mxr)
-    min_support.append(mns)
-    for y_val in max_resistance[-1]:
-        plt.axhline(y = y_val, color ='r')
-    for y_val in min_support[-1]:
-        plt.axhline(y = y_val, color ='r')
-    plt.scatter(curr_stock_historical_min.index, curr_stock_historical_min, c='r')
-    plt.scatter(curr_stock_historical_max.index, curr_stock_historical_max, c='g')
-
-    print("========================================================")
-    print(curr_stock_historical)
-
-    print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-
-    print(curr_stock_historical_max)
-    print("VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV")
-    print(curr_stock_historical_min)
-    
-    #define colors to use
-    #bar and minmax colors
-
-    col1 = 'green'
-    col2 = 'red'
-    #Ema
-    #WIDE
-    col3 = 'purple'
-    #MED
-    col4 = 'orange'
-    #THIN
-    col5 = 'cyan'
-    
-    #create figure
-    plt.figure()
-
-    #define width of candlestick elements
-    width = .0002
-    width2 = .00002
-    #plot up prices
-    plt.bar(up.index,up.Close-up.Open,width,bottom=up.Open,color=col1)
-    plt.bar(up.index,up.High-up.Close,width2,bottom=up.Close,color=col1)
-    plt.bar(up.index,up.Low-up.Open,width2,bottom=up.Open,color=col1)
-
-    #plot down prices
-    plt.bar(down.index,down.Close-down.Open,width,bottom=down.Open,color=col2)
-    plt.bar(down.index,down.High-down.Open,width2,bottom=down.Open,color=col2)
-    plt.bar(down.index,down.Low-down.Close,width2,bottom=down.Close,color=col2)
-    plt.plot(curr_stock_historical.index,curr_stock_historical["ema_wide"],color=col3)
-    plt.plot(curr_stock_historical.index,curr_stock_historical["ema_med"],color=col4)
-    plt.plot(curr_stock_historical.index,curr_stock_historical["ema_thin"],color=col5)
-    #rotate x-axis tick labels
-    plt.xticks(rotation=45, ha='right')
-
-    #display candlestick chart ,EMA_[wide,med,thin] ,first n local min/max of 1st period of the day,
-    plt.show()
-    curr_stock_historical=curr_stock_historical.iloc[60:,:]
-    for index, row in curr_stock_historical['Close'].iteritems():
-        current_time = time(index.hour, index.minute, index.second)
+        curr_stock_historical_1 =curr_stock_historical.iloc[0:59,:]
+        #ema 60
+        curr_stock_historical['ema_wide']= ta.trend.sma_indicator(curr_stock_historical['Close'],window=60,fillna=False)
+        #ema 30
+        curr_stock_historical['ema_med']= ta.trend.sma_indicator(curr_stock_historical['Close'],window=30,fillna=False)
+        #ema 10
+        curr_stock_historical['ema_thin']= ta.trend.sma_indicator(curr_stock_historical['Close'],window=10,fillna=False)
         
-        #set when to stop opening positions 
-        close_time = time(hour=15,minute=30,second=00)
-        
-        #what was the intent of the previos trade in positions
-        last_intent = positions.iloc[-1]['Intent']
+        #fill trend column
+        conditions = [
+            (curr_stock_historical['ema_wide'].lt(curr_stock_historical['ema_med'])) & (curr_stock_historical['ema_med'].lt(curr_stock_historical['ema_thin'])) & (curr_stock_historical['ema_thin'].lt(curr_stock_historical['Close'])) ,
+            (curr_stock_historical['ema_wide'].gt(curr_stock_historical['ema_med'])) & (curr_stock_historical['ema_med'].gt(curr_stock_historical['ema_thin'])) & (curr_stock_historical['ema_thin'].gt(curr_stock_historical['Close']))
+                    ]    
+    
+        choices = ['clear_up','clear_down']
+        curr_stock_historical['trend'] = np.select(conditions, choices, default=0 )
 
-        #checks if its closing time       
-        if(close_time<current_time):
-            get_rid_of_position = True
+        max_resistance = []
+        min_support = []
+        k=2
+        #get obvious local min max of first period then use k_mean cluster for sup and res levels 
+        n = 7  # number of points to be checked before and after (TODO: change n based on volitility)           
+        curr_stock_historical_min = curr_stock_historical_1.iloc[argrelextrema(curr_stock_historical_1.Close.values, np.less_equal,
+                        order=n)[0]]['Close']
+        curr_stock_historical_max = curr_stock_historical_1.iloc[argrelextrema(curr_stock_historical_1.Close.values, np.greater_equal,
+                        order=n)[0]]['Close']
+        mxr=k_clusters(k,curr_stock_historical_max)
+        mns=k_clusters(k,curr_stock_historical_min)
+        max_resistance.append(mxr)
+        min_support.append(mns)
+        snr=np.append(mxr,mns)
+        for y_val in max_resistance[-1]:
+            plt.axhline(y = y_val, color ='r')
+        for y_val in min_support[-1]:
+            plt.axhline(y = y_val, color ='g')
+        plt.scatter(curr_stock_historical_min.index, curr_stock_historical_min, c='r')
+        plt.scatter(curr_stock_historical_max.index, curr_stock_historical_max, c='g')
+        #define colors to use
+        #bar and minmax colors
+
+        col1 = 'green'
+        col2 = 'red'
+        #Ema
+        #WIDE
+        col3 = 'purple'
+        #MED
+        col4 = 'orange'
+        #THIN
+        col5 = 'cyan'
+        
+        #create figure
+
+        #define width of candlestick elements
+        width = .0002
+        width2 = .00002
+        #plot up prices
+        plt.bar(up.index,up.Close-up.Open,width,bottom=up.Open,color=col1)
+        plt.bar(up.index,up.High-up.Close,width2,bottom=up.Close,color=col1)
+        plt.bar(up.index,up.Low-up.Open,width2,bottom=up.Open,color=col1)
+
+        #plot down prices
+        plt.bar(down.index,down.Close-down.Open,width,bottom=down.Open,color=col2)
+        plt.bar(down.index,down.High-down.Open,width2,bottom=down.Open,color=col2)
+        plt.bar(down.index,down.Low-down.Close,width2,bottom=down.Close,color=col2)
+        plt.plot(curr_stock_historical.index,curr_stock_historical["ema_wide"],color=col3)
+        plt.plot(curr_stock_historical.index,curr_stock_historical["ema_med"],color=col4)
+        plt.plot(curr_stock_historical.index,curr_stock_historical["ema_thin"],color=col5)
+        #rotate x-axis tick labels
+        plt.xticks(rotation=45, ha='right')
+
+        #display candlestick chart ,EMA_[wide,med,thin] ,first n local min/max of 1st period of the day,
+        plt.show()
+        curr_stock_historical=curr_stock_historical.iloc[60:,:]
+        print("====================")
+        print(snr)
+        ##########################################################################################################################
+        #                                       RUN THROUGH DAY                                                                  #   
+        ##########################################################################################################################
+        for index, row in curr_stock_historical['Close'].iteritems():
+            current_time = time(index.hour, index.minute, index.second)
+            
+            #set when to stop opening positions 
+            close_time = time(hour=15,minute=30,second=00)
+            
+
+            #checks if its closing time       
+            if(close_time<current_time):
+                get_rid_of_position = True
+            
+            #what was the intent of the previos trade in positions
+            last_intent = positions.iloc[-1]['Intent']    
+            #current close
+            close=curr_stock_historical.loc[index]['Close']
+            #current identified trend
+            trend = curr_stock_historical.loc[index]['trend']
+            
+            sr_pair=get_pair(close,snr)
+            
+            if (get_rid_of_position==False ):
+                break
     
 stock_to_trade = 'AAPL'
 start_date_range = '2021-12-13'
