@@ -85,20 +85,32 @@ def k_clusters(k,df):
     cluster_list = []
     kmeans = KMeans(n_clusters=k).fit(df.array.reshape(-1,1))
     centroids = kmeans.cluster_centers_
-    return centroids  
+    return centroids
+def risk_fac(close,sr_pair):
+    print(type(sr_pair))   
 def get_pair(close,snr):
     global curr_stock_historical
-    df = pd.DataFrame(columns=["level","delta"])
-    print("++++++++++++++++++")
-    print(snr)
+    df = pd.DataFrame(columns=["level","delta"]) 
     print(curr_stock_historical)
+    i=0
     for level in snr:
         abs_delta=abs(close-level)
-        a_row=[level,abs_delta]
-        df_row=pd.DataFrame([a_row])
-        df = pd. concat([df_row, df], ignore_index=True)
-        df.sort_values(by=['delta'])
-        print(df)    
+        df.loc[i,'level']=level
+        df.loc[i,'delta']=abs_delta
+        i += 1
+    print(df)
+    df.sort_values(by=['delta'],ascending=True)
+    print(df)
+    print(close)
+    max=df["level"].max()
+    min=df["level"].min()
+    print("CLOSE : "+str(close))
+    if(close > max ):
+        return max
+    elif (close < min) :
+        return min
+    else:
+        return [df.iloc[-1],df.iloc[-2]]
 def run_simulation(stock_to_trade):
     get_rid_of_position = False
     position_is_open=False
@@ -229,12 +241,11 @@ def run_simulation(stock_to_trade):
         #display candlestick chart ,EMA_[wide,med,thin] ,first n local min/max of 1st period of the day,
         plt.show()
         curr_stock_historical=curr_stock_historical.iloc[60:,:]
-        print("====================")
-        print(snr)
         ##########################################################################################################################
         #                                       RUN THROUGH DAY                                                                  #   
         ##########################################################################################################################
         for index, row in curr_stock_historical['Close'].iteritems():
+            print("FOR")
             current_time = time(index.hour, index.minute, index.second)
             
             #set when to stop opening positions 
@@ -253,11 +264,35 @@ def run_simulation(stock_to_trade):
             trend = curr_stock_historical.loc[index]['trend']
             
             sr_pair=get_pair(close,snr)
-            
-            if (get_rid_of_position==False ):
+            risk_fac(close,sr_pair)
+            print("SR P:"+str(sr_pair))
+            if (position_is_open==False ):
+                if(trend=="clear_up"):
+                    
+                    position_is_open=True
+                    action='buy'
+                    intent = 'LONG'
+                    curr_price =curr_stock_historical.loc[index]['Close']
+                    stock_amnt=update_stock_amnt(balance,curr_price,action)
+                    trans_value=curr_price*stock_amnt
+                    if run_type == 'ADJ' or 'REAL' :
+                        balance=update_balance(balance,trans_value,action,intent)
+                    update_pos(index,action,curr_price,stock_amnt,trans_value,intent,balance)
+                    print("BL&")
+                elif(trend=="clear_down"):
+                    position_is_open=True
+                    action='sell'
+                    intent = 'SHORT'
+                    curr_price =curr_stock_historical.loc[index]['Close']
+                    stock_amnt=update_stock_amnt(balance,curr_price,action)
+                    trans_value=curr_price*stock_amnt
+                    if run_type == 'ADJ' or 'REAL' :
+                        balance=update_balance(balance,trans_value,action,intent)
+                    update_pos(index,action,curr_price,stock_amnt,trans_value,intent,balance)
+                    print("BS&")
+            else:
                 break
-    
-stock_to_trade = 'AAPL'
+stock_to_trade = 'TSLA'
 start_date_range = '2021-12-13'
 end_date_range = '2021-12-14'
 run_type = 'ADJ'
