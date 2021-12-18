@@ -1,4 +1,6 @@
 from contextlib import nullcontext
+from re import X
+from numpy.lib.function_base import append
 import yfinance as yf
 import pandas as pd
 import ta
@@ -10,6 +12,7 @@ from sklearn.cluster import KMeans
 from datetime import timedelta,time,datetime
 import sys
 import multiprocessing
+from sklearn.metrics import silhouette_score
 
 get_rid_of_position = False
 position_is_open=False
@@ -82,11 +85,30 @@ def update_stock_amnt (balance,stock_price,action):
 
     return stock_amnt
 
-def k_clusters(k,df):
-    cluster_list = []
-    kmeans = KMeans(n_clusters=k).fit(df.array.reshape(-1,1))
-    centroids = kmeans.cluster_centers_
-    return centroids
+def k_clusters(kmax,x):
+    sil = [None,None]
+    kmax = 10
+
+    # dissimilarity would not be defined for a single cluster, thus, minimum number of clusters should be 2
+    for k in range(2, kmax+1):
+        kmeans = KMeans(n_clusters = k)
+        preds = kmeans.fit_predict(x.array.reshape(-1,1))
+        
+        centroids=kmeans.cluster_centers_
+        sil.append(silhouette_score(x.array.reshape(-1,1), preds, metric = 'euclidean'))
+    print("------------WSS_---------------------")
+    print(sil)
+    max_value = max(sil)
+    max_index = sil.index(max_value) 
+    return centroids[max_index]
+
+def isSupport(df,i):
+  support = df['Low'][i] < df['Low'][i-1]  and df['Low'][i] < df['Low'][i+1] and df['Low'][i+1] < df['Low'][i+2] and df['Low'][i-1] < df['Low'][i-2]
+  return support
+
+def isResistance(df,i):
+  resistance = df['High'][i] > df['High'][i-1]  and df['High'][i] > df['High'][i+1] and df['High'][i+1] > df['High'][i+2] and df['High'][i-1] > df['High'][i-2]
+  return resistance
 #returns list of risk factor,if min / max  return null
 def risk_fac(close,sr_pair):
     global curr_stock_historical
@@ -206,9 +228,10 @@ def run_simulation(stock_to_trade):
     
         choices = ['clear_up','clear_down']
         curr_stock_historical['trend'] = np.select(conditions, choices, default=0 )
+        levels = []
 
         max_resistance = []
-        min_support = []
+        """ min_support = []
         k=2
         #get obvious local min max of first period then use k_mean cluster for sup and res levels 
         n = 7  # number of points to be checked before and after (TODO: change n based on volitility)           
@@ -226,7 +249,8 @@ def run_simulation(stock_to_trade):
         for y_val in min_support[-1]:
             plt.axhline(y = y_val, color ='g')
         plt.scatter(curr_stock_historical_min.index, curr_stock_historical_min, c='r')
-        plt.scatter(curr_stock_historical_max.index, curr_stock_historical_max, c='g')
+        plt.scatter(curr_stock_historical_max.index, curr_stock_historical_max, c='g') """
+        
         #define colors to use
         #bar and minmax colors
 
@@ -262,6 +286,8 @@ def run_simulation(stock_to_trade):
 
         #display candlestick chart ,EMA_[wide,med,thin] ,first n local min/max of 1st period of the day,
         plt.show()
+        
+        curr_stock_historical_bkp = curr_stock_historical
         minute_ran=60
         curr_stock_historical=curr_stock_historical.iloc[minute_ran:,:]
         ##########################################################################################################################
@@ -269,13 +295,12 @@ def run_simulation(stock_to_trade):
         ##########################################################################################################################
         for index, row in curr_stock_historical['Close'].iteritems():
             
-            print("FOR")
             current_time = time(index.hour, index.minute, index.second)
             
             #set when to stop opening positions 
             close_time = time(hour=15,minute=30,second=00)
+            print(index)
             
-
             #checks if its closing time       
             if(close_time<current_time):
                 get_rid_of_position = True
@@ -288,46 +313,32 @@ def run_simulation(stock_to_trade):
             trend = curr_stock_historical.loc[index]['trend']
             #re calc snr evry omega mins
             if minute_ran % 30 == 0:
-                curr_stock_historical_1 = curr_stock_historical.iloc[0:minute_ran,:]
-                print(curr_stock_historical_1)
-                max_resistance = []
-                min_support = []
-                k=3
-                #get obvious local min max of first period then use k_mean cluster for sup and res levels 
-                n = 3  # number of points to be checked before and after (TODO: change n based on volitility)           
-                curr_stock_historical_min = curr_stock_historical_1.iloc[argrelextrema(curr_stock_historical_1.Close.values, np.less_equal,
-                                order=n)[0]]['Close']
-                curr_stock_historical_max = curr_stock_historical_1.iloc[argrelextrema(curr_stock_historical_1.Close.values, np.greater_equal,
-                                order=n)[0]]['Close']
-                print(curr_stock_historical_max)
-                mxr=k_clusters(k,curr_stock_historical_max)
-                mns=k_clusters(k,curr_stock_historical_min)
-                max_resistance.append(mxr)
-                min_support.append(mns)
-                snr=np.append(mxr,mns)
-            
-            sr_pair=get_pair(close,snr)
-            srr=risk_fac(close,sr_pair)
-            print("SR P:"+str(sr_pair))
-            print("RF:"+str(srr))
+                levels = []
+                df = curr_stock_historical_bkp.iloc[:minute_ran,:]
+                for i in range(2,df.shape[0]-2):
+                    if isSupport(df,i):
+                        levels.append((i,df['Low'][i]))
+                    elif isResistance(df,i):
+                        levels.append((i,df['High'][i]))
+                print("==============LEVELS IN "+str(minute_ran)+" =====================")
+                print(levels)
+                for y_val in levels[-1]:
+                    plt.axhline(y = y_val, color ='r')
+                    
+                    
             if (position_is_open==False ):
                 if(trend=="clear_up"):
-                    rf= 1/srr
-                    print("RF : " + str(rf))
-                    if (rf >= 1.5): 
-                        position_is_open=True
-                        action='buy'
-                        intent = 'LONG'
-                        curr_price =curr_stock_historical.loc[index]['Close']
-                        stock_amnt=update_stock_amnt(balance,curr_price,action)
-                        trans_value=curr_price*stock_amnt
-                        if run_type == 'ADJ' or 'REAL' :
-                            balance=update_balance(balance,trans_value,action,intent)
-                        update_pos(index,action,curr_price,stock_amnt,trans_value,intent,balance)
-                        print("BL&")
+                    position_is_open=True
+                    action='buy'
+                    intent = 'LONG'
+                    curr_price =curr_stock_historical.loc[index]['Close']
+                    stock_amnt=update_stock_amnt(balance,curr_price,action)
+                    trans_value=curr_price*stock_amnt
+                    if run_type == 'ADJ' or 'REAL' :
+                        balance=update_balance(balance,trans_value,action,intent)
+                    update_pos(index,action,curr_price,stock_amnt,trans_value,intent,balance)
+                    print("BL&")
                 elif(trend=="clear_down"):
-                    rf = srr
-                    print("RF : " + str(rf))
                     position_is_open=True
                     action='sell'
                     intent = 'SHORT'
