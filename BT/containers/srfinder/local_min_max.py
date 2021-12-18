@@ -262,11 +262,13 @@ def run_simulation(stock_to_trade):
 
         #display candlestick chart ,EMA_[wide,med,thin] ,first n local min/max of 1st period of the day,
         plt.show()
-        curr_stock_historical=curr_stock_historical.iloc[60:,:]
+        minute_ran=60
+        curr_stock_historical=curr_stock_historical.iloc[minute_ran:,:]
         ##########################################################################################################################
         #                                       RUN THROUGH DAY                                                                  #   
         ##########################################################################################################################
         for index, row in curr_stock_historical['Close'].iteritems():
+            
             print("FOR")
             current_time = time(index.hour, index.minute, index.second)
             
@@ -284,25 +286,48 @@ def run_simulation(stock_to_trade):
             close=curr_stock_historical.loc[index]['Close']
             #current identified trend
             trend = curr_stock_historical.loc[index]['trend']
+            #re calc snr evry omega mins
+            if minute_ran % 30 == 0:
+                curr_stock_historical_1 = curr_stock_historical.iloc[0:minute_ran,:]
+                print(curr_stock_historical_1)
+                max_resistance = []
+                min_support = []
+                k=3
+                #get obvious local min max of first period then use k_mean cluster for sup and res levels 
+                n = 3  # number of points to be checked before and after (TODO: change n based on volitility)           
+                curr_stock_historical_min = curr_stock_historical_1.iloc[argrelextrema(curr_stock_historical_1.Close.values, np.less_equal,
+                                order=n)[0]]['Close']
+                curr_stock_historical_max = curr_stock_historical_1.iloc[argrelextrema(curr_stock_historical_1.Close.values, np.greater_equal,
+                                order=n)[0]]['Close']
+                print(curr_stock_historical_max)
+                mxr=k_clusters(k,curr_stock_historical_max)
+                mns=k_clusters(k,curr_stock_historical_min)
+                max_resistance.append(mxr)
+                min_support.append(mns)
+                snr=np.append(mxr,mns)
             
             sr_pair=get_pair(close,snr)
-            rf=risk_fac(close,sr_pair)
+            srr=risk_fac(close,sr_pair)
             print("SR P:"+str(sr_pair))
-            print("RF:"+str(rf))
+            print("RF:"+str(srr))
             if (position_is_open==False ):
                 if(trend=="clear_up"):
-                    
-                    position_is_open=True
-                    action='buy'
-                    intent = 'LONG'
-                    curr_price =curr_stock_historical.loc[index]['Close']
-                    stock_amnt=update_stock_amnt(balance,curr_price,action)
-                    trans_value=curr_price*stock_amnt
-                    if run_type == 'ADJ' or 'REAL' :
-                        balance=update_balance(balance,trans_value,action,intent)
-                    update_pos(index,action,curr_price,stock_amnt,trans_value,intent,balance)
-                    print("BL&")
+                    rf= 1/srr
+                    print("RF : " + str(rf))
+                    if (rf >= 1.5): 
+                        position_is_open=True
+                        action='buy'
+                        intent = 'LONG'
+                        curr_price =curr_stock_historical.loc[index]['Close']
+                        stock_amnt=update_stock_amnt(balance,curr_price,action)
+                        trans_value=curr_price*stock_amnt
+                        if run_type == 'ADJ' or 'REAL' :
+                            balance=update_balance(balance,trans_value,action,intent)
+                        update_pos(index,action,curr_price,stock_amnt,trans_value,intent,balance)
+                        print("BL&")
                 elif(trend=="clear_down"):
+                    rf = srr
+                    print("RF : " + str(rf))
                     position_is_open=True
                     action='sell'
                     intent = 'SHORT'
@@ -312,7 +337,7 @@ def run_simulation(stock_to_trade):
                     if run_type == 'ADJ' or 'REAL' :
                         balance=update_balance(balance,trans_value,action,intent)
                     update_pos(index,action,curr_price,stock_amnt,trans_value,intent,balance)
-
+            minute_ran += 1    
 stock_to_trade = 'AAPL'
 start_date_range = '2021-12-13'
 end_date_range = '2021-12-14'
