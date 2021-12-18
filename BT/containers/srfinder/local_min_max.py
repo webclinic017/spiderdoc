@@ -1,3 +1,4 @@
+from contextlib import nullcontext
 import yfinance as yf
 import pandas as pd
 import ta
@@ -86,12 +87,33 @@ def k_clusters(k,df):
     kmeans = KMeans(n_clusters=k).fit(df.array.reshape(-1,1))
     centroids = kmeans.cluster_centers_
     return centroids
+#returns list of risk factor,if min / max  return null
 def risk_fac(close,sr_pair):
-    print(type(sr_pair))   
-def get_pair(close,snr):
     global curr_stock_historical
+    print("srp -1----------------")
+    print(str(sr_pair[-1]))
+    print("====================")
+    if str(sr_pair[-1]) == "max":
+        return "max"
+    elif str(sr_pair[-1]) == "min":
+        return "min"
+    elif sr_pair[-1] > close:
+            print("res is : "+ str(sr_pair[-1]))
+            print("sup is : "+str(sr_pair[0]))
+            delta_res = abs(sr_pair[-1] - close)
+            delta_sup = abs(close - sr_pair[0])
+            sr_rate=delta_sup / delta_res
+            return sr_rate
+    elif sr_pair[-1] < close:
+            print("res is : "+ str(sr_pair[0]))
+            print("sup is : "+str(sr_pair[-1]))
+            delta_res = abs(sr_pair[0] - close)
+            delta_sup = abs(close - sr_pair[-1])
+            sr_rate=delta_sup / delta_res
+            return sr_rate        
+               
+def get_pair(close,snr):
     df = pd.DataFrame(columns=["level","delta"]) 
-    print(curr_stock_historical)
     i=0
     for level in snr:
         abs_delta=abs(close-level)
@@ -106,12 +128,12 @@ def get_pair(close,snr):
     min=df["level"].min()
     print("CLOSE : "+str(close))
     if(close > max ):
-        return max
+        return [max,"max"]
     elif (close < min) :
-        return min
+        return [min,"min"]
     else:
-        return [df.iloc[-1],df.iloc[-2]]
-def run_simulation(stock_to_trade):
+        return [df.iloc[-1]["level"],df.iloc[-2]["level"]]
+def run_simulation(stock_to_trade):    
     get_rid_of_position = False
     position_is_open=False
     stock_not_avail = False
@@ -264,8 +286,9 @@ def run_simulation(stock_to_trade):
             trend = curr_stock_historical.loc[index]['trend']
             
             sr_pair=get_pair(close,snr)
-            risk_fac(close,sr_pair)
+            rf=risk_fac(close,sr_pair)
             print("SR P:"+str(sr_pair))
+            print("RF:"+str(rf))
             if (position_is_open==False ):
                 if(trend=="clear_up"):
                     
@@ -289,10 +312,8 @@ def run_simulation(stock_to_trade):
                     if run_type == 'ADJ' or 'REAL' :
                         balance=update_balance(balance,trans_value,action,intent)
                     update_pos(index,action,curr_price,stock_amnt,trans_value,intent,balance)
-                    print("BS&")
-            else:
-                break
-stock_to_trade = 'TSLA'
+
+stock_to_trade = 'AAPL'
 start_date_range = '2021-12-13'
 end_date_range = '2021-12-14'
 run_type = 'ADJ'
