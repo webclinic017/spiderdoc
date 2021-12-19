@@ -304,28 +304,65 @@ def run_simulation(stock_to_trade):
             #checks if its closing time       
             if(close_time<current_time):
                 get_rid_of_position = True
-            
             #what was the intent of the previos trade in positions
             last_intent = positions.iloc[-1]['Intent']    
             #current close
             close=curr_stock_historical.loc[index]['Close']
             #current identified trend
             trend = curr_stock_historical.loc[index]['trend']
+
             #re calc snr evry omega mins
             if minute_ran % 30 == 0:
-                levels = []
+                fig, ax = plt.subplots()
+                
+                levels =[]
                 df = curr_stock_historical_bkp.iloc[:minute_ran,:]
+                df['Datetime'] = pd.to_datetime(df.index)
+                df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close']]
                 for i in range(2,df.shape[0]-2):
                     if isSupport(df,i):
                         levels.append((i,df['Low'][i]))
                     elif isResistance(df,i):
                         levels.append((i,df['High'][i]))
                 print("==============LEVELS IN "+str(minute_ran)+" =====================")
-                print(levels)
-                for y_val in levels[-1]:
-                    plt.axhline(y = y_val, color ='r')
-                    
-                    
+                for level in levels:
+                    plt.hlines(level[1],xmin=df['Datetime'][level[0]],\
+                            xmax=max(df['Datetime']),colors='blue')
+
+                #define colors to use
+                #bar and minmax colors
+                col1 = 'green'
+                col2 = 'red'
+                #Ema
+                #WIDE
+                col3 = 'purple'
+                #MED
+                col4 = 'orange'
+                #THIN
+                col5 = 'cyan'
+                
+                #create figure
+
+                #define width of candlestick elements
+                width = .0002
+                width2 = .00002
+                #plot up prices
+                plt.bar(up.index,up.Close-up.Open,width,bottom=up.Open,color=col1)
+                plt.bar(up.index,up.High-up.Close,width2,bottom=up.Close,color=col1)
+                plt.bar(up.index,up.Low-up.Open,width2,bottom=up.Open,color=col1)
+
+                #plot down prices
+                plt.bar(down.index,down.Close-down.Open,width,bottom=down.Open,color=col2)
+                plt.bar(down.index,down.High-down.Open,width2,bottom=down.Open,color=col2)
+                plt.bar(down.index,down.Low-down.Close,width2,bottom=down.Close,color=col2)
+                plt.plot(curr_stock_historical.index,curr_stock_historical["ema_wide"],color=col3)
+                plt.plot(curr_stock_historical.index,curr_stock_historical["ema_med"],color=col4)
+                plt.plot(curr_stock_historical.index,curr_stock_historical["ema_thin"],color=col5)
+                #rotate x-axis tick labels
+                plt.xticks(rotation=45, ha='right')
+
+                #display candlestick chart ,EMA_[wide,med,thin] ,first n local min/max of 1st period of the day,
+                plt.show()
             if (position_is_open==False ):
                 if(trend=="clear_up"):
                     position_is_open=True
@@ -348,7 +385,8 @@ def run_simulation(stock_to_trade):
                     if run_type == 'ADJ' or 'REAL' :
                         balance=update_balance(balance,trans_value,action,intent)
                     update_pos(index,action,curr_price,stock_amnt,trans_value,intent,balance)
-            minute_ran += 1    
+            minute_ran += 1
+            
 stock_to_trade = 'AAPL'
 start_date_range = '2021-12-13'
 end_date_range = '2021-12-14'
