@@ -109,6 +109,9 @@ def isSupport(df,i):
 def isResistance(df,i):
   resistance = df['High'][i] > df['High'][i-1]  and df['High'][i] > df['High'][i+1] and df['High'][i+1] > df['High'][i+2] and df['High'][i-1] > df['High'][i-2]
   return resistance
+
+def isFarFromLevel(l,levels,s):
+   return np.sum([abs(l-x) < s  for x in levels]) == 0
 #returns list of risk factor,if min / max  return null
 def risk_fac(close,sr_pair):
     global curr_stock_historical
@@ -319,11 +322,16 @@ def run_simulation(stock_to_trade):
                 df = curr_stock_historical_bkp.iloc[:minute_ran,:]
                 df['Datetime'] = pd.to_datetime(df.index)
                 df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close']]
+                s =  np.mean(df['High'] - df['Low'])
                 for i in range(2,df.shape[0]-2):
                     if isSupport(df,i):
-                        levels.append((i,df['Low'][i]))
+                        l = df['Low'][i]
+                        if isFarFromLevel(l,levels,s):
+                            levels.append((i,l))
                     elif isResistance(df,i):
-                        levels.append((i,df['High'][i]))
+                        l = df['High'][i]
+                        if isFarFromLevel(l,levels,s):
+                            levels.append((i,l))
                 print("==============LEVELS IN "+str(minute_ran)+" =====================")
                 for level in levels:
                     plt.hlines(level[1],xmin=df['Datetime'][level[0]],\
