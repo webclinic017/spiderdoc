@@ -217,6 +217,78 @@ def show_plt(minute_ran):
     #display candlestick chart ,EMA_[wide,med,thin] ,first n local min/max of 1st period of the day,
     plt.show()
     
+def sell_short(i):
+    global balance
+    action='sell'
+    intent = 'SHORT'
+    curr_price =curr_stock_historical['Close'][i]
+    stock_amnt=update_stock_amnt(balance,curr_price,action)
+    trans_value=curr_price*stock_amnt
+    if run_type == 'ADJ' or 'REAL' :
+        balance=update_balance(balance,trans_value,action,intent)
+    update_pos(curr_stock_historical['Datetime'][i],action,curr_price,stock_amnt,trans_value,intent,balance)
+
+def close_short(i):
+    global balance
+    action='buy'
+    intent = 'CLOSE_SHORT'
+    curr_price =curr_stock_historical['Close'][i]
+    stock_amnt =positions.iloc[-1]['Amount']
+    trans_value=curr_price*stock_amnt
+    if run_type == 'ADJ' or 'REAL' :
+        balance=update_balance(balance,trans_value,action,intent)
+    update_pos(curr_stock_historical['Datetime'][i],action,curr_price,stock_amnt,trans_value,intent,balance)  
+
+def buy_long(i):
+    global balance
+    action='buy'
+    intent = 'LONG'
+    curr_price =curr_stock_historical['Close'][i]
+    stock_amnt=update_stock_amnt(balance,curr_price,action)
+    trans_value=curr_price*stock_amnt
+    if run_type == 'ADJ' or 'REAL' :
+        balance=update_balance(balance,trans_value,action,intent)
+    update_pos(curr_stock_historical['Datetime'][i],action,curr_price,stock_amnt,trans_value,intent,balance)
+
+def close_long(i):
+    global balance
+    action='sell'
+    intent = 'CLOSE_LONG'
+    curr_price =curr_stock_historical['SMA'][i]
+    stock_amnt=positions.iloc[-1]['Amount']
+    trans_value=curr_price*stock_amnt
+    if run_type == 'ADJ' or 'REAL' :
+        balance=update_balance(balance,trans_value,action,intent)
+    update_pos(curr_stock_historical['Datetime'][i],action,curr_price,stock_amnt,trans_value,intent,balance)  
+
+def get_support(i,close):
+    global levels
+    for level in reversed(levels):
+       if level[1] <  close:
+           return level[1]
+    return 0 
+def get_resistance(i,close):
+    global levels
+    for level in reversed(levels):
+       if level[1] >  close:
+           return level[1]
+    return 0 
+
+def set_stop_loss(i):
+    global curr_stock_historical
+    close = curr_stock_historical["Close"][i]
+    trend = curr_stock_historical["trend"][i]
+    sup = get_support(i,close)
+    res= get_resistance(i,close)
+    if trend == 'clear_up':
+        print(str(((res-close)/close))+'/'+str(((res-close)/close)))
+        rrr = ((res-close)/close) / ((close-sup)/sup)
+    if trend == 'clear_down':
+        print(str(((res-close)/close))+'/'+str(((res-close)/close)))
+        rrr = ((close-sup)/sup) / ((res-close)/close)
+    else:
+        rrr = 0
+    return rrr
 
 def run_simulation(stock_to_trade):    
     get_rid_of_position = False
@@ -229,6 +301,7 @@ def run_simulation(stock_to_trade):
     global curr_stock_historical
     global curr_stock_historical_bkp
     global levels
+    global balance
     stock_to_trade=stock_to_trade.strip('\n')
    
     a = datetime.strptime(start_date_range, "%Y-%m-%d")
@@ -338,8 +411,6 @@ def run_simulation(stock_to_trade):
             #current identified trend
             trend = curr_stock_historical['trend'][i]
 
-            #show current state # TODO : remove
-
             #search for snr live
             print("REL :"+str(real_index))
             if isSupport(curr_stock_historical,i):
@@ -355,29 +426,28 @@ def run_simulation(stock_to_trade):
             if i % 30 == 0:
                 fig, ax = plt.subplots()
                 show_plt(real_index)
-                
+            #############################################################
+            #                     STRATEGY                              #
+            #############################################################
+            min_rrr = 1.2
+            max_rrr = 2.5
             if (position_is_open==False ):
                 if(trend=="clear_up"):
-                    position_is_open=True
-                    action='buy'
-                    intent = 'LONG'
-                    curr_price =curr_stock_historical['Close'][i]
-                    stock_amnt=update_stock_amnt(balance,curr_price,action)
-                    trans_value=curr_price*stock_amnt
-                    if run_type == 'ADJ' or 'REAL' :
-                        balance=update_balance(balance,trans_value,action,intent)
-                    update_pos(curr_stock_historical['Datetime'][i],action,curr_price,stock_amnt,trans_value,intent,balance)
-                    print("BL&")
+                    set_stop_loss=set_stop_loss(i)
+                    print("risk reward ratio : "+str(rrr))
+                    if rrr>min_rrr and rrr < max_rrr:
+                        position_is_open=True
+                        buy_long(i)
+                        print("BL&")
                 elif(trend=="clear_down"):
-                    position_is_open=True
-                    action='sell'
-                    intent = 'SHORT'
-                    curr_price =curr_stock_historical['Close'][i]
-                    stock_amnt=update_stock_amnt(balance,curr_price,action)
-                    trans_value=curr_price*stock_amnt
-                    if run_type == 'ADJ' or 'REAL' :
-                        balance=update_balance(balance,trans_value,action,intent)
-                    update_pos(curr_stock_historical['Datetime'][i],action,curr_price,stock_amnt,trans_value,intent,balance)
+                    rrr=set_stop_loss(i)
+                    print("risk reward ratio : "+str(rrr))
+                    if (rrr>min_rrr) and (rrr < max_rrr):
+                        position_is_open=True
+                        sell_short(i)
+                        print("SS&")
+            #else:
+                
             
 stock_to_trade = 'AAPL'
 start_date_range = '2021-12-13'
