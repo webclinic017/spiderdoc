@@ -1,5 +1,6 @@
 from contextlib import nullcontext
 from re import X
+import re
 from numpy.lib.function_base import append
 import yfinance as yf
 import pandas as pd
@@ -86,22 +87,6 @@ def update_stock_amnt (balance,stock_price,action):
 
     return stock_amnt
 
-def k_clusters(kmax,x):
-    sil = [None,None]
-    kmax = 10
-
-    # dissimilarity would not be defined for a single cluster, thus, minimum number of clusters should be 2
-    for k in range(2, kmax+1):
-        kmeans = KMeans(n_clusters = k)
-        preds = kmeans.fit_predict(x.array.reshape(-1,1))
-        
-        centroids=kmeans.cluster_centers_
-        sil.append(silhouette_score(x.array.reshape(-1,1), preds, metric = 'euclidean'))
-    print("------------WSS_---------------------")
-    print(sil)
-    max_value = max(sil)
-    max_index = sil.index(max_value) 
-    return centroids[max_index]
 
 def isSupport(df,i):
   support = df['Low'][i] < df['Low'][i-1]  and df['Low'][i] < df['Low'][i+1] and df['Low'][i+1] < df['Low'][i+2] and df['Low'][i-1] < df['Low'][i-2]
@@ -114,51 +99,6 @@ def isResistance(df,i):
 def isFarFromLevel(l,levels,s):
    return np.sum([abs(l-x) < s  for x in levels]) == 0
 #returns list of risk factor,if min / max  return null
-def risk_fac(close,sr_pair):
-    global curr_stock_historical
-    print("srp -1----------------")
-    print(str(sr_pair[-1]))
-    print("====================")
-    if str(sr_pair[-1]) == "max":
-        return "max"
-    elif str(sr_pair[-1]) == "min":
-        return "min"
-    elif sr_pair[-1] > close:
-            print("res is : "+ str(sr_pair[-1]))
-            print("sup is : "+str(sr_pair[0]))
-            delta_res = abs(sr_pair[-1] - close)
-            delta_sup = abs(close - sr_pair[0])
-            sr_rate=delta_sup / delta_res
-            return sr_rate
-    elif sr_pair[-1] < close:
-            print("res is : "+ str(sr_pair[0]))
-            print("sup is : "+str(sr_pair[-1]))
-            delta_res = abs(sr_pair[0] - close)
-            delta_sup = abs(close - sr_pair[-1])
-            sr_rate=delta_sup / delta_res
-            return sr_rate        
-               
-def get_pair(close,snr):
-    df = pd.DataFrame(columns=["level","delta"]) 
-    i=0
-    for level in snr:
-        abs_delta=abs(close-level)
-        df.loc[i,'level']=level
-        df.loc[i,'delta']=abs_delta
-        i += 1
-    print(df)
-    df.sort_values(by=['delta'],ascending=True)
-    print(df)
-    print(close)
-    max=df["level"].max()
-    min=df["level"].min()
-    print("CLOSE : "+str(close))
-    if(close > max ):
-        return [max,"max"]
-    elif (close < min) :
-        return [min,"min"]
-    else:
-        return [df.iloc[-1]["level"],df.iloc[-2]["level"]]
 
 def show_plt(minute_ran):
     global curr_stock_historical_bkp
@@ -217,12 +157,12 @@ def show_plt(minute_ran):
     #display candlestick chart ,EMA_[wide,med,thin] ,first n local min/max of 1st period of the day,
     plt.show()
     
-def sell_short(i):
+def sell_short(i,stock_amnt_to_order):
     global balance
     action='sell'
     intent = 'SHORT'
     curr_price =curr_stock_historical['Close'][i]
-    stock_amnt=update_stock_amnt(balance,curr_price,action)
+    stock_amnt=stock_amnt_to_order
     trans_value=curr_price*stock_amnt
     if run_type == 'ADJ' or 'REAL' :
         balance=update_balance(balance,trans_value,action,intent)
@@ -239,12 +179,12 @@ def close_short(i):
         balance=update_balance(balance,trans_value,action,intent)
     update_pos(curr_stock_historical['Datetime'][i],action,curr_price,stock_amnt,trans_value,intent,balance)  
 
-def buy_long(i):
+def buy_long(i,stock_amnt_to_order):
     global balance
     action='buy'
     intent = 'LONG'
     curr_price =curr_stock_historical['Close'][i]
-    stock_amnt=update_stock_amnt(balance,curr_price,action)
+    stock_amnt=stock_amnt_to_order
     trans_value=curr_price*stock_amnt
     if run_type == 'ADJ' or 'REAL' :
         balance=update_balance(balance,trans_value,action,intent)
@@ -274,22 +214,46 @@ def get_resistance(i,close):
            return level[1]
     return 0 
 
-def set_stop_loss(i):
+def set_stop_and_target(i):
     global curr_stock_historical
+    global balance
+    max_risk = balance * 0.02
     close = curr_stock_historical["Close"][i]
     trend = curr_stock_historical["trend"][i]
     sup = get_support(i,close)
     res= get_resistance(i,close)
     if trend == 'clear_up':
-        print(str(((res-close)/close))+'/'+str(((res-close)/close)))
         rrr = ((res-close)/close) / ((close-sup)/sup)
     if trend == 'clear_down':
-        print(str(((res-close)/close))+'/'+str(((res-close)/close)))
         rrr = ((close-sup)/sup) / ((res-close)/close)
     else:
         rrr = 0
     return rrr
 
+def stock_amnt_order(close,level):
+    global balance
+    close_level_delta = abs(close-level)
+    max_money_risk = balance * 0.02
+    stock_amnt_order = max_money_risk / close_level_delta
+    return stock_amnt_order
+
+def potential_delta(stock_amnt_order,close,level):
+    if level==0:
+        return 0
+    #logical else
+    close_level_delta = abs(close-level)
+    pot_delta = close_level_delta * stock_amnt_order
+    return pot_delta
+    
+def get_target_price(level,close):
+    delta = abs(close-level)
+    delta_target = delta *1.5
+    if(level >= close):
+        tp=close-delta_target
+    else:
+        tp = close + delta_target
+    return tp
+    
 def run_simulation(stock_to_trade):    
     get_rid_of_position = False
     position_is_open=False
@@ -383,15 +347,13 @@ def run_simulation(stock_to_trade):
                 l = curr_stock_historical_prerun['High'][i]
                 if isFarFromLevel(l,levels,s):
                     levels.append((i,l))
-            print(str(i))
         show_plt(minute_ran)
 
         curr_stock_historical=curr_stock_historical_bkp.iloc[minute_ran:,:]
         curr_stock_historical['Datetime'] = pd.to_datetime(curr_stock_historical.index)
         curr_stock_historical = curr_stock_historical.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','ema_thin','ema_med','ema_wide','trend']]
         s =  np.mean(curr_stock_historical['High'] - curr_stock_historical['Low'])    
-        print(curr_stock_historical)
-        print(curr_stock_historical.shape[0])
+        
         ##########################################################################################################################
         #                                       RUN THROUGH DAY                                                                  #   
         ##########################################################################################################################
@@ -400,7 +362,6 @@ def run_simulation(stock_to_trade):
             real_index = i + minute_ran 
             #set when to stop opening positions 
             close_time = 360
-            print(curr_stock_historical['Datetime'][i])
             #checks if its closing time       
             if(close_time<i):
                 get_rid_of_position = True
@@ -412,7 +373,6 @@ def run_simulation(stock_to_trade):
             trend = curr_stock_historical['trend'][i]
 
             #search for snr live
-            print("REL :"+str(real_index))
             if isSupport(curr_stock_historical,i):
                 l = curr_stock_historical['Low'][i]
                 if isFarFromLevel(l,levels,s):
@@ -421,35 +381,67 @@ def run_simulation(stock_to_trade):
                 l = curr_stock_historical['High'][i]
                 if isFarFromLevel(l,levels,s):
                     levels.append((real_index,l))
-
+            
+            sup = get_support(i,close)
+            print('S : '+ str(sup))
+            res= get_resistance(i,close)
+            print('R : '+ str(res))
             #show current state # TODO : remove            
             if i % 30 == 0:
                 fig, ax = plt.subplots()
                 show_plt(real_index)
+                print(positions)
             #############################################################
             #                     STRATEGY                              #
             #############################################################
             min_rrr = 1.2
             max_rrr = 2.5
+            rrr = 0
+            #Open Position
             if (position_is_open==False ):
                 if(trend=="clear_up"):
-                    set_stop_loss=set_stop_loss(i)
+                    stock_amnt_to_order = stock_amnt_order(close,sup)
+                    print(str(stock_amnt_to_order)+" is order amount")
+
+                    potential_money_risked = potential_delta(stock_amnt_to_order,close,sup)
+                    potential_money_gained = potential_delta(stock_amnt_to_order,close,res)
+
+                    if potential_money_gained != 0:
+                        rrr = potential_money_risked / potential_money_gained
+                    elif potential_money_gained == 0:
+                        rrr = 1.5
+                        
                     print("risk reward ratio : "+str(rrr))
                     if rrr>min_rrr and rrr < max_rrr:
                         position_is_open=True
-                        buy_long(i)
+                        buy_long(i,stock_amnt_to_order)
                         print("BL&")
+                        target_price= get_target_price(res,close)
+                        stop_loss = sup
+                                
                 elif(trend=="clear_down"):
-                    rrr=set_stop_loss(i)
+                    stock_amnt_to_order = stock_amnt_order(close,res)
+                    print(str(stock_amnt_to_order)+" is order amount")
+
+                    potential_money_risked = potential_delta(stock_amnt_to_order,close,res)
+                    potential_money_gained = potential_delta(stock_amnt_to_order,close,sup)
+
+                    if potential_money_gained != 0:
+                        rrr = potential_money_risked / potential_money_gained
+                    elif potential_money_gained == 0:
+                        rrr = 1.5
+
                     print("risk reward ratio : "+str(rrr))
                     if (rrr>min_rrr) and (rrr < max_rrr):
                         position_is_open=True
-                        sell_short(i)
+                        sell_short(i,stock_amnt_to_order)
                         print("SS&")
+                        target_price= get_target_price(res,close)
+                        stop_loss = sup
             #else:
                 
             
-stock_to_trade = 'AAPL'
+stock_to_trade = 'TSLA'
 start_date_range = '2021-12-13'
 end_date_range = '2021-12-14'
 run_type = 'ADJ'
