@@ -107,8 +107,7 @@ def show_plt(minute_ran):
     df = curr_stock_historical_bkp.iloc[:minute_ran+1,:]
     df['Datetime'] = pd.to_datetime(df.index)
     df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close']]
-    print("==============LEVELS IN "+str(minute_ran)+" =====================")
-    print(levels)
+
     for level in levels:
         plt.hlines(level[1],xmin=df['Datetime'][level[0]],\
                 xmax=max(df['Datetime']),colors='blue')
@@ -253,7 +252,22 @@ def get_target_price(level,close):
     else:
         tp = close + delta_target
     return tp
+   
+def is_bull_hammer(df,i):
     
+    return 0
+def is_bear_hammer():
+    return 0
+def is_bull_engulf():
+    return 0
+def is_bear_engulf():
+    return 0
+   
+def patter_indicator():
+#bull patter recognize func call
+
+#bear patter recognize func call 
+    return 0    
 def run_simulation(stock_to_trade):    
     get_rid_of_position = False
     position_is_open=False
@@ -381,7 +395,7 @@ def run_simulation(stock_to_trade):
                 l = curr_stock_historical['High'][i]
                 if isFarFromLevel(l,levels,s):
                     levels.append((real_index,l))
-            
+            pir=patter_indicator()
             sup = get_support(i,close)
             print('S : '+ str(sup))
             res= get_resistance(i,close)
@@ -397,7 +411,7 @@ def run_simulation(stock_to_trade):
             min_rrr = 1.2
             max_rrr = 2.5
             rrr = 0
-            #Open Position
+            #look for entrance criteria
             if (position_is_open==False ):
                 if(trend=="clear_up"):
                     stock_amnt_to_order = stock_amnt_order(close,sup)
@@ -438,10 +452,20 @@ def run_simulation(stock_to_trade):
                         print("SS&")
                         target_price= get_target_price(res,close)
                         stop_loss = sup
+            #look for exit criteria 
             #else:
+                #get position delta
+                #get intent
+                #intent == long
+                    #trend is up - hold position
+                        #delta > target
+                            #trend is up then manage_risk() - sell n% of position to cover risk amount
+
+                    
+                
                 
             
-stock_to_trade = 'TSLA'
+stock_to_trade = 'A'
 start_date_range = '2021-12-13'
 end_date_range = '2021-12-14'
 run_type = 'ADJ'
