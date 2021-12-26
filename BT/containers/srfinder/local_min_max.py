@@ -5,6 +5,7 @@ from numpy.lib.function_base import append
 import yfinance as yf
 import pandas as pd
 import ta
+import talib
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mpl_dates
@@ -368,6 +369,9 @@ def run_simulation(stock_to_trade):
         curr_stock_historical = curr_stock_historical.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','ema_thin','ema_med','ema_wide','trend']]
         s =  np.mean(curr_stock_historical['High'] - curr_stock_historical['Low'])    
         
+        #for patter recognition        
+        candle_names = talib.get_function_groups()['Pattern Recognition']
+        print(candle_names)
         ##########################################################################################################################
         #                                       RUN THROUGH DAY                                                                  #   
         ##########################################################################################################################
