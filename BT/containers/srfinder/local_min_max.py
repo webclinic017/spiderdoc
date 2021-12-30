@@ -382,11 +382,11 @@ def get_target_price(level,close):
     return tp
    
    
-def insert_pattern(cdf,i):
-    global curr_stock_historical
+def get_pattern_df(i):
+    global curr_stock_historical_bkp
     global candle_rankings
 
-    df = curr_stock_historical.iloc[:i,:]
+    df = curr_stock_historical_bkp.iloc[:i,:]
 # extract OHLC 
     op = df['Open']
     hi = df['High']
@@ -426,17 +426,22 @@ def insert_pattern(cdf,i):
             # filter out pattern names from bool list of values
             patterns = list(compress(row[candle_names].keys(), row[candle_names].values != 0))
             container = []
+            container_val = 0
             for pattern in patterns:
                 if row[pattern] > 0:
                     container.append(pattern + '_Bull')
+                    container_val += 1
                 else:
                     container.append(pattern + '_Bear')
+                    container_val -= 1
             rank_list = [candle_rankings[p] for p in container]
             if len(rank_list) == len(container):
                 rank_index_best = rank_list.index(min(rank_list))
                 df.loc[index, 'candlestick_pattern'] = container[rank_index_best]
+                df.loc[index, 'pattern_val'] = container_val
                 df.loc[index, 'candlestick_match_count'] = len(container)
     # clean up candle columns
+    df['pattern_val']=df['pattern_val'].fillna(0)
     df.drop(candle_names, axis = 1, inplace = True)
     return df
 
@@ -514,10 +519,13 @@ def run_simulation(stock_to_trade):
         #fill trend column
         conditions = [
             (curr_stock_historical['ema_wide'].lt(curr_stock_historical['ema_med'])) & (curr_stock_historical['ema_med'].lt(curr_stock_historical['ema_thin'])) & (curr_stock_historical['ema_thin'].lt(curr_stock_historical['Close'])) ,
-            (curr_stock_historical['ema_wide'].gt(curr_stock_historical['ema_med'])) & (curr_stock_historical['ema_med'].gt(curr_stock_historical['ema_thin'])) & (curr_stock_historical['ema_thin'].gt(curr_stock_historical['Close']))
+            (curr_stock_historical['ema_wide'].gt(curr_stock_historical['ema_med'])) & (curr_stock_historical['ema_med'].gt(curr_stock_historical['ema_thin'])) & (curr_stock_historical['ema_thin'].gt(curr_stock_historical['Close'])),
+            (curr_stock_historical['ema_wide'].gt(curr_stock_historical['ema_med']))  & (curr_stock_historical['ema_med'].lt(curr_stock_historical['Close'])),
+            (curr_stock_historical['ema_wide'].lt(curr_stock_historical['ema_med']))  & (curr_stock_historical['ema_med'].gt(curr_stock_historical['Close']))
+
                     ]    
     
-        choices = ['clear_up','clear_down']
+        choices = ['clear_up','clear_down','up_shift_close_x_med','down_shift_close_x_med']
         curr_stock_historical['trend'] = np.select(conditions, choices, default=0 )
         levels = []
         curr_stock_historical_bkp = curr_stock_historical
@@ -546,8 +554,8 @@ def run_simulation(stock_to_trade):
         #for patter recognition (global to feach it ones only)    
         candle_names = talib.get_function_groups()['Pattern Recognition']
         
-        candle_df = pd.DataFrame(columns=["Datetime"])
-        candle_df =candle_df.loc[:,['Datetime']]
+        pattern_df = pd.DataFrame(columns=["Datetime"])
+        pattern_df =pattern_df.loc[:,['Datetime']]
         
         ##########################################################################################################################
         #                                       RUN THROUGH DAY                                                                  #   
@@ -567,8 +575,8 @@ def run_simulation(stock_to_trade):
             #current identified trend
             trend = curr_stock_historical['trend'][i]
             
-            #fill candle pattern overtime
-            candle_df = insert_pattern(candle_df,i)
+            
+
             
             
             #search for snr live
@@ -598,7 +606,7 @@ def run_simulation(stock_to_trade):
             rrr = 0
             #look for entrance criteria
             if (position_is_open==False ):
-                if(trend=="clear_up"):
+                if(trend=="clear_up" or trend=='up_shift_close_x_med'):
                     stock_amnt_to_order = stock_amnt_order(close,sup)
                     print(str(stock_amnt_to_order)+" is order amount")
 
@@ -612,13 +620,20 @@ def run_simulation(stock_to_trade):
                         
                     print("risk reward ratio : "+str(rrr))
                     if rrr>min_rrr and rrr < max_rrr:
-                        position_is_open=True
-                        buy_long(i,stock_amnt_to_order)
-                        print("BL&")
-                        target_price= get_target_price(res,close)
-                        stop_loss = sup
-                                
-                elif(trend=="clear_down"):
+                        pattern_df = get_pattern_df(real_index)
+                        print(pattern_df)
+                        candle_rating = pattern_df['pattern_val'].rolling(5).sum()
+                        print("####################")
+                        print(candle_rating[i])
+                        if candle_rating[i] > 5:
+                            position_is_open=True
+                            buy_long(i,stock_amnt_to_order)
+                            print("BL&")
+                            target_price= get_target_price(res,close)
+                            stop_loss = sup
+                            print(positions)
+   
+                elif(trend=="clear_down" or trend == ' down_shift_close_x_med'):
                     stock_amnt_to_order = stock_amnt_order(close,res)
                     print(str(stock_amnt_to_order)+" is order amount")
 
@@ -632,25 +647,63 @@ def run_simulation(stock_to_trade):
 
                     print("risk reward ratio : "+str(rrr))
                     if (rrr>min_rrr) and (rrr < max_rrr):
-                        position_is_open=True
-                        sell_short(i,stock_amnt_to_order)
-                        print("SS&")
-                        target_price= get_target_price(res,close)
-                        stop_loss = sup
+                                    #fill candle pattern overtime
+                        pattern_df = get_pattern_df(real_index)
+                        print(pattern_df)
+                        candle_rating = pattern_df['pattern_val'].rolling(window=5).sum()
+                        print("####################")
+                        print(candle_rating[i])
+                        if candle_rating[i] < -5:
+                            position_is_open=True
+                            sell_short(i,stock_amnt_to_order)
+                            print("SS&")
+                            target_price= get_target_price(res,close)
+                            stop_loss = res
+                            print(positions)
             #look for exit criteria 
-            #else:
-                #get position delta
-                #get intent
+            else:
+                intent=positions.iloc[-1]['Intent']
+                print("############CLOSE POS REP###############")
+                print("intent : "+intent)
+                print("close : "+str(close))
+                print("target : "+str(target_price))
+                print("stop loss : "+ str(stop_loss))
+                print("############CLOSE POS REP###############")
+                if intent=='SHORT':
+                    if close >= stop_loss:
+                        print("STOP LOSS!!!!!!")
+                        #close short
+                    elif trend == 'clear_up' or trend == 'up_shift_close_x_med':
+                        candle_rating = pattern_df['pattern_val'].rolling(window=5).sum()
+                        print("####################")
+                        print(candle_rating[i])
+                        if candle_rating[i] >= 5:
+                            print("^ - BULL REVERSAL ON SHORT POS DETECTED - ^")
+                    elif close <= target_price:
+                        print("TARGET REACHED")
+                        #check for bullish revesal wih candle_rating
+                elif intent=='LONG':
+                    if close <= stop_loss:
+                        print("STOP LOSS!!!!!!")
+                        #close short
+                    elif trend == 'clear_up' or trend == 'up_shift_close_x_med':
+                        candle_rating = pattern_df['pattern_val'].rolling(window=5).sum()
+                        print("####################")
+                        print(candle_rating[i])
+                        if candle_rating[i] <= -5:
+                            print("V - BEAR REVERSAL ON SHORT POS DETECTED - V")
+                    elif close >= target_price:
+                        print("TARGET REACHED")
+                        #check for bullish revesal wih candle_rating                       
                 #intent == long
                     #trend is up - hold position
                         #delta > target
                             #trend is up then manage_risk() - sell n% of position to cover risk amount
-
                     
                 
                 
             
-stock_to_trade = 'A'
+stock_to_trade = 'AAPL'
 start_date_range = '2021-12-13'
 end_date_range = '2021-12-14'
 run_type = 'ADJ'
