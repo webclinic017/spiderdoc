@@ -18,6 +18,7 @@ import multiprocessing
 from sklearn.metrics import silhouette_score
 
 from itertools import compress
+pd.options.mode.chained_assignment = None  # default='warn'
 
 global candle_rankings
 
@@ -228,14 +229,79 @@ def isFarFromLevel(l,levels,s):
    return np.sum([abs(l-x) < s  for x in levels]) == 0
 #returns list of risk factor,if min / max  return null
 
+def clean_levels(minute_ran):
+    global levels
+    global curr_stock_historical_bkp
+    df =curr_stock_historical_bkp
+    df['Datetime'] = pd.to_datetime(curr_stock_historical_bkp.index)
+    df = curr_stock_historical_bkp.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','ema_thin','ema_med','ema_wide','trend']]
+    df =curr_stock_historical_bkp.iloc[0:minute_ran,:]
+
+    new_levels = []
+    n=10
+    range_arg_extrema_counts = 2
+    curr_stock_historical_min = df.iloc[argrelextrema(df.Close.values, np.less_equal,
+            order=n)[0]]['Low']
+    curr_stock_historical_max = df.iloc[argrelextrema(df.Close.values, np.greater_equal,
+            order=n)[0]]['High']
+    curr_stock_historical_min['Datetime'] = pd.to_datetime(curr_stock_historical_min.index)
+     
+    curr_stock_historical_max['Datetime'] = pd.to_datetime(curr_stock_historical_max.index)
+
+    print(str(len(levels)))
+    for i in range(len(levels)):
+        lvl_idx=levels[i][0]
+        print("LVL_IDX "+str(lvl_idx))
+        for k in range(len(curr_stock_historical_min.index)-1):
+            s1 = str(curr_stock_historical_bkp['Datetime'][0])
+            s2 = str(curr_stock_historical_min['Datetime'][k])
+            print("s 1 : "+s1)
+            print("s 2 : "+s2)
+            print("lvl[i][0] "+ str(levels[i][0]))
+            format = '%Y-%m-%d %H:%M:%S%z'
+            tdelta = datetime.strptime(s2, format) - datetime.strptime(s1, format)
+            print('tdelta : '+str(tdelta))
+
+            delta = tdelta.seconds / 60
+            print(str(delta))
+            if lvl_idx in range(int(delta)-range_arg_extrema_counts,int(delta)+range_arg_extrema_counts):
+                found_exrma_next_to_lvl =True
+                new_levels.append((lvl_idx,levels[i][1]))
+                
+            """ if found_exrma_next_to_lvl==True:
+            break  """         
+        for k in range(len(curr_stock_historical_max.index)-1):
+            s1 = str(curr_stock_historical_bkp['Datetime'][0])
+            s2 = str(curr_stock_historical_max['Datetime'][k])
+            print("s 1 : "+s1)
+            print("s 2 : "+s2)
+            print("lvl[i][0] "+ str(levels[i][0]))
+            format = '%Y-%m-%d %H:%M:%S%z'
+            tdelta = datetime.strptime(s2, format) - datetime.strptime(s1, format)
+            print('tdelta : '+str(tdelta))
+            delta = tdelta.seconds / 60 
+            
+            print("delta : "+str(delta))
+            if lvl_idx in range(int(delta)-range_arg_extrema_counts,int(delta)+range_arg_extrema_counts):
+                new_levels.append((lvl_idx,levels[i][1]))
+                found_exrma_next_to_lvl =True
+                break
+                
+
+        print("==============NEW LVLs===============")
+        print(new_levels)
+    return new_levels        
+            
 def show_plt(minute_ran):
     global curr_stock_historical_bkp
     global levels
+    global positions
     curr_stock_historical_1 =curr_stock_historical_bkp.iloc[0:minute_ran,:]
     df = curr_stock_historical_bkp.iloc[:minute_ran+1,:]
     df['Datetime'] = pd.to_datetime(df.index)
     df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close']]
-
+    
+    fig, ax = plt.subplots()
     for level in levels:
         plt.hlines(level[1],xmin=df['Datetime'][level[0]],\
                 xmax=max(df['Datetime']),colors='blue')
@@ -280,7 +346,16 @@ def show_plt(minute_ran):
     plt.plot(curr_stock_historical.index,curr_stock_historical["ema_thin"],color=col5)
     #rotate x-axis tick labels
     plt.xticks(rotation=45, ha='right')
-
+    positions_long = positions[positions['Intent'] == "LONG"]
+    positions_closed_longs = positions[positions['Intent'] == "CLOSE_LONG"]
+    positions_short =  positions[positions['Intent'] == "SHORT"]
+    positions_closed_short = positions[positions['Intent'] == "CLOSE_SHORT"]
+    
+    plt.scatter(positions_long.index,positions_long['Price'],marker='^',color="green")
+    plt.scatter(positions_closed_longs.index,positions_closed_longs['Price'],marker='^',color="red")
+    plt.scatter(positions_short.index,positions_short['Price'],marker='v',color="green")
+    plt.scatter(positions_closed_short.index,positions_closed_short['Price'],marker='v',color="red")
+    
     #display candlestick chart ,EMA_[wide,med,thin] ,first n local min/max of 1st period of the day,
     plt.show()
     
@@ -321,12 +396,12 @@ def close_long(i):
     global balance
     action='sell'
     intent = 'CLOSE_LONG'
-    curr_price =curr_stock_historical['SMA'][i]
+    curr_price =curr_stock_historical['Close'][i]
     stock_amnt=positions.iloc[-1]['Amount']
     trans_value=curr_price*stock_amnt
     if run_type == 'ADJ' or 'REAL' :
         balance=update_balance(balance,trans_value,action,intent)
-    update_pos(curr_stock_historical['Datetime'][i],action,curr_price,stock_amnt,trans_value,intent,balance)  
+    update_pos(curr_stock_historical['Datetime'][i],action,curr_price,stock_amnt,trans_value,intent,balance)     
 
 def get_support(i,close):
     global levels
@@ -360,8 +435,15 @@ def set_stop_and_target(i):
 def stock_amnt_order(close,level):
     global balance
     close_level_delta = abs(close-level)
-    max_money_risk = balance * 0.02
-    stock_amnt_order = max_money_risk / close_level_delta
+    max_amnt=int(balance/close)
+    max_tval=max_amnt * close
+    starting_max_risk=close_level_delta*max_amnt
+    desired_max_risk= balance * 0.02
+    if starting_max_risk >= desired_max_risk:
+        devide_coff=(starting_max_risk/desired_max_risk)
+        stock_amnt_order = (max_amnt / devide_coff)
+    else:
+        stock_amnt_order=max_amnt
     return stock_amnt_order
 
 def potential_delta(stock_amnt_order,close,level):
@@ -387,7 +469,7 @@ def get_pattern_df(i):
     global candle_rankings
 
     df = curr_stock_historical_bkp.iloc[:i,:]
-# extract OHLC 
+    # extract OHLC 
     op = df['Open']
     hi = df['High']
     lo = df['Low']
@@ -445,8 +527,7 @@ def get_pattern_df(i):
     df.drop(candle_names, axis = 1, inplace = True)
     return df
 
-#bear patter recognize func call 
-    return 0    
+
 def run_simulation(stock_to_trade):    
     get_rid_of_position = False
     position_is_open=False
@@ -460,6 +541,7 @@ def run_simulation(stock_to_trade):
     global levels
     global balance
     global candle_names
+    global positions
     stock_to_trade=stock_to_trade.strip('\n')
    
     a = datetime.strptime(start_date_range, "%Y-%m-%d")
@@ -518,10 +600,10 @@ def run_simulation(stock_to_trade):
         
         #fill trend column
         conditions = [
-            (curr_stock_historical['ema_wide'].lt(curr_stock_historical['ema_med'])) & (curr_stock_historical['ema_med'].lt(curr_stock_historical['ema_thin'])) & (curr_stock_historical['ema_thin'].lt(curr_stock_historical['Close'])) ,
-            (curr_stock_historical['ema_wide'].gt(curr_stock_historical['ema_med'])) & (curr_stock_historical['ema_med'].gt(curr_stock_historical['ema_thin'])) & (curr_stock_historical['ema_thin'].gt(curr_stock_historical['Close'])),
-            (curr_stock_historical['ema_wide'].gt(curr_stock_historical['ema_med']))  & (curr_stock_historical['ema_med'].lt(curr_stock_historical['Close'])),
-            (curr_stock_historical['ema_wide'].lt(curr_stock_historical['ema_med']))  & (curr_stock_historical['ema_med'].gt(curr_stock_historical['Close']))
+            (curr_stock_historical['ema_wide'].lt(curr_stock_historical['ema_med'])) & (curr_stock_historical['ema_med'].lt(curr_stock_historical['ema_thin'])),
+            (curr_stock_historical['ema_wide'].gt(curr_stock_historical['ema_med'])) & (curr_stock_historical['ema_med'].gt(curr_stock_historical['ema_thin'])),
+            (curr_stock_historical['ema_wide'].gt(curr_stock_historical['ema_med']))  & (curr_stock_historical['ema_med'].lt(curr_stock_historical['ema_thin'])) & (curr_stock_historical['ema_wide'].lt(curr_stock_historical['ema_thin'])),
+            (curr_stock_historical['ema_wide'].lt(curr_stock_historical['ema_med']))  & (curr_stock_historical['ema_med'].gt(curr_stock_historical['ema_thin'])) & (curr_stock_historical['ema_wide'].gt(curr_stock_historical['ema_thin']))
 
                     ]    
     
@@ -561,7 +643,6 @@ def run_simulation(stock_to_trade):
         #                                       RUN THROUGH DAY                                                                  #   
         ##########################################################################################################################
         for i in range(2,curr_stock_historical.shape[0]-2):
-            print(i)
             real_index = i + minute_ran 
             #set when to stop opening positions 
             close_time = 360
@@ -588,122 +669,137 @@ def run_simulation(stock_to_trade):
                 l = curr_stock_historical['High'][i]
                 if isFarFromLevel(l,levels,s):
                     levels.append((real_index,l))
-            sup = get_support(i,close)
-            print('S : '+ str(sup))
-            res= get_resistance(i,close)
-            print('R : '+ str(res))
+
             #show current state # TODO : remove            
             if i % 30 == 0:
-                fig, ax = plt.subplots()
-                show_plt(real_index)
-                print(positions)
-            
+                levels = clean_levels(real_index)
+                #print(positions)
+            sup = get_support(i,close)
+            res= get_resistance(i,close)   
             #############################################################
             #                     STRATEGY                              #
             #############################################################
             min_rrr = 1.2
-            max_rrr = 2.5
+            max_rrr = 5
+            enter_rating =7
+            target_reached_rating=5
             rrr = 0
             #look for entrance criteria
             if (position_is_open==False ):
-                if(trend=="clear_up" or trend=='up_shift_close_x_med'):
+                if(trend=="clear_down" or trend=='up_shift_close_x_med'):
                     stock_amnt_to_order = stock_amnt_order(close,sup)
-                    print(str(stock_amnt_to_order)+" is order amount")
 
                     potential_money_risked = potential_delta(stock_amnt_to_order,close,sup)
                     potential_money_gained = potential_delta(stock_amnt_to_order,close,res)
 
                     if potential_money_gained != 0:
-                        rrr = potential_money_risked / potential_money_gained
+                        rrr = potential_money_gained / potential_money_risked
                     elif potential_money_gained == 0:
                         rrr = 1.5
                         
-                    print("risk reward ratio : "+str(rrr))
                     if rrr>min_rrr and rrr < max_rrr:
                         pattern_df = get_pattern_df(real_index)
-                        print(pattern_df)
-                        candle_rating = pattern_df['pattern_val'].rolling(5).sum()
-                        print("####################")
-                        print(candle_rating[i])
-                        if candle_rating[i] > 5:
+                        if pattern_df['pattern_val'][i] > enter_rating:
                             position_is_open=True
                             buy_long(i,stock_amnt_to_order)
-                            print("BL&")
                             target_price= get_target_price(res,close)
                             stop_loss = sup
-                            print(positions)
-   
-                elif(trend=="clear_down" or trend == ' down_shift_close_x_med'):
+                            print('=============entry report==============')
+                            print("type is           : LONG")
+                            print("candle value      : "+str(pattern_df['pattern_val'][i]))
+                            print('candle name       : '+str(pattern_df['candlestick_pattern'][i]))
+                            print('total patterns    : '+str(pattern_df['candlestick_match_count'][i]))
+                            print("resistance chosen : "+str(res) )
+                            print('close price       : '+str(close))
+                            print("support chosen    : "+str(sup) )
+                            print("potential risk    : "+str(potential_money_risked))
+                            print("potential gained  : "+str(potential_money_gained))
+                            print('RRR               : '+str(rrr))
+                            print("#######################################")
+                            show_plt(real_index)
+                elif(trend=="clear_up" or trend == 'down_shift_close_x_med'):
                     stock_amnt_to_order = stock_amnt_order(close,res)
-                    print(str(stock_amnt_to_order)+" is order amount")
 
                     potential_money_risked = potential_delta(stock_amnt_to_order,close,res)
                     potential_money_gained = potential_delta(stock_amnt_to_order,close,sup)
 
                     if potential_money_gained != 0:
-                        rrr = potential_money_risked / potential_money_gained
+                        rrr =  potential_money_gained /potential_money_risked
                     elif potential_money_gained == 0:
                         rrr = 1.5
 
-                    print("risk reward ratio : "+str(rrr))
                     if (rrr>min_rrr) and (rrr < max_rrr):
                                     #fill candle pattern overtime
                         pattern_df = get_pattern_df(real_index)
-                        print(pattern_df)
-                        candle_rating = pattern_df['pattern_val'].rolling(window=5).sum()
-                        print("####################")
-                        print(candle_rating[i])
-                        if candle_rating[i] < -5:
+                        if pattern_df['pattern_val'][i] < -1*enter_rating:
                             position_is_open=True
                             sell_short(i,stock_amnt_to_order)
-                            print("SS&")
                             target_price= get_target_price(res,close)
                             stop_loss = res
-                            print(positions)
+                            print('=============entry report==============')
+                            print("type is           : SHORT")
+                            print("candle value      : "+str(pattern_df['pattern_val'][i]))
+                            print('candle name       : '+str(pattern_df['candlestick_pattern'][i]))
+                            print('total patterns    : '+str(pattern_df['candlestick_match_count'][i]))
+                            print("support chosen    : "+str(sup) )
+                            print('close price       : '+str(close))
+                            print("resistance chosen : "+str(res) )
+                            print("potential risk    : "+str(potential_money_risked))
+                            print("potential gained  : "+str(potential_money_gained))
+                            print('RRR               : '+str(rrr))
+                            print("#######################################")
+                            show_plt(real_index)
             #look for exit criteria 
             else:
                 intent=positions.iloc[-1]['Intent']
-                print("############CLOSE POS REP###############")
-                print("intent : "+intent)
-                print("close : "+str(close))
-                print("target : "+str(target_price))
-                print("stop loss : "+ str(stop_loss))
-                print("############CLOSE POS REP###############")
                 if intent=='SHORT':
                     if close >= stop_loss:
-                        print("STOP LOSS!!!!!!")
-                        #close short
-                    elif trend == 'clear_up' or trend == 'up_shift_close_x_med':
                         candle_rating = pattern_df['pattern_val'].rolling(window=5).sum()
-                        print("####################")
-                        print(candle_rating[i])
-                        if candle_rating[i] >= 5:
-                            print("^ - BULL REVERSAL ON SHORT POS DETECTED - ^")
+                        if candle_rating[i] >= enter_rating:
+                            position_is_open=False
+                            close_short(i)
+                    elif trend == 'clear_up' or trend == 'up_shift_close_x_med':
+                        candle_rating = pattern_df['pattern_val'].rolling(window=3).sum()
+                        if candle_rating[i] >= enter_rating:
+                            position_is_open=False
+                            close_short(i)
                     elif close <= target_price:
-                        print("TARGET REACHED")
+                        pattern_df = get_pattern_df(real_index)
+                        candle_rating = pattern_df['pattern_val'].rolling(window=3).sum()
                         #check for bullish revesal wih candle_rating
+                        if candle_rating[i] >= target_reached_rating:
+                            position_is_open=False
+                            close_short(i)
+                            stop_loss = res
                 elif intent=='LONG':
                     if close <= stop_loss:
-                        print("STOP LOSS!!!!!!")
-                        #close short
-                    elif trend == 'clear_up' or trend == 'up_shift_close_x_med':
-                        candle_rating = pattern_df['pattern_val'].rolling(window=5).sum()
-                        print("####################")
-                        print(candle_rating[i])
-                        if candle_rating[i] <= -5:
-                            print("V - BEAR REVERSAL ON SHORT POS DETECTED - V")
+                        position_is_open=False
+                        close_long(i)
+                    elif trend == 'clear_down' or trend == 'down_shift_close_x_med':
+                        candle_rating = pattern_df['pattern_val'].rolling(window=3).sum()
+                        if candle_rating[i] <= -1*enter_rating:
+                            position_is_open=False
+                            close_long(i)
                     elif close >= target_price:
-                        print("TARGET REACHED")
-                        #check for bullish revesal wih candle_rating                       
-                #intent == long
-                    #trend is up - hold position
-                        #delta > target
-                            #trend is up then manage_risk() - sell n% of position to cover risk amount
+                        pattern_df = get_pattern_df(real_index)
+                        candle_rating = pattern_df['pattern_val'].rolling(window=3).sum()
+                        #check for bearish revesal wih candle_rating
+                        if candle_rating[i] <= -1*target_reached_rating:
+                            position_is_open=False
+                            close_long(i)
+        #DAY FINISHED COMPUTING
+        pd.set_option("display.max_rows", None, "display.max_columns", None)
+        print(pattern_df)
+        print(positions)
+        print(levels)
+        show_plt(real_index)
+
+                
                     
                 
                 
             
-stock_to_trade = 'AAPL'
+stock_to_trade = 'TSLA'
 start_date_range = '2021-12-13'
 end_date_range = '2021-12-14'
 run_type = 'ADJ'
