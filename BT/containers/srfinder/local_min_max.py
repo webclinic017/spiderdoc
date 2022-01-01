@@ -286,7 +286,6 @@ def clean_levels(minute_ran):
                 new_levels.append((lvl_idx,levels[i][1]))
                 found_exrma_next_to_lvl =True
                 break
-                
 
         print("==============NEW LVLs===============")
         print(new_levels)
@@ -541,6 +540,7 @@ def run_simulation(stock_to_trade):
     global levels
     global balance
     global candle_names
+    global candle_rankings
     global positions
     stock_to_trade=stock_to_trade.strip('\n')
    
@@ -669,7 +669,7 @@ def run_simulation(stock_to_trade):
                 l = curr_stock_historical['High'][i]
                 if isFarFromLevel(l,levels,s):
                     levels.append((real_index,l))
-
+                
             #show current state # TODO : remove            
             if i % 30 == 0:
                 levels = clean_levels(real_index)
@@ -681,12 +681,12 @@ def run_simulation(stock_to_trade):
             #############################################################
             min_rrr = 1.2
             max_rrr = 5
-            enter_rating =7
-            target_reached_rating=5
+            enter_rating =50
+            target_reached_rating=60
             rrr = 0
             #look for entrance criteria
             if (position_is_open==False ):
-                if(trend=="clear_down" or trend=='up_shift_close_x_med'):
+                if(trend=="clear_up" or trend=='up_shift_close_x_med'):
                     stock_amnt_to_order = stock_amnt_order(close,sup)
 
                     potential_money_risked = potential_delta(stock_amnt_to_order,close,sup)
@@ -699,7 +699,29 @@ def run_simulation(stock_to_trade):
                         
                     if rrr>min_rrr and rrr < max_rrr:
                         pattern_df = get_pattern_df(real_index)
-                        if pattern_df['pattern_val'][i] > enter_rating:
+                        best_candle_rating=candle_rankings.get(pattern_df['candlestick_pattern'][i],100)
+                        print(best_candle_rating)
+                        if potential_money_gained == 0:
+                            if best_candle_rating <= enter_rating and '_Bear' in pattern_df['candlestick_pattern'][i]:    
+                                position_is_open=True
+                                sell_short(i,stock_amnt_to_order)
+                                target_price= get_target_price(res,close)
+                                stop_loss = res
+                                print('=============entry report==============')
+                                print("type is           : SHORT")
+                                print("candle value      : "+str(pattern_df['pattern_val'][i]))
+                                print('candle name       : '+str(pattern_df['candlestick_pattern'][i]))
+                                print('total patterns    : '+str(pattern_df['candlestick_match_count'][i]))
+                                print("support chosen    : "+str(sup) )
+                                print('close price       : '+str(close))
+                                print('target price      : '+str(target_price))
+                                print("resistance chosen : "+str(res) )
+                                print("potential risk    : "+str(potential_money_risked))
+                                print("potential gained  : "+str(potential_money_gained))
+                                print('RRR               : '+str(rrr))
+                                print("#######################################")
+                                show_plt(real_index)
+                        elif best_candle_rating <= enter_rating and '_Bear' in pattern_df['candlestick_pattern'][i]:
                             position_is_open=True
                             buy_long(i,stock_amnt_to_order)
                             target_price= get_target_price(res,close)
@@ -712,12 +734,13 @@ def run_simulation(stock_to_trade):
                             print("resistance chosen : "+str(res) )
                             print('close price       : '+str(close))
                             print("support chosen    : "+str(sup) )
+                            print('target price      : '+str(target_price))
                             print("potential risk    : "+str(potential_money_risked))
                             print("potential gained  : "+str(potential_money_gained))
                             print('RRR               : '+str(rrr))
                             print("#######################################")
                             show_plt(real_index)
-                elif(trend=="clear_up" or trend == 'down_shift_close_x_med'):
+                elif(trend=="clear_down" or trend == 'down_shift_close_x_med'):
                     stock_amnt_to_order = stock_amnt_order(close,res)
 
                     potential_money_risked = potential_delta(stock_amnt_to_order,close,res)
@@ -731,7 +754,29 @@ def run_simulation(stock_to_trade):
                     if (rrr>min_rrr) and (rrr < max_rrr):
                                     #fill candle pattern overtime
                         pattern_df = get_pattern_df(real_index)
-                        if pattern_df['pattern_val'][i] < -1*enter_rating:
+                        best_candle_rating=candle_rankings.get(pattern_df['candlestick_pattern'][i],100)
+                        print(best_candle_rating)
+                        if potential_money_gained == 0:
+                            if best_candle_rating <= enter_rating and '_Bull' in pattern_df['candlestick_pattern'][i]:    
+                                position_is_open=True
+                                buy_long(i,stock_amnt_to_order)
+                                target_price= get_target_price(res,close)
+                                stop_loss = sup
+                                print('=============entry report==============')
+                                print("type is           : LONG")
+                                print("candle value      : "+str(pattern_df['pattern_val'][i]))
+                                print('candle name       : '+str(pattern_df['candlestick_pattern'][i]))
+                                print('total patterns    : '+str(pattern_df['candlestick_match_count'][i]))
+                                print("resistance chosen : "+str(res) )
+                                print('close price       : '+str(close))
+                                print("support chosen    : "+str(sup) )
+                                print('target price      : '+str(target_price))
+                                print("potential risk    : "+str(potential_money_risked))
+                                print("potential gained  : "+str(potential_money_gained))
+                                print('RRR               : '+str(rrr))
+                                print("#######################################")
+                                show_plt(real_index)
+                        elif best_candle_rating <= enter_rating and '_Bear' in pattern_df['candlestick_pattern'][i]:
                             position_is_open=True
                             sell_short(i,stock_amnt_to_order)
                             target_price= get_target_price(res,close)
@@ -744,6 +789,7 @@ def run_simulation(stock_to_trade):
                             print("support chosen    : "+str(sup) )
                             print('close price       : '+str(close))
                             print("resistance chosen : "+str(res) )
+                            print('target price      : '+str(target_price))
                             print("potential risk    : "+str(potential_money_risked))
                             print("potential gained  : "+str(potential_money_gained))
                             print('RRR               : '+str(rrr))
@@ -754,39 +800,46 @@ def run_simulation(stock_to_trade):
                 intent=positions.iloc[-1]['Intent']
                 if intent=='SHORT':
                     if close >= stop_loss:
-                        candle_rating = pattern_df['pattern_val'].rolling(window=5).sum()
-                        if candle_rating[i] >= enter_rating:
-                            position_is_open=False
-                            close_short(i)
-                    elif trend == 'clear_up' or trend == 'up_shift_close_x_med':
-                        candle_rating = pattern_df['pattern_val'].rolling(window=3).sum()
-                        if candle_rating[i] >= enter_rating:
-                            position_is_open=False
-                            close_short(i)
-                    elif close <= target_price:
                         pattern_df = get_pattern_df(real_index)
-                        candle_rating = pattern_df['pattern_val'].rolling(window=3).sum()
-                        #check for bullish revesal wih candle_rating
-                        if candle_rating[i] >= target_reached_rating:
+                        candle_rating = pattern_df['pattern_val'].rolling(window=5).mean()
+                        if candle_rating[i] >= enter_rating:
                             position_is_open=False
                             close_short(i)
-                            stop_loss = res
+                    elif trend == 'clear_up' or trend == 'up_shift_close_x_med' or trend == 0:
+                        pattern_df = get_pattern_df(real_index)
+                        best_candle_rating=candle_rankings.get(pattern_df['candlestick_pattern'][i],100)
+                        #check for bullish revesal wih candle_rating
+                        if best_candle_rating <= target_reached_rating and '_Bull' in pattern_df['candlestick_pattern'][i]:
+                            position_is_open=False
+                            close_short(i)
+                            print('CLOSE ')
+                    elif close <= target_price:
+                        if trend == 'up_shift_close_x_med' or trend ==0:
+                            pattern_df = get_pattern_df(real_index)
+                            best_candle_rating=candle_rankings.get(pattern_df['candlestick_pattern'][i],100)
+                            #check for bullish revesal wih candle_rating
+                            if best_candle_rating <= target_reached_rating and '_Bull' in pattern_df['candlestick_pattern'][i]:
+                                position_is_open=False
+                                close_short(i)
                 elif intent=='LONG':
                     if close <= stop_loss:
                         position_is_open=False
                         close_long(i)
                     elif trend == 'clear_down' or trend == 'down_shift_close_x_med':
-                        candle_rating = pattern_df['pattern_val'].rolling(window=3).sum()
-                        if candle_rating[i] <= -1*enter_rating:
+                        pattern_df = get_pattern_df(real_index)
+                        best_candle_rating=candle_rankings.get(pattern_df['candlestick_pattern'][i],100)
+                        #check for bullish revesal wih candle_rating
+                        if best_candle_rating <= target_reached_rating and '_Bear' in pattern_df['candlestick_pattern'][i]:
                             position_is_open=False
                             close_long(i)
                     elif close >= target_price:
-                        pattern_df = get_pattern_df(real_index)
-                        candle_rating = pattern_df['pattern_val'].rolling(window=3).sum()
-                        #check for bearish revesal wih candle_rating
-                        if candle_rating[i] <= -1*target_reached_rating:
-                            position_is_open=False
-                            close_long(i)
+                        if trend == 'down_shift_close_x_med' or trend == 0:
+                            pattern_df = get_pattern_df(real_index)
+                            best_candle_rating=candle_rankings.get(pattern_df['candlestick_pattern'][i],100)
+                            #check for bullish revesal wih candle_rating
+                            if best_candle_rating <= target_reached_rating and '_Bear' in pattern_df['candlestick_pattern'][i]:
+                                position_is_open=False
+                                close_long(i)
         #DAY FINISHED COMPUTING
         pd.set_option("display.max_rows", None, "display.max_columns", None)
         print(pattern_df)
@@ -799,7 +852,7 @@ def run_simulation(stock_to_trade):
                 
                 
             
-stock_to_trade = 'TSLA'
+stock_to_trade = 'AAPL'
 start_date_range = '2021-12-13'
 end_date_range = '2021-12-14'
 run_type = 'ADJ'
