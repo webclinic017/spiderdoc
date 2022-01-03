@@ -682,7 +682,7 @@ def run_simulation(stock_to_trade):
             min_rrr = 1.2
             max_rrr = 5
             enter_rating =50
-            target_reached_rating=60
+            target_reached_rating=30
             rrr = 0
             #look for entrance criteria
             if (position_is_open==False ):
@@ -802,7 +802,7 @@ def run_simulation(stock_to_trade):
                     if close >= stop_loss:
                         pattern_df = get_pattern_df(real_index)
                         candle_rating = pattern_df['pattern_val'].rolling(window=5).mean()
-                        if candle_rating[i] >= enter_rating:
+                        if candle_rating[i] >= entery_pattern_rating:
                             position_is_open=False
                             close_short(i)
                     elif trend == 'clear_up' or trend == 'up_shift_close_x_med' or trend == 0:
@@ -814,7 +814,7 @@ def run_simulation(stock_to_trade):
                             close_short(i)
                             print('CLOSE ')
                     elif close <= target_price:
-                        if trend == 'up_shift_close_x_med' or trend ==0:
+                        if trend == 'up_shift_close_x_med' or trend ==0 or trend == 'clear_down':
                             pattern_df = get_pattern_df(real_index)
                             best_candle_rating=candle_rankings.get(pattern_df['candlestick_pattern'][i],100)
                             #check for bullish revesal wih candle_rating
