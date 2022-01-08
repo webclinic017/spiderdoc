@@ -286,10 +286,13 @@ def clean_levels(minute_ran):
                 new_levels.append((lvl_idx,levels[i][1]))
                 found_exrma_next_to_lvl =True
                 break
+<<<<<<< Updated upstream
                 
 
         print("==============NEW LVLs===============")
         print(new_levels)
+=======
+>>>>>>> Stashed changes
     return new_levels        
             
 def show_plt(minute_ran):
@@ -598,6 +601,16 @@ def run_simulation(stock_to_trade):
         #ema 10
         curr_stock_historical['ema_thin']= ta.trend.sma_indicator(curr_stock_historical['Close'],window=10,fillna=False)
         
+<<<<<<< Updated upstream
+=======
+        #rocp 1
+        curr_stock_historical["rocp_thin"] = talib.ROCP(curr_stock_historical['Close'], timeperiod = 1)
+        #rocp 5
+        curr_stock_historical["rocp_med"] = talib.ROCP(curr_stock_historical['Close'], timeperiod = 5)
+        #rocp 5
+        curr_stock_historical["rocp_wide"] = talib.ROCP(curr_stock_historical['Close'], timeperiod = 10)
+        print(curr_stock_historical)
+>>>>>>> Stashed changes
         #fill trend column
         conditions = [
             (curr_stock_historical['ema_wide'].lt(curr_stock_historical['ema_med'])) & (curr_stock_historical['ema_med'].lt(curr_stock_historical['ema_thin'])),
@@ -612,7 +625,6 @@ def run_simulation(stock_to_trade):
         levels = []
         curr_stock_historical_bkp = curr_stock_historical
         minute_ran=60
-        from_time=0
         curr_stock_historical_prerun=curr_stock_historical.iloc[:minute_ran-1,:]
         curr_stock_historical_prerun['Datetime'] = pd.to_datetime(curr_stock_historical_prerun.index)
         curr_stock_historical_prerun = curr_stock_historical_prerun.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','ema_thin','ema_med','ema_wide','trend']]
@@ -645,12 +657,11 @@ def run_simulation(stock_to_trade):
         for i in range(2,curr_stock_historical.shape[0]-2):
             real_index = i + minute_ran 
             #set when to stop opening positions 
-            close_time = 360
+            close_time = 300
             #checks if its closing time       
             if(close_time<i):
                 get_rid_of_position = True
             #what was the intent of the previos trade in positions
-            last_intent = positions.iloc[-1]['Intent']    
             #current close
             close=curr_stock_historical['Close'][i]
             #current identified trend
@@ -681,12 +692,22 @@ def run_simulation(stock_to_trade):
             #############################################################
             min_rrr = 1.2
             max_rrr = 5
+<<<<<<< Updated upstream
             enter_rating =7
             target_reached_rating=5
             rrr = 0
             #look for entrance criteria
             if (position_is_open==False ):
                 if(trend=="clear_down" or trend=='up_shift_close_x_med'):
+=======
+            enter_rating =50
+            target_pattern_rating=50
+            entery_pattern_rating = 3
+            rrr = 0
+            #look for entrance criteria
+            if (position_is_open==False and i < 300):
+                if(trend=="clear_up" or trend=='down_shift_close_x_med'):
+>>>>>>> Stashed changes
                     stock_amnt_to_order = stock_amnt_order(close,sup)
 
                     potential_money_risked = potential_delta(stock_amnt_to_order,close,sup)
@@ -716,8 +737,12 @@ def run_simulation(stock_to_trade):
                             print("potential gained  : "+str(potential_money_gained))
                             print('RRR               : '+str(rrr))
                             print("#######################################")
+<<<<<<< Updated upstream
                             show_plt(real_index)
                 elif(trend=="clear_up" or trend == 'down_shift_close_x_med'):
+=======
+                elif(trend=="clear_down" or trend == 'up_shift_close_x_med'):
+>>>>>>> Stashed changes
                     stock_amnt_to_order = stock_amnt_order(close,res)
 
                     potential_money_risked = potential_delta(stock_amnt_to_order,close,res)
@@ -767,15 +792,35 @@ def run_simulation(stock_to_trade):
                         pattern_df = get_pattern_df(real_index)
                         candle_rating = pattern_df['pattern_val'].rolling(window=3).sum()
                         #check for bullish revesal wih candle_rating
+<<<<<<< Updated upstream
                         if candle_rating[i] >= target_reached_rating:
                             position_is_open=False
                             close_short(i)
                             stop_loss = res
+=======
+                        if best_candle_rating <= target_pattern_rating and '_Bull' in pattern_df['candlestick_pattern'][i]:
+                                position_is_open=False
+                                close_short(i)
+                                print('CLOSE ')
+                    elif close <= target_price:
+                        
+                        if trend == 'up_shift_close_x_med' or trend ==0 or trend == 'clear_down':
+                            pattern_df = get_pattern_df(real_index)
+                            best_candle_rating=candle_rankings.get(pattern_df['candlestick_pattern'][i],100)
+                            #check for bullish revesal wih candle_rating
+                            if best_candle_rating <= target_pattern_rating and '_Bull' in pattern_df['candlestick_pattern'][i]:
+                                roc_ra = pattern_df['rocp_thin'].rolling(window=7).sum()
+                                #l_m_roc = pattern_df['roc_thin'].rolling(window=5)
+                                if roc_ra[-1] > 0:
+                                    position_is_open=False
+                                    close_short(i)
+>>>>>>> Stashed changes
                 elif intent=='LONG':
                     if close <= stop_loss:
                         position_is_open=False
                         close_long(i)
                     elif trend == 'clear_down' or trend == 'down_shift_close_x_med':
+<<<<<<< Updated upstream
                         candle_rating = pattern_df['pattern_val'].rolling(window=3).sum()
                         if candle_rating[i] <= -1*enter_rating:
                             position_is_open=False
@@ -787,9 +832,27 @@ def run_simulation(stock_to_trade):
                         if candle_rating[i] <= -1*target_reached_rating:
                             position_is_open=False
                             close_long(i)
+=======
+                        pattern_df = get_pattern_df(real_index)
+                        best_candle_rating=candle_rankings.get(pattern_df['candlestick_pattern'][i],100)
+                        #check for bullish revesal wih candle_rating
+                        if best_candle_rating <= target_pattern_rating and '_Bear' in pattern_df['candlestick_pattern'][i]:
+                            position_is_open=False
+                            close_long(i)
+                    elif close >= target_price:
+                        if trend == 'down_shift_close_x_med' or trend == 0 or trend == 'clear_up':
+                            pattern_df = get_pattern_df(real_index)
+                            best_candle_rating=candle_rankings.get(pattern_df['candlestick_pattern'][i],100)
+                            #check for bullish revesal wih candle_rating
+                            if best_candle_rating <= target_pattern_rating and '_Bear' in pattern_df['candlestick_pattern'][i]:
+                                roc_ra = pattern_df['roc_thin'].rolling(window=7).sum()
+                                #l_m_roc = pattern_df['roc_thin'].rolling(window=5)
+                                if roc_ra[-1] < 0  :
+                                    position_is_open=False
+                                    close_long(i)
+>>>>>>> Stashed changes
         #DAY FINISHED COMPUTING
         pd.set_option("display.max_rows", None, "display.max_columns", None)
-        print(pattern_df)
         print(positions)
         print(levels)
         show_plt(real_index)
@@ -799,7 +862,7 @@ def run_simulation(stock_to_trade):
                 
                 
             
-stock_to_trade = 'TSLA'
+stock_to_trade = 'A'
 start_date_range = '2021-12-13'
 end_date_range = '2021-12-14'
 run_type = 'ADJ'
