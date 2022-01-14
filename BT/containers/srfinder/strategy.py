@@ -1,8 +1,5 @@
 from contextlib import nullcontext
 from re import X
-import re
-from numpy.lib.function_base import append
-from scipy.signal.ltisys import dfreqresp
 import yfinance as yf
 import pandas as pd
 import ta
@@ -528,7 +525,7 @@ def long_criteria_satisfied_1(i,support,resistance,close):
     trend = df['trend'][i]
     print("========== NEW CHECK SET ==================") 
     #when trend is not shifting up,or, going up or not undifined DONT enter trade
-    if not (trend == 'clear_up' or  trend == 'up_shift_close_x_med') :
+    if not (trend == 'clear_up' or  trend == ' up_shift_3') :
         return False
     print("TREND PASSED")
     #dont enter longs with no support
@@ -558,7 +555,7 @@ def long_criteria_satisfied_1(i,support,resistance,close):
     print(" NOT BEAR PATTERN PASSED")  
     return True
 
-def close_long_criteria_satisfied_1(i,support,resistance,close):
+def close_long_criteria_satisfied_1(i,support,resistance,close,entery_time):
     global curr_stock_historical
     
     min_rrr = 1.2
@@ -566,6 +563,9 @@ def close_long_criteria_satisfied_1(i,support,resistance,close):
     entery_pattern_rating = -3
     max_candle_rating = 40
 
+    delta_in_pos = i - entery_time
+    if delta_in_pos < 15:
+        return False
     #when a check failed this becomes false and func returns False
     df = curr_stock_historical.iloc[:i+1,:]
     
@@ -579,7 +579,7 @@ def close_long_criteria_satisfied_1(i,support,resistance,close):
                 if isFarFromLevel(l,levels,s):
                     return True
     #when trend shift is occuring - exit            
-    if trend == 'down_shift_close_x_med':
+    if trend == 'down_shift_3' or trend == 'down_shift_2':
         return True
     
     # search for candle indicator for exit
@@ -605,7 +605,7 @@ def short_criteria_satisfied_1(i,support,resistance,close):
     trend = df['trend'][i]
     print("========== NEW CHECK SET ==================") 
     #when trend is not shifting up,or, going up or not undifined DONT enter trade
-    if not (trend == 'clear_down' or  trend == 'down_shift_close_x_med') :
+    if not (trend == 'clear_down' or  trend == ' down_shift_3') :
         return False
     print("TREND PASSED")
     #dont enter longs with no support
@@ -635,12 +635,15 @@ def short_criteria_satisfied_1(i,support,resistance,close):
     print(" NOT BULL PATTERN PASSED")  
     return True
 
-def close_short_criteria_satisfied_1(i,support,resistance,close):
+def close_short_criteria_satisfied_1(i,support,resistance,close,entery_time):
     global curr_stock_historical
     
     entery_pattern_rating = 3
     max_candle_rating = 40
 
+    delta_in_pos = i - entery_time
+    if delta_in_pos < 15:
+        return False
     #when a check failed this becomes false and func returns False
     df = curr_stock_historical.iloc[:i+1,:]
     
@@ -652,7 +655,7 @@ def close_short_criteria_satisfied_1(i,support,resistance,close):
                 if isFarFromLevel(l,levels,s):
                     return True
     #when trend shift is occuring - exit            
-    if trend == 'up_shift_close_x_med':
+    if trend == 'up_shift_3' or 'up_shift_2':
         return True
     
     # search for candle indicator for exit
@@ -739,12 +742,13 @@ def run_simulation(stock_to_trade):
         conditions = [
             (curr_stock_historical['ema_wide'].lt(curr_stock_historical['ema_med'])) & (curr_stock_historical['ema_med'].lt(curr_stock_historical['ema_thin'])),
             (curr_stock_historical['ema_wide'].gt(curr_stock_historical['ema_med'])) & (curr_stock_historical['ema_med'].gt(curr_stock_historical['ema_thin'])),
-            (curr_stock_historical['ema_wide'].gt(curr_stock_historical['ema_med']))  & (curr_stock_historical['ema_med'].lt(curr_stock_historical['ema_thin'])) & (curr_stock_historical['ema_wide'].lt(curr_stock_historical['ema_thin'])),
-            (curr_stock_historical['ema_wide'].lt(curr_stock_historical['ema_med']))  & (curr_stock_historical['ema_med'].gt(curr_stock_historical['ema_thin'])) & (curr_stock_historical['ema_wide'].gt(curr_stock_historical['ema_thin']))
-
+            (curr_stock_historical['ema_wide'].gt(curr_stock_historical['ema_med'])) & (curr_stock_historical['ema_med'].lt(curr_stock_historical['ema_thin'])) & (curr_stock_historical['ema_wide'].lt(curr_stock_historical['ema_thin'])),
+            (curr_stock_historical['ema_wide'].lt(curr_stock_historical['ema_med'])) & (curr_stock_historical['ema_med'].gt(curr_stock_historical['ema_thin'])) & (curr_stock_historical['ema_wide'].gt(curr_stock_historical['ema_thin'])),
+            (curr_stock_historical['ema_med'].lt(curr_stock_historical['ema_thin'])) & (curr_stock_historical['ema_thin'].lt(curr_stock_historical['ema_wide'])) & (curr_stock_historical['ema_wide'].gt(curr_stock_historical['ema_med'])),
+            (curr_stock_historical['ema_med'].gt(curr_stock_historical['ema_thin'])) & (curr_stock_historical['ema_thin'].gt(curr_stock_historical['ema_wide'])) & (curr_stock_historical['ema_wide'].lt(curr_stock_historical['ema_med']))
                     ]    
     
-        choices = ['clear_up','clear_down','up_shift_close_x_med','down_shift_close_x_med']
+        choices = ['clear_up','clear_down',' up_shift_3',' down_shift_3','up_shift_2','down_shift_2']
         curr_stock_historical['trend'] = np.select(conditions, choices, default=0 )
         levels = []
         
@@ -819,7 +823,8 @@ def run_simulation(stock_to_trade):
                     sell_short(i,stock_amnt_to_order)
                     print("ENTERED!++++++++++++++++++++++++++++++++")
                     exit_criteria_selecctor = -1
-                    
+                    entery_time = i
+            #exits conds
             elif position_is_open == True:
                 #STOP LOSSES
                 intent=positions.iloc[-1]['Intent']
@@ -828,17 +833,17 @@ def run_simulation(stock_to_trade):
                         position_is_open=False
                         close_long(i)
                 elif intent=='SHORT':
-                    if close <= stop_loss:
+                    if close >= stop_loss:
                         position_is_open=False
                         close_short(i)
                 #exit criteria selector
                 if exit_criteria_selecctor == 1:
-                    if (close_long_criteria_satisfied_1(i,support,resistance,close)):
+                    if (close_long_criteria_satisfied_1(i,support,resistance,close,entery_time)):
                         position_is_open=False
                         close_long(i)
                         print("Exited! ----------------------")
                 elif  exit_criteria_selecctor == -1 :
-                    if (close_short_criteria_satisfied_1(i,support,resistance,close)):
+                    if (close_short_criteria_satisfied_1(i,support,resistance,close,entery_time)):
                         position_is_open=False
                         close_short(i)
                         print("Exited! ----------------------")
