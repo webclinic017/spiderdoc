@@ -558,6 +558,112 @@ def long_criteria_satisfied_1(i,support,resistance,close):
     print(" NOT BEAR PATTERN PASSED")  
     return True
 
+def close_long_criteria_satisfied_1(i,support,resistance,close):
+    global curr_stock_historical
+    
+    min_rrr = 1.2
+    max_rrr = 5
+    entery_pattern_rating = -3
+    max_candle_rating = 40
+
+    #when a check failed this becomes false and func returns False
+    df = curr_stock_historical.iloc[:i+1,:]
+    
+
+    
+    trend = df['trend'][i]
+    
+    #when new resistance is found exit
+    if isResistance(curr_stock_historical,i):
+                l = curr_stock_historical['High'][i]
+                if isFarFromLevel(l,levels,s):
+                    return True
+    #when trend shift is occuring - exit            
+    if trend == 'down_shift_close_x_med':
+        return True
+    
+    # search for candle indicator for exit
+    pattern_df = get_pattern_df(i)
+    candle_rating = pattern_df['pattern_val'].rolling(window=5).mean()
+    best_candle_rating=candle_rankings.get(pattern_df['candlestick_pattern'][i-1],100)
+    if best_candle_rating < max_candle_rating and candle_rating[-1] < entery_pattern_rating and '_Bear' in pattern_df['candlestick_pattern'][i]:
+        return True
+    return False   
+
+def short_criteria_satisfied_1(i,support,resistance,close):
+    global curr_stock_historical
+    
+    max_candle_rating = 40
+    min_rrr = 1.2
+    max_rrr = 5
+    #when a check failed this becomes false and func returns False
+    df = curr_stock_historical.iloc[:i+1,:]
+    
+    pattern_df = get_pattern_df(i)
+
+    
+    trend = df['trend'][i]
+    print("========== NEW CHECK SET ==================") 
+    #when trend is not shifting up,or, going up or not undifined DONT enter trade
+    if not (trend == 'clear_down' or  trend == 'down_shift_close_x_med') :
+        return False
+    print("TREND PASSED")
+    #dont enter longs with no support
+    if resistance == 0:
+        return False
+    
+    stock_amnt_to_order = stock_amnt_order(close,resistance)
+    potential_money_risked = potential_delta(stock_amnt_to_order,close,resistance)
+    potential_money_gained = potential_delta(stock_amnt_to_order,close,support)
+
+    if potential_money_gained != 0:
+        rrr = potential_money_gained / potential_money_risked
+    elif potential_money_gained == 0:
+        rrr = 2
+    
+    if not(rrr>min_rrr and rrr < max_rrr):
+        return False
+    print(" RRR PASSED ")     
+    best_candle_rating=candle_rankings.get(pattern_df['candlestick_pattern'][i-1],100)
+    #when the prominent candle is not rated below 40 dont enter
+    if best_candle_rating > max_candle_rating:
+        return False
+    print("RATING PASSED")
+    #when the prominent candle is a bull dont enter
+    if '_Bull' in pattern_df['candlestick_pattern'][i-1]:
+        return False
+    print(" NOT BULL PATTERN PASSED")  
+    return True
+
+def close_short_criteria_satisfied_1(i,support,resistance,close):
+    global curr_stock_historical
+    
+    entery_pattern_rating = 3
+    max_candle_rating = 40
+
+    #when a check failed this becomes false and func returns False
+    df = curr_stock_historical.iloc[:i+1,:]
+    
+    trend = df['trend'][i]
+    
+    #when new support is found exit
+    if isSupport(curr_stock_historical,i):
+                l = curr_stock_historical['Low'][i]
+                if isFarFromLevel(l,levels,s):
+                    return True
+    #when trend shift is occuring - exit            
+    if trend == 'up_shift_close_x_med':
+        return True
+    
+    # search for candle indicator for exit
+    pattern_df = get_pattern_df(i)
+    candle_rating = pattern_df['pattern_val'].rolling(window=5).mean()
+    best_candle_rating=candle_rankings.get(pattern_df['candlestick_pattern'][i-1],100)
+    if best_candle_rating < max_candle_rating and candle_rating[-1] > entery_pattern_rating and '_Bull' in pattern_df['candlestick_pattern'][i]:
+        return True
+    return False   
+
+
 def run_simulation(stock_to_trade):    
     get_rid_of_position = False
     position_is_open=False
@@ -573,6 +679,7 @@ def run_simulation(stock_to_trade):
     global candle_names
     global candle_rankings
     global positions
+    global s
     stock_to_trade=stock_to_trade.strip('\n')
    
     a = datetime.strptime(start_date_range, "%Y-%m-%d")
@@ -589,7 +696,6 @@ def run_simulation(stock_to_trade):
     #                                           New Day initilazion
     #                                           ==================
     #########################################################################################################################                                            
-        global positions
         positions              = pd.DataFrame(columns=['Timestamp','Action','Amount','Price','TValue','Intent'])
         #for eval 
         positions_short        = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
@@ -606,7 +712,7 @@ def run_simulation(stock_to_trade):
         if curr_date.weekday() == 5 or curr_date.weekday() == 6 :
             continue
             #define up and down prices
-
+        exit_criteria_selecctor = 0
         ########################################################################################################################
         #                                      Data and Metrics for this day are calculated Here
         #                                     ===================================================
@@ -699,11 +805,46 @@ def run_simulation(stock_to_trade):
                     else:
                         target_price = 0  
                     buy_long(i,stock_amnt_to_order)
-                    print("ENTERED!")
-            else:
-                #LONG entrance criteria #1 
-                #
-                pass
+                    print("ENTERED!++++++++++++++++++++++++++++++++")
+                    exit_criteria_selecctor = 1
+                    entery_time = i
+                if (short_criteria_satisfied_1(i,support,resistance,close)):
+                    position_is_open = True
+                    stock_amnt_to_order = stock_amnt_order(close,resistance)
+                    stop_loss = resistance
+                    if resistance != 0:
+                        target_price= get_target_price(support,close)
+                    else:
+                        target_price = 0  
+                    sell_short(i,stock_amnt_to_order)
+                    print("ENTERED!++++++++++++++++++++++++++++++++")
+                    exit_criteria_selecctor = -1
+                    
+            elif position_is_open == True:
+                #STOP LOSSES
+                intent=positions.iloc[-1]['Intent']
+                if intent=='LONG':
+                    if close <= stop_loss:
+                        position_is_open=False
+                        close_long(i)
+                elif intent=='SHORT':
+                    if close <= stop_loss:
+                        position_is_open=False
+                        close_short(i)
+                #exit criteria selector
+                if exit_criteria_selecctor == 1:
+                    if (close_long_criteria_satisfied_1(i,support,resistance,close)):
+                        position_is_open=False
+                        close_long(i)
+                        print("Exited! ----------------------")
+                elif  exit_criteria_selecctor == -1 :
+                    if (close_short_criteria_satisfied_1(i,support,resistance,close)):
+                        position_is_open=False
+                        close_short(i)
+                        print("Exited! ----------------------")
+                else:
+                    pass
+                
                     #DAY FINISHED COMPUTING
         pd.set_option("display.max_rows", None, "display.max_columns", None)
         print(pattern_df)
