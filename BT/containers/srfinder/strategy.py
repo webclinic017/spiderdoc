@@ -922,7 +922,7 @@ def run_simulation(stock_to_trade):
                 
                 
             
-stock_to_trade = 'TSLA'
+stock_to_trade = 'AAPL'
 start_date_range = '2021-12-21'
 end_date_range = '2021-12-22'
 run_type = 'ADJ'
