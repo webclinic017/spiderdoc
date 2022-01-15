@@ -576,8 +576,6 @@ def long_criteria_satisfied_1(i,support,resistance,close):
     
     if not((roc_5 > 0) and (roc_30 > 0) ) :
         return False
-    if not(((p_roc_5 < 0) and (p_roc_30 < 0))):
-        return False
     if not(roc_roc_5 > 0 and roc_roc_30 > 0):
         return False
     return True
@@ -671,8 +669,6 @@ def short_criteria_satisfied_1(i,support,resistance,close):
     print(" NOT BULL PATTERN PASSED")  """
     
     if not((roc_5 < 0) and (roc_30 < 0)):
-        return False
-    if not((p_roc_5 > 0) and (p_roc_30 > 0)):
         return False
     
     if not(roc_roc_5 < 0 and roc_roc_30 < 0):
