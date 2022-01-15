@@ -611,7 +611,7 @@ def close_long_criteria_satisfied_1(i,support,resistance,close,entery_time):
                 if isFarFromLevel(l,levels,s):
                     return True
     #when trend shift is occuring - exit            
-    if (roc_5 < roc_30) or roc_30 < 0:
+    if (roc_5 < 0) or roc_30 < 0:
         return True
     
     # search for candle indicator for exit
@@ -704,7 +704,7 @@ def close_short_criteria_satisfied_1(i,support,resistance,close,entery_time):
                 if isFarFromLevel(l,levels,s):
                     return True
     #when trend shift is occuring - exit            
-    if (roc_5 > roc_30) or roc_30 > 0:
+    if (roc_5 > 0) or roc_30 > 0:
         return True
     # search for candle indicator for exit
     pattern_df = get_pattern_df(i)
@@ -922,9 +922,9 @@ def run_simulation(stock_to_trade):
                 
                 
             
-stock_to_trade = 'AAPL'
-start_date_range = '2021-12-22'
-end_date_range = '2021-12-23'
+stock_to_trade = 'TSLA'
+start_date_range = '2021-12-21'
+end_date_range = '2021-12-22'
 run_type = 'ADJ'
 run_simulation(stock_to_trade)
 """ file_path = '/input/'+symbols_file
