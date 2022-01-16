@@ -455,6 +455,17 @@ def potential_delta(stock_amnt_order,close,level):
     pot_delta = close_level_delta * stock_amnt_order
     return pot_delta
     
+def  get_pos_delta(close):
+    global positions
+    intent=positions.iloc[-1]['Intent']
+    stock_amnt = positions.iloc[-1]['Amount']
+    prev_price = positions.iloc[-1]['Price']
+    if intent == "LONG":
+        delta = (close - prev_price)* stock_amnt
+    else:
+        delta = (prev_price - close)* stock_amnt
+    return delta
+
 def get_target_price(level,close):
     delta = abs(close-level)
     delta_target = delta *1.5
@@ -530,21 +541,18 @@ def get_pattern_df(i):
 def long_criteria_satisfied_1(i,support,resistance,close):
     global curr_stock_historical
     
-    max_candle_rating = 60
+    max_candle_rating = 40
     min_rrr = 1.2
     max_rrr = 5
     #when a check failed this becomes false and func returns False
     df = curr_stock_historical.iloc[:i+1,:]
     
-    pattern_df = get_pattern_df(i)
-
-    
     trend = df['trend'][i]
     roc_5 = df['roc_sma_5'][i]
     roc_30 = df['roc_sma_30'][i]
     
-    p_roc_5 = df['roc_sma_5'][i-10]
-    p_roc_30 = df['roc_sma_30'][i-10]
+    p_roc_5 = df['roc_sma_5'][i-5]
+    p_roc_30 = df['roc_sma_30'][i-5]
     
     roc_roc_5 =df['roc_roc_5'][i]
     roc_roc_30 =df['roc_roc_30'][i]
@@ -552,8 +560,8 @@ def long_criteria_satisfied_1(i,support,resistance,close):
     #dont enter longs with no support
     if support == 0:
         return False
-    """ stock_amnt_to_order = stock_amnt_order(close,support)
-     potential_money_risked = potential_delta(stock_amnt_to_order,close,support)
+    stock_amnt_to_order = stock_amnt_order(close,support)
+    potential_money_risked = potential_delta(stock_amnt_to_order,close,support)
     potential_money_gained = potential_delta(stock_amnt_to_order,close,resistance)
 
     if potential_money_gained != 0:
@@ -563,92 +571,71 @@ def long_criteria_satisfied_1(i,support,resistance,close):
     
     if not(rrr>min_rrr and rrr < max_rrr):
         return False
-    print(" RRR PASSED ")  """
-        
-    """ best_candle_rating=candle_rankings.get(pattern_df['candlestick_pattern'][i-1],100)
-    #when the prominent candle is not rated below 40 dont enter
-    if best_candle_rating < max_candle_rating:
-        return False
-    print("RATING PASSED")
     
-    #when the prominent candle is a bear dont enter
+    if roc_5 < 0:
+        return False
+    if roc_30 < 0:
+        return False
+    if roc_5 < roc_30:
+        return False
+    
+    if p_roc_30 > 0:
+        return False
+    if p_roc_5 > 0:
+        return False
+    
+    pattern_df = get_pattern_df(i)
+    candle_rating = pattern_df['pattern_val'].rolling(window=5).mean()
+    if candle_rating[-1] < 0:
+        return False
     if '_Bear' in pattern_df['candlestick_pattern'][i-1]:
         return False
-    print(" NOT BEAR PATTERN PASSED") """
-    
-    if not((roc_5 > 0) and (roc_30 > 0) and (roc_5 > roc_30)) :
-        return False
-    if not(roc_roc_5 > 0 and roc_roc_30 > 0):
+    best_candle_rating=candle_rankings.get(pattern_df['candlestick_pattern'][i-1],100)
+    if best_candle_rating > max_candle_rating:
         return False
     return True
 
 def close_long_criteria_satisfied_1(i,support,resistance,close,entery_time):
     global curr_stock_historical
-    
-    min_rrr = 1.2
-    max_rrr = 5
-    entery_pattern_rating = -3
-    max_candle_rating = 40
 
-    delta_in_pos = i - entery_time
-    if delta_in_pos < 15:
-        return False
     #when a check failed this becomes false and func returns False
     df = curr_stock_historical.iloc[:i+1,:]
     
-
+    delta_money = get_pos_delta(close)
+    if delta_money <= 0:
+        return False
     
-    trend = df['trend'][i]
     roc_5 = df['roc_sma_5'][i]
     roc_30 = df['roc_sma_30'][i]
     
-    p_roc_5 = df['roc_sma_5'][i-10]
-    p_roc_30 = df['roc_sma_30'][i-10]
-    
-    #when new resistance is found exit
-    if isResistance(curr_stock_historical,i):
-                l = curr_stock_historical['High'][i]
-                if isFarFromLevel(l,levels,s):
-                    return True
     #when trend shift is occuring - exit            
     if (roc_5 < 0) or roc_30 < 0:
         return True
-    
-    # search for candle indicator for exit
-    pattern_df = get_pattern_df(i)
-    candle_rating = pattern_df['pattern_val'].rolling(window=5).mean()
-    best_candle_rating=candle_rankings.get(pattern_df['candlestick_pattern'][i-1],100)
-    if best_candle_rating < max_candle_rating and candle_rating[-1] < entery_pattern_rating and '_Bear' in pattern_df['candlestick_pattern'][i]:
+    if roc_5 < roc_30:
         return True
+    
     return False   
 
 def short_criteria_satisfied_1(i,support,resistance,close):
     global curr_stock_historical
     
-    max_candle_rating = 60
     min_rrr = 1.2
     max_rrr = 5
     #when a check failed this becomes false and func returns False
     df = curr_stock_historical.iloc[:i+1,:]
     
-    pattern_df = get_pattern_df(i)
-
-    
-    trend = df['trend'][i]
     roc_5 = df['roc_sma_5'][i]
     roc_30 = df['roc_sma_30'][i]
+
     
-    p_roc_5 = df['roc_sma_5'][i-10]
-    p_roc_30 = df['roc_sma_30'][i-10]
-    
-    roc_roc_5 =df['roc_roc_5'][i]
-    roc_roc_30 =df['roc_roc_30'][i]
+    p_roc_5 = df['roc_sma_5'][i-5]
+    p_roc_30 = df['roc_sma_30'][i-5]
     
     #when trend is not shifting up,or, going up or not undifined DONT enter trade
     #dont enter longs with no support
     if resistance == 0:
         return False
-    """ stock_amnt_to_order = stock_amnt_order(close,resistance)
+    stock_amnt_to_order = stock_amnt_order(close,resistance)
     potential_money_risked = potential_delta(stock_amnt_to_order,close,resistance)
     potential_money_gained = potential_delta(stock_amnt_to_order,close,support)
 
@@ -659,22 +646,19 @@ def short_criteria_satisfied_1(i,support,resistance,close):
     
     if not(rrr>min_rrr and rrr < max_rrr):
         return False
-    print(" RRR PASSED ")   """   
-    """ best_candle_rating=candle_rankings.get(pattern_df['candlestick_pattern'][i-1],100)
-    #when the prominent candle is not rated below 40 dont enter
-      if best_candle_rating < max_candle_rating:
+
+    if roc_5 > 0:
         return False
-    print("RATING PASSED")
-    #when the prominent candle is a bull dont enter
-    if '_Bull' in pattern_df['candlestick_pattern'][i-1]:
+    if roc_30 > 0:
         return False
-    print(" NOT BULL PATTERN PASSED")  """
-    
-    if not((roc_5 < 0) and (roc_30 < 0) and (roc_5 < roc_30)):
+    if roc_5 > roc_30:
         return False
     
-    if not(roc_roc_5 < 0 and roc_roc_30 < 0):
+    if p_roc_30 > 0:
         return False
+    if p_roc_5 > 0:
+        return False
+    
     return True
 
 def close_short_criteria_satisfied_1(i,support,resistance,close,entery_time):
@@ -683,33 +667,21 @@ def close_short_criteria_satisfied_1(i,support,resistance,close,entery_time):
     entery_pattern_rating = 3
     max_candle_rating = 40
 
-    delta_in_pos = i - entery_time
-    if delta_in_pos < 15:
+    delta_money = get_pos_delta(close)
+    if delta_money <= 0:
         return False
     #when a check failed this becomes false and func returns False
     df = curr_stock_historical.iloc[:i+1,:]
     
-    trend = df['trend'][i]
     roc_5 = df['roc_sma_5'][i]
     roc_30 = df['roc_sma_30'][i]
     
-    p_roc_5 = df['roc_sma_5'][i-10]
-    p_roc_30 = df['roc_sma_30'][i-10]
-    
-    #when new support is found exit
-    if isSupport(curr_stock_historical,i):
-                l = curr_stock_historical['Low'][i]
-                if isFarFromLevel(l,levels,s):
-                    return True
     #when trend shift is occuring - exit            
-    if (roc_5 > 0) or roc_30 > 0:
+    if (roc_30 > 0):
+        return True
+    if roc_5 > roc_30:
         return True
     # search for candle indicator for exit
-    pattern_df = get_pattern_df(i)
-    candle_rating = pattern_df['pattern_val'].rolling(window=5).mean()
-    best_candle_rating=candle_rankings.get(pattern_df['candlestick_pattern'][i-1],100)
-    if best_candle_rating < max_candle_rating and candle_rating[-1] > entery_pattern_rating and '_Bull' in pattern_df['candlestick_pattern'][i]:
-        return True
     return False   
 
 def run_simulation(stock_to_trade):    
@@ -843,13 +815,7 @@ def run_simulation(stock_to_trade):
             #############################################################
             #                     STRATEGY                              #
             #############################################################
-            min_rrr = 1.2
-            max_rrr = 5
-            max_candle_rating =50
-            min_candle_rating = 3
-            rrr = 0
 
-            
             support = get_support(i,close)
             resistance = get_resistance(i,close)
             close = curr_stock_historical['Close'][i]
