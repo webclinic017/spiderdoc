@@ -8,12 +8,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mpl_dates
 from scipy.signal import argrelextrema
-from sklearn.cluster import KMeans
 from datetime import timedelta,time,datetime
 import sys
 import multiprocessing
-from sklearn.metrics import silhouette_score
-
 from itertools import compress
 pd.options.mode.chained_assignment = None  # default='warn'
 
@@ -144,12 +141,12 @@ candle_rankings = {
 
 get_rid_of_position = False
 position_is_open=False
-""" symbols_file = sys.argv[1]
+symbols_file = sys.argv[1]
 start_date_range = sys.argv[2]
 end_date_range = sys.argv[3]
 run_type = sys.argv[4]
 prallel_proc_amnt = sys.argv[5]
-prallel_proc_amnt=int(prallel_proc_amnt) """
+prallel_proc_amnt=int(prallel_proc_amnt) 
 
 positions              = pd.DataFrame(columns=['Timestamp','Action','Amount','Price','TValue','Intent','Balance'])
 #for eval 
@@ -206,13 +203,13 @@ def update_balance (balance,trans_value,action,intent):
     else:
         balance = balance + trans_value
     return balance
+
 def update_stock_amnt (balance,stock_price,action):
     tmp_mod=balance % stock_price
     tmp_balace=balance-tmp_mod
     stock_amnt=tmp_balace / stock_price
 
     return stock_amnt
-
 
 def isSupport(df,i):
   support = df['Low'][i] < df['Low'][i-1]  and df['Low'][i] < df['Low'][i+1] and df['Low'][i+1] < df['Low'][i+2] and df['Low'][i-1] < df['Low'][i-2]
@@ -224,7 +221,6 @@ def isResistance(df,i):
 
 def isFarFromLevel(l,levels,s):
    return np.sum([abs(l-x) < s  for x in levels]) == 0
-#returns list of risk factor,if min / max  return null
 
 def clean_levels(minute_ran):
     global levels
@@ -407,6 +403,7 @@ def get_support(i,close):
        if level[1] <  close:
            return level[1]
     return 0 
+
 def get_resistance(i,close):
     global levels
     for level in reversed(levels):
@@ -460,8 +457,7 @@ def get_target_price(level,close):
     else:
         tp = close + delta_target
     return tp
-   
-   
+      
 def get_pattern_df(i):
     global curr_stock_historical
     global candle_rankings
@@ -710,7 +706,6 @@ def close_short_criteria_satisfied_1(i,support,resistance,close,entery_time):
         return True
     return False   
 
-
 def run_simulation(stock_to_trade):    
     get_rid_of_position = False
     position_is_open=False
@@ -773,11 +768,11 @@ def run_simulation(stock_to_trade):
             break
 
         #ema 60
-        curr_stock_historical['ema_wide']= ta.trend.sma_indicator(curr_stock_historical['Close'],window=60,fillna=False)
+        curr_stock_historical['ema_wide']= talib.SMA(curr_stock_historical['Close'],timeperiod=60)
         #ema 30
-        curr_stock_historical['ema_med']= ta.trend.sma_indicator(curr_stock_historical['Close'],window=30,fillna=False)
+        curr_stock_historical['ema_med']= talib.SMA(curr_stock_historical['Close'],timeperiod=30)
         #ema 10
-        curr_stock_historical['ema_thin']= ta.trend.sma_indicator(curr_stock_historical['Close'],window=10,fillna=False)
+        curr_stock_historical['ema_thin']= talib.SMA(curr_stock_historical['Close'],timeperiod=10)
         
         #roc 
         curr_stock_historical["roc_thin"] = talib.ROCP(curr_stock_historical['Close'], timeperiod = 5)
@@ -864,7 +859,6 @@ def run_simulation(stock_to_trade):
                     else:
                         target_price = 0  
                     buy_long(i,stock_amnt_to_order)
-                    print("ENTERED!++++++++++++++++++++++++++++++++")
                     exit_criteria_selecctor = 1
                     entery_time = i
                 if (short_criteria_satisfied_1(i,support,resistance,close)):
@@ -876,7 +870,6 @@ def run_simulation(stock_to_trade):
                     else:
                         target_price = 0  
                     sell_short(i,stock_amnt_to_order)
-                    print("ENTERED!++++++++++++++++++++++++++++++++")
                     exit_criteria_selecctor = -1
                     entery_time = i
             #exits conds
@@ -898,36 +891,38 @@ def run_simulation(stock_to_trade):
                     if (close_long_criteria_satisfied_1(i,support,resistance,close,entery_time)):
                         position_is_open=False
                         close_long(i)
-                        print("Exited! ----------------------")
                 elif  exit_criteria_selecctor == -1 :
                     if (close_short_criteria_satisfied_1(i,support,resistance,close,entery_time)):
                         position_is_open=False
                         close_short(i)
-                        print("Exited! ----------------------")
                 else:
                     pass
                 
                     #DAY FINISHED COMPUTING
-        pd.set_option("display.max_rows", None, "display.max_columns", None)
-        print(positions)
-        print(levels)
-        show_plt(i)
+
+        outname = "ROC_1-"+stock_to_trade+"-X-"+datetime.strftime(curr_date,"%Y-%m-%d")+".csv"
+        outdir = '/output/'
+        #outdir = 'C:\DEVOPS\python apps\spiderdoc\spiderdoc\outfile\positions\''
+        fullname =  outdir + outname
+        positions.to_csv(fullname)
+    if (stock_not_avail):
+        return
 
                 
                     
                 
                 
             
-stock_to_trade = 'TSLA'
+""" stock_to_trade = 'TSLA'
 start_date_range = '2022-01-03'
-end_date_range = '2022-01-04'
-run_type = 'ADJ'
-run_simulation(stock_to_trade)
-""" file_path = '/input/'+symbols_file
+end_date_range = '2022-01-14'
+run_type = 'ADJ' 
+run_simulation(stock_to_trade) """
+file_path = '/input/'+symbols_file
 Sym_file = open(file_path,"r")
 
 
 if __name__ == '__main__':
     # start n worker processes
     with multiprocessing.Pool(processes=prallel_proc_amnt) as pool:
-        pool.map_async(run_simulation,iterable=Sym_file).get()   """
+        pool.map_async(run_simulation,iterable=Sym_file).get()

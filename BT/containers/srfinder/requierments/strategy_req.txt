@@ -1,0 +1,6 @@
+alpaca_trade_api
+pandas
+ta-lib
+matplotlib
+yfinance
+scipy
