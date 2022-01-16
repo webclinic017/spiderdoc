@@ -1,0 +1,29 @@
+---
+- name: initial_installs
+  hosts: BTServers
+  remote_user: ubuntu
+  become: true
+  tasks:
+  - name: clear output
+    file:
+      path: /containers/output
+      state: absent
+  - name: clear input
+    file:
+      path: /appcode/spiderdoc/BT/containers/tmp
+      state: absent
+  - name: modify permissions and properties of a directory (or create it if it doesn't exist)
+    file:
+      path: /containers/output/
+      state: directory
+      owner: ubuntu
+      group: docker
+      mode: 0766
+  - name: modify permissions and properties of a directory (or create it if it doesn't exist)
+    file:
+      path: /appcode/spiderdoc/BT/containers/tmp
+      state: directory
+      owner: ubuntu
+      group: docker
+      mode: 0766
+
