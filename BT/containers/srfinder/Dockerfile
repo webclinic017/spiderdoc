@@ -1,5 +1,5 @@
 FROM python:latest
-LABEL Name=SMA Version=1.0.0
+LABEL Name=ROC Version=1.0.0
 WORKDIR /
 # Install dependencies:
 COPY ./requierments/min_max_req.txt .
