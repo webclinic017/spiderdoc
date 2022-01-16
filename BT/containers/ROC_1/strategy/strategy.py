@@ -141,11 +141,17 @@ candle_rankings = {
 
 get_rid_of_position = False
 position_is_open=False
-symbols_file = sys.argv[1]
+""" #symbols_file = sys.argv[1]
 start_date_range = sys.argv[2]
 end_date_range = sys.argv[3]
 run_type = sys.argv[4]
-prallel_proc_amnt = sys.argv[5]
+prallel_proc_amnt = sys.argv[5] """
+
+start_date_range = '2022-01-03'
+end_date_range = '2022-01-14'
+run_type = 'REAL'
+prallel_proc_amnt = 16
+
 prallel_proc_amnt=int(prallel_proc_amnt) 
 
 positions              = pd.DataFrame(columns=['Timestamp','Action','Amount','Price','TValue','Intent','Balance'])
@@ -901,8 +907,8 @@ def run_simulation(stock_to_trade):
                     #DAY FINISHED COMPUTING
 
         outname = "ROC_1-"+stock_to_trade+"-X-"+datetime.strftime(curr_date,"%Y-%m-%d")+".csv"
-        outdir = '/output/'
-        #outdir = 'C:\DEVOPS\python apps\spiderdoc\spiderdoc\outfile\positions\''
+        #outdir = '/output/'
+        outdir = 'C:\\Users\\nolys\\Desktop\\results\\'
         fullname =  outdir + outname
         positions.to_csv(fullname)
     if (stock_not_avail):
@@ -918,7 +924,8 @@ start_date_range = '2022-01-03'
 end_date_range = '2022-01-14'
 run_type = 'ADJ' 
 run_simulation(stock_to_trade) """
-file_path = '/input/'+symbols_file
+#file_path = '/input/'+symbols_file
+file_path = 'C:\\Users\\nolys\\Desktop\\results\\symbols.txt'
 Sym_file = open(file_path,"r")
 
 
