@@ -574,7 +574,7 @@ def long_criteria_satisfied_1(i,support,resistance,close):
         return False
     print(" NOT BEAR PATTERN PASSED") """
     
-    if not((roc_5 > 0) and (roc_30 > 0) ) :
+    if not((roc_5 > 0) and (roc_30 > 0) and (roc_5 > roc_30)) :
         return False
     if not(roc_roc_5 > 0 and roc_roc_30 > 0):
         return False
@@ -668,7 +668,7 @@ def short_criteria_satisfied_1(i,support,resistance,close):
         return False
     print(" NOT BULL PATTERN PASSED")  """
     
-    if not((roc_5 < 0) and (roc_30 < 0)):
+    if not((roc_5 < 0) and (roc_30 < 0) and (roc_5 < roc_30)):
         return False
     
     if not(roc_roc_5 < 0 and roc_roc_30 < 0):
@@ -918,9 +918,9 @@ def run_simulation(stock_to_trade):
                 
                 
             
-stock_to_trade = 'AAPL'
-start_date_range = '2021-12-21'
-end_date_range = '2021-12-22'
+stock_to_trade = 'TSLA'
+start_date_range = '2022-01-03'
+end_date_range = '2022-01-04'
 run_type = 'ADJ'
 run_simulation(stock_to_trade)
 """ file_path = '/input/'+symbols_file
