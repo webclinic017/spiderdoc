@@ -485,10 +485,12 @@ def run_simulation(stock_to_trade):
                 l = curr_stock_historical['Low'][i]
                 if isFarFromLevel(l,levels,s):
                     levels.append((i,l))
+                    levels = clean_levels(i)
             elif isResistance(curr_stock_historical,i):
                 l = curr_stock_historical['High'][i]
                 if isFarFromLevel(l,levels,s):
                     levels.append((i,l))
+                    levels = clean_levels(i)
             
             #what was the intent of the previos trade in positions
             last_intent = positions.iloc[-1]['Intent']    
