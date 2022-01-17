@@ -448,7 +448,7 @@ def run_simulation(stock_to_trade):
         curr_stock_historical["roc_sma_30"] = talib.SMA(curr_stock_historical['roc_thin'], timeperiod = 30)
 
         #roc_roc_sma_30
-        curr_stock_historical["roc_sma_5"] = talib.SMA(curr_stock_historical['roc_thin'], timeperiod = 5)
+        curr_stock_historical["roc_sma_5"] = talib.SMA(curr_stock_historical['roc_thin'], timeperiod = 20)
         
         
         #fill trend column
