@@ -442,7 +442,7 @@ def run_simulation(stock_to_trade):
         curr_stock_historical['ema_thin']= ta.trend.sma_indicator(curr_stock_historical['Close'],window=10,fillna=False)
         
         #roc 
-        curr_stock_historical["roc_thin"] = talib.ROCP(curr_stock_historical['Close'], timeperiod = 5)
+        curr_stock_historical["roc_thin"] = talib.ROC(curr_stock_historical['Close'], timeperiod = 5)
         
         #roc sma        
         curr_stock_historical["roc_sma_30"] = talib.SMA(curr_stock_historical['roc_thin'], timeperiod = 30)

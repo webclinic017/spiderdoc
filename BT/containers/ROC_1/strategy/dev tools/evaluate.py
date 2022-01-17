@@ -27,7 +27,7 @@ def concat_positions():
                 positions.drop(index=positions.index[-1],axis=0, inplace=True) 
         li.append(positions)  #add file to concatination to list
     
-    positions = pd.concat(li, axis=0)  #combine all files to single df
+        positions = pd.concat(li, axis=0)  #combine all files to single df
     positions= positions.reset_index(drop=True) #fix indexting issue
     return positions
 def gen_delta_position():
@@ -57,7 +57,21 @@ def calc_gross_profit():
         if delta_positions.loc[index]["Value"] >= 0:
             gross_profit = gross_profit + delta_positions.loc[index]["Value"]
     return gross_profit
-
+def gen_delta_positions_per_sym(sym):
+    path = "C:\\Users\\nolys\\Desktop\\results\\" # TODO:CHANGE PATH TO RELEVANT PATH FOR PROJECT
+    all_files = glob.glob(path +"*-"+sym+"-*.csv")
+    li = []
+    for filename in all_files:
+        positions = pd.read_csv(filename)  #read single file
+        positions.rename(columns = {'Unnamed: 0':'minute_in_day'}, inplace = True) 
+        if(not positions.empty):
+            if(positions.iloc[-1]['Intent'] == "SHORT" or positions.iloc[-1]['Intent'] == "LONG") :  #drop open positions at EOD
+                positions.drop(index=positions.index[-1],axis=0, inplace=True) 
+        li.append(positions)  #add file to concatination to list
+    
+        positions = pd.concat(li, axis=0)  #combine all files to single df
+    positions= positions.reset_index(drop=True) #fix indexting issue
+    return positions
     #my own attempt
 def win_calc_streak():
     # save ram !
@@ -198,10 +212,45 @@ print("    ============================================")
 print("avg_lose_strak_length  : "+   str(avg_lose_streak_length))
 print("min_lose_streak_length : "+     str(min_lose_streak_length))
 print("max_lose_streak_length : "+     str(max_lose_streak_length))
+print('#####################################################')
+print('############# positions per symbols #################')
+print('#####################################################')
+file_path = 'C:\\Users\\nolys\\Desktop\\results\\symbols.txt'
+Sym_file  = open(file_path,"r")
+Daily_df = pd.DataFrame(columns=['Stock','Date','Daily_delta'])
+Daily_df = Daily_df.loc[:,['Stock','Date','Daily_delta']]
+k=0
+for sym in Sym_file:
+    sym=sym.strip('\n')
+    positions_p_sym=gen_delta_positions_per_sym(sym)
+    positions_p_sym = positions_p_sym.loc[:,['minute_in_day','Timestamp','Action','Amount','TValue','Intent',"Balance"]]
+    df = positions_p_sym
+   
+    start_idx = 0
+    do_calc   = False
+    for i in range(1,df.shape[0]):
+        pass
+        minute = df['minute_in_day'][i]
+        p_minute = df['minute_in_day'][i-1]
 
-"""
-delta_positions.reset_index().plot.scatter(x = 'index', y = 'Value')
-plt.grid(True)
-plt.show()
-print(delta_positions)         """
- 
+        if p_minute > minute:
+            end_idx = i-1
+            do_calc = True 
+        if do_calc:
+            EOD_balance_delta = df['Balance'][end_idx] - df['Balance'][start_idx]
+            date = df['Timestamp'][i-1]
+            date =datetime.strptime(date, '%Y-%m-%d %H:%M:%S%z').date()
+            Daily_df.loc[k,'Stock']=sym
+            Daily_df.loc[k,'Date']=date
+            Daily_df.loc[k,'Daily_delta']=EOD_balance_delta
+            
+            k         +=1
+            start_idx = i
+            do_calc   = False
+print(Daily_df)
+        #set flag to true
+        #when date changes set flag to flase
+        #retrive previos pos from when the flag was set
+    #avg day profit lose
+    #max day profit loss
+    #streak daily

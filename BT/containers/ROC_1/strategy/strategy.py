@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mpl_dates
 from scipy.signal import argrelextrema
+from scipy import stats
 from datetime import timedelta,time,datetime
 import sys
 import multiprocessing
@@ -166,42 +167,15 @@ positions.set_index('Timestamp')
 #                                           FUNCTIONS
 ########################################################################################################################
 
-def update_pos(index,action,price,amount,tvalue,intent,balance) :
+def update_pos(index,datetime,action,price,amount,tvalue,intent,balance) :
     global positions
+    positions.loc[index,'Timestamp']=datetime
     positions.loc[index,'Action']=action
     positions.loc[index,'Amount']=amount
     positions.loc[index,'Price']=price
     positions.loc[index,'TValue']=tvalue
     positions.loc[index,'Intent']=intent
     positions.loc[index,'Balance']=balance
-
-def update_pos_long(index,action,amount,price,tvalue,intent) :
-    positions_long .loc[index,'Action']=action
-    positions_long.loc[index,'Amount']=amount
-    positions_long.loc[index,'Price']=price
-    positions_long.loc[index,'TValue']=tvalue
-    positions_long.loc[index,'Intent']=intent
-    
-def update_pos_closed_long(index,action,amount,price,tvalue,intent) :
-    positions_closed_longs.loc[index,'Action']=action
-    positions_closed_longs.loc[index,'Amount']=amount
-    positions_closed_longs.loc[index,'Price']=price
-    positions_closed_longs.loc[index,'TValue']=tvalue
-    positions_closed_longs.loc[index,'Intent']=intent
-    
-def update_pos_short(index,action,amount,price,tvalue,intent) :
-    positions.loc[index,'Action']=action
-    positions_short.loc[index,'Amount']=amount
-    positions_short.loc[index,'Price']=price
-    positions_short.loc[index,'TValue']=tvalue
-    positions_short.loc[index,'Intent']=intent
-    
-def update_pos_closed_short(index,action,amount,price,tvalue,intent) :
-    positions_closed_short.loc[index,'Action']=action
-    positions_closed_short.loc[index,'Amount']=amount
-    positions_closed_short.loc[index,'Price']=price
-    positions_closed_short.loc[index,'TValue']=tvalue
-    positions_closed_short.loc[index,'Intent']=intent
 
 def update_balance (balance,trans_value,action,intent):  
     if (action == 'buy') :
@@ -363,7 +337,7 @@ def sell_short(i,stock_amnt_to_order):
     trans_value=curr_price*stock_amnt
     if run_type == 'ADJ' or 'REAL' :
         balance=update_balance(balance,trans_value,action,intent)
-    update_pos(curr_stock_historical['Datetime'][i],action,curr_price,stock_amnt,trans_value,intent,balance)
+    update_pos(i,curr_stock_historical['Datetime'][i],action,curr_price,stock_amnt,trans_value,intent,balance)
 
 def close_short(i):
     global balance
@@ -376,7 +350,7 @@ def close_short(i):
     trans_value=curr_price*stock_amnt
     if run_type == 'ADJ' or 'REAL' :
         balance=update_balance(balance,trans_value,action,intent)
-    update_pos(curr_stock_historical['Datetime'][i],action,curr_price,stock_amnt,trans_value,intent,balance)  
+    update_pos(i,curr_stock_historical['Datetime'][i],action,curr_price,stock_amnt,trans_value,intent,balance)  
 
 def buy_long(i,stock_amnt_to_order):
     global balance
@@ -388,7 +362,7 @@ def buy_long(i,stock_amnt_to_order):
     trans_value=curr_price*stock_amnt
     if run_type == 'ADJ' or 'REAL' :
         balance=update_balance(balance,trans_value,action,intent)
-    update_pos(curr_stock_historical['Datetime'][i],action,curr_price,stock_amnt,trans_value,intent,balance)
+    update_pos(i,curr_stock_historical['Datetime'][i],action,curr_price,stock_amnt,trans_value,intent,balance)
 
 def close_long(i):
     global balance
@@ -401,7 +375,7 @@ def close_long(i):
     trans_value=curr_price*stock_amnt
     if run_type == 'ADJ' or 'REAL' :
         balance=update_balance(balance,trans_value,action,intent)
-    update_pos(curr_stock_historical['Datetime'][i],action,curr_price,stock_amnt,trans_value,intent,balance)     
+    update_pos(i,curr_stock_historical['Datetime'][i],action,curr_price,stock_amnt,trans_value,intent,balance)     
 
 def get_support(i,close):
     global levels
@@ -710,16 +684,16 @@ def run_simulation(stock_to_trade):
     #                                           New Day initilazion
     #                                           ==================
     #########################################################################################################################                                            
-        positions              = pd.DataFrame(columns=['Timestamp','Action','Amount','Price','TValue','Intent'])
+        positions              = pd.DataFrame(columns=['Timestamp','Action','Amount','Price','TValue','Intent','Balance'])
         #for eval 
-        positions_short        = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
-        positions_closed_short = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
-        positions_long         = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
-        positions_closed_longs = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
+        #positions['Timestamp'] = pd.to_datetime(positions.index)
+        positions = positions.loc[:,['Timestamp','Action','Amount','TValue','Intent',"Balance"]]
+
         curr_date=curr_date + timedelta(days=1) 
-        update_pos('0000-00-00 00:00:00-00:00','NA',0,0,0,'NA',balance)
         if run_type != 'REAL' :
             balance=10000
+        update_pos(0,'0000-00-00 00:00:00-00:00','NA',0,0,0,'NA',balance)
+
         tommorow_date =curr_date + timedelta(days=1)
         get_rid_of_position = False 
         #skips loop run if staurday
