@@ -511,7 +511,7 @@ def get_pattern_df(i):
 def long_criteria_satisfied_1(i,support,resistance,close):
     global curr_stock_historical
     
-    min_pattern_val = 10
+    min_pattern_val = 12
     max_candle_rating = 40
     min_rrr = 1.9
     #when a check failed this becomes false and func returns False
@@ -537,13 +537,13 @@ def long_criteria_satisfied_1(i,support,resistance,close):
         return False
     pattern_df = get_pattern_df(i)
     candle_rating = pattern_df['pattern_val'].rolling(window=5).sum()
-    if candle_rating[i-1] <= min_pattern_val:
+    if candle_rating[-1] <= min_pattern_val:
         return False
 
-    if '_Bear' in pattern_df['candlestick_pattern'][i-1]:
+    if '_Bear' in pattern_df['candlestick_pattern'][-1]:
         return False
 
-    best_candle_rating=candle_rankings.get(pattern_df['candlestick_pattern'][i-1],105)
+    best_candle_rating=candle_rankings.get(pattern_df['candlestick_pattern'][-1],105)
     if best_candle_rating > max_candle_rating:
         return False
 
@@ -599,14 +599,19 @@ def short_criteria_satisfied_1(i,support,resistance,close):
         rrr = 2
     
     if (rrr < min_rrr):
-        return False    
+        return False 
     pattern_df = get_pattern_df(i)
     candle_rating = pattern_df['pattern_val'].rolling(window=5).sum()
-    if candle_rating[i-1] >= min_pattern_val:
+    if candle_rating[-1] >= min_pattern_val:
+        return False 
+    
+    print('Pattern_val Passed')
+    
+    if '_Bull' in pattern_df['candlestick_pattern'][-1]:
         return False
-    if '_Bull' in pattern_df['candlestick_pattern'][i-1]:
-        return False
-    best_candle_rating=candle_rankings.get(pattern_df['candlestick_pattern'][i-1],105)
+    print('CDL type Passed')
+    
+    best_candle_rating=candle_rankings.get(pattern_df['candlestick_pattern'][-1],105)
     if best_candle_rating > max_candle_rating:
         return False
     print('ALL SHORT CRITERIA PASSED')
@@ -653,12 +658,11 @@ def long_confirmation(i,pattern_spotted_time):
         return False
     if p_roc_5 > roc_5:
         return False
-    if p_roc_30 > roc_30:
-        return False
     
     if roc_5 < roc_30:
         return False
-    
+    if roc_5 < 0:
+        return False
     return True
 
 def short_confirmation(i,pattern_spotted_time):
@@ -680,12 +684,11 @@ def short_confirmation(i,pattern_spotted_time):
         return False
     if p_roc_5 < roc_5:
         return False
-    if p_roc_30 < roc_30:
-        return False
     
     if roc_5 > roc_30:
         return False
-    
+    if roc_5 > 0:
+        return False
     return True
 
 def run_simulation(stock_to_trade):    
@@ -855,7 +858,6 @@ def run_simulation(stock_to_trade):
                             buy_long(i,stock_amnt_to_order)
                             exit_criteria_selecctor = 1
                             entery_time = i
-                            print('entered LONG ++++++++++ ')
                         elif long_confirmation(i,pattern_register_time) == 0:
                             continue
                         else:
