@@ -137,8 +137,7 @@ candle_rankings = {
         "CDLSTALLEDPATTERN_Bull": 93,
         "CDLSTALLEDPATTERN_Bear": 93,
         "CDLKICKINGBYLENGTH": 96,
-        "CDLKICKINGBYLENGTH_Bear": 102,
-        "CDLKICKINGBYLENGTH_Bull": 102
+        "CDLKICKINGBYLENGTH_Bear": 102
     }
 
 get_rid_of_position = False
@@ -157,6 +156,11 @@ prallel_proc_amnt = 16
 prallel_proc_amnt=int(prallel_proc_amnt) 
 
 positions              = pd.DataFrame(columns=['Timestamp','Action','Amount','Price','TValue','Intent','Balance'])
+#for eval 
+positions_short        = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
+positions_closed_short = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
+positions_long         = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
+positions_closed_longs = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
 positions.set_index('Timestamp')
 #assign before referance
 ########################################################################################################################
@@ -511,15 +515,21 @@ def get_pattern_df(i):
 def long_criteria_satisfied_1(i,support,resistance,close):
     global curr_stock_historical
     
-    min_pattern_val = 12
     max_candle_rating = 40
-    min_rrr = 1.9
+    min_rrr = 1.6
+    max_rrr = 3
     #when a check failed this becomes false and func returns False
     df = curr_stock_historical.iloc[:i+1,:]
+    
+    trend = df['trend'][i]
     roc_5 = df['roc_sma_5'][i]
     roc_30 = df['roc_sma_30'][i]
+    
     p_roc_5 = df['roc_sma_5'][i-5]
     p_roc_30 = df['roc_sma_30'][i-5]
+    
+    roc_roc_5 =df['roc_roc_5'][i]
+    roc_roc_30 =df['roc_roc_30'][i]
     
     #dont enter longs with no support
     if support == 0:
@@ -533,22 +543,25 @@ def long_criteria_satisfied_1(i,support,resistance,close):
     elif potential_money_gained == 0:
         rrr = 2
     
-    if (rrr<min_rrr):
+    if (rrr<min_rrr or rrr > max_rrr):
         return False
+    
+    if roc_5 < 0:
+        return False
+    if roc_30 < 0:
+        return False
+    if roc_5 < roc_30:
+        return False
+    
+    if p_roc_30 > 0:
+        return False
+    if p_roc_5 > 0:
+        return False
+    
     pattern_df = get_pattern_df(i)
     candle_rating = pattern_df['pattern_val'].rolling(window=5).sum()
-    if candle_rating[-1] <= min_pattern_val:
+    if candle_rating[-1] < 6:
         return False
-
-    if '_Bear' in pattern_df['candlestick_pattern'][-1]:
-        return False
-
-    best_candle_rating=candle_rankings.get(pattern_df['candlestick_pattern'][-1],105)
-    if best_candle_rating > max_candle_rating:
-        return False
-
-    print('ALL LONG CRITERIA PASSED')
-
     
     return True
 
@@ -558,13 +571,18 @@ def close_long_criteria_satisfied_1(i,close,target):
     #when a check failed this becomes false and func returns False
     df = curr_stock_historical.iloc[:i+1,:]
     
+    
     if close <= target:
         return False
     
     roc_5 = df['roc_sma_5'][i]
     roc_30 = df['roc_sma_30'][i]
+    roc_roc_5 = df['roc_roc_5'][i]
     #when trend shift is occuring - exit            
     if roc_5 < roc_30:
+        return True
+    
+    if roc_roc_5 < 0:
         return True
     
     return False   
@@ -572,9 +590,8 @@ def close_long_criteria_satisfied_1(i,close,target):
 def short_criteria_satisfied_1(i,support,resistance,close):
     global curr_stock_historical
     
-    min_rrr = 1.9
-    max_candle_rating = 40
-    min_pattern_val = -10
+    min_rrr = 1.6
+    max_rrr = 3
     #when a check failed this becomes false and func returns False
     df = curr_stock_historical.iloc[:i+1,:]
     
@@ -598,25 +615,27 @@ def short_criteria_satisfied_1(i,support,resistance,close):
     elif potential_money_gained == 0:
         rrr = 2
     
-    if (rrr < min_rrr):
-        return False 
+    if (rrr < min_rrr or rrr > max_rrr):
+        return False
+
+    if roc_5 > 0:
+        return False
+    if roc_30 > 0:
+        return False
+    if roc_5 > roc_30:
+        return False
+    
+    if p_roc_30 > 0:
+        return False
+    if p_roc_5 > 0:
+        return False
+    
     pattern_df = get_pattern_df(i)
     candle_rating = pattern_df['pattern_val'].rolling(window=5).sum()
-    if candle_rating[-1] >= min_pattern_val:
-        return False 
-    
-    print('Pattern_val Passed')
-    
-    if '_Bull' in pattern_df['candlestick_pattern'][-1]:
+    if candle_rating[-1] > -6:
         return False
-    print('CDL type Passed')
-    
-    best_candle_rating=candle_rankings.get(pattern_df['candlestick_pattern'][-1],105)
-    if best_candle_rating > max_candle_rating:
-        return False
-    print('ALL SHORT CRITERIA PASSED')
-    
     return True
+
 
 def close_short_criteria_satisfied_1(i,close,target):
     global curr_stock_historical
@@ -631,65 +650,24 @@ def close_short_criteria_satisfied_1(i,close,target):
     
     roc_5 = df['roc_sma_5'][i]
     roc_30 = df['roc_sma_30'][i]
+    roc_roc_5 = df['roc_roc_5'][i]
 
     #when trend shift is occuring - exit            
     if roc_5 > roc_30:
         return True
     
+    if roc_roc_5 > 0:
+        return True
+    
     # search for candle indicator for exit
     return False   
 
-def long_confirmation(i,pattern_spotted_time):
-    global curr_stock_historical
-    delta_time_pass = (i - pattern_spotted_time)
-    if delta_time_pass < 5:
-        return 0
-    df = curr_stock_historical
-    close = df['Close'][i]
-    prev_close = df['Close'][i-5]
-    
-    roc_5 = df['roc_sma_5'][i]
-    roc_30 = df['roc_sma_30'][i]
-    
-    p_roc_5 = df['roc_sma_5'][i-5]
-    p_roc_30 = df['roc_sma_30'][i-5]
-    
-    if close < prev_close:
-        return False
-    if p_roc_5 > roc_5:
-        return False
-    
-    if roc_5 < roc_30:
-        return False
-    if roc_5 < 0:
-        return False
-    return True
-
-def short_confirmation(i,pattern_spotted_time):
-    global curr_stock_historical
-    delta_time_pass = (i - pattern_spotted_time)
-    if delta_time_pass < 5:
-        return 0
-    df = curr_stock_historical
-    close = df['Close'][i]
-    prev_close = df['Close'][i-5]
-    
-    roc_5 = df['roc_sma_5'][i]
-    roc_30 = df['roc_sma_30'][i]
-    
-    p_roc_5 = df['roc_sma_5'][i-5]
-    p_roc_30 = df['roc_sma_30'][i-5]
-    
-    if close > prev_close:
-        return False
-    if p_roc_5 < roc_5:
-        return False
-    
-    if roc_5 > roc_30:
-        return False
-    if roc_5 > 0:
-        return False
-    return True
+def no_support_tp(close,resistance):
+    delta = resistance - close
+    return close - (delta * 2)
+def no_resistance_tp(close,support):
+    delta = close - support
+    return  close + (delta * 2)
 
 def run_simulation(stock_to_trade):    
     get_rid_of_position = False
@@ -726,7 +704,7 @@ def run_simulation(stock_to_trade):
         positions              = pd.DataFrame(columns=['Timestamp','Action','Amount','Price','TValue','Intent','Balance'])
         #for eval 
         #positions['Timestamp'] = pd.to_datetime(positions.index)
-        positions = positions.loc[:,['Timestamp','Action','Amount','Price','TValue','Intent',"Balance"]]
+        positions = positions.loc[:,['Timestamp','Action','Amount','TValue','Intent',"Balance"]]
 
         curr_date=curr_date + timedelta(days=1) 
         if run_type != 'REAL' :
@@ -797,8 +775,6 @@ def run_simulation(stock_to_trade):
         pattern_df =pattern_df.loc[:,['Datetime']]
         curr_stock_historical['Datetime'] = pd.to_datetime(curr_stock_historical.index)
         curr_stock_historical = curr_stock_historical.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','ema_thin','ema_med','ema_wide','trend','roc_sma_5','roc_sma_30','roc_roc_5','roc_roc_30']]
-        
-        srch_confirm = False
         ##########################################################################################################################
         #                                       RUN THROUGH DAY                                                                  #   
         ##########################################################################################################################
@@ -835,52 +811,30 @@ def run_simulation(stock_to_trade):
 
             #possible to enter osotion only between 10:30 - 15:30 and when no positions are open
             if (position_is_open==False and i < 300 and i > 60):
-                if srch_confirm == False:
-                    if (long_criteria_satisfied_1(i,support,resistance,close)):
-                        pattern_register_time = i
-                        srch_confirm = True
-                        srch_conf_type = 'LONG'
-                            
-                    if (short_criteria_satisfied_1(i,support,resistance,close)):
-                        pattern_register_time = i
-                        srch_confirm = True
-                        srch_conf_type = 'SHORT'
-                else:
-                    if srch_conf_type == 'LONG':
-                        if (long_confirmation(i,pattern_register_time)):
-                            position_is_open = True
-                            stock_amnt_to_order = stock_amnt_order(close,support)
-                            stop_loss = support
-                            if resistance != 0:
-                                target_price= get_target_price(resistance,close)
-                            else:
-                                target_price = 0  
-                            buy_long(i,stock_amnt_to_order)
-                            exit_criteria_selecctor = 1
-                            entery_time = i
-                        elif long_confirmation(i,pattern_register_time) == 0:
-                            continue
-                        else:
-                            srch_confirm = False
-                    elif srch_conf_type == 'SHORT':
-                        if (short_confirmation(i,pattern_register_time)):
-                            position_is_open = True
-                            stock_amnt_to_order = stock_amnt_order(close,resistance)
-                            stop_loss = resistance
-                            if resistance != 0:
-                                target_price= get_target_price(support,close)
-                            else:
-                                target_price = 0  
-                            sell_short(i,stock_amnt_to_order)
-                            exit_criteria_selecctor = -1
-                            entery_time = i
-                            print('entered SHORT --------------- ')
-                        elif short_confirmation(i,pattern_register_time) == 0:
-                            continue
-                        else:
-                            srch_confirm = False
-                        
                 
+                
+                if (long_criteria_satisfied_1(i,support,resistance,close)):
+                    position_is_open = True
+                    stock_amnt_to_order = stock_amnt_order(close,support)
+                    stop_loss = support
+                    if resistance != 0:
+                        target_price= get_target_price(resistance,close)
+                    else:
+                        target_price = no_resistance_tp(close,support) 
+                    buy_long(i,stock_amnt_to_order)
+                    exit_criteria_selecctor = 1
+                    entery_time = i
+                if (short_criteria_satisfied_1(i,support,resistance,close)):
+                    position_is_open = True
+                    stock_amnt_to_order = stock_amnt_order(close,resistance)
+                    stop_loss = resistance
+                    if support != 0:
+                        target_price= get_target_price(support,close)
+                    else:
+                        target_price = no_support_tp(close,resistance) 
+                    sell_short(i,stock_amnt_to_order)
+                    exit_criteria_selecctor = -1
+                    entery_time = i
             #exits conds
             elif position_is_open == True:
                 #STOP LOSSES
@@ -894,6 +848,43 @@ def run_simulation(stock_to_trade):
                     if close >= stop_loss:
                         position_is_open=False
                         close_short(i)
+                        continue
+                #Target reached
+                if intent=='LONG':
+                    support = get_support(i,close)
+                    resistance = get_resistance(i,close)
+                    close = curr_stock_historical['Close'][i]
+                    if close >= target_price:
+                        #if all original conditions are met stay in pos
+                        if (long_criteria_satisfied_1(i,support,resistance,close)):
+                            position_is_open = True
+                            stop_loss = support
+                            if resistance != 0:
+                                target_price= get_target_price(resistance,close)
+                            else:
+                                target_price = 0  
+                            exit_criteria_selecctor = 1
+                        
+                            continue
+                        else:
+                            position_is_open=False
+                            close_long(i)
+                            continue
+                elif intent=='SHORT':
+                    support = get_support(i,close)
+                    resistance = get_resistance(i,close)
+                    close = curr_stock_historical['Close'][i]
+                    if close <= target_price:
+                        if (short_criteria_satisfied_1(i,support,resistance,close)):
+                            position_is_open = True
+                            stop_loss = resistance
+                            if resistance != 0:
+                                target_price= get_target_price(support,close)
+                            else:
+                                target_price = 0  
+                        else:
+                            position_is_open=False
+                            close_short(i)
                         continue
                 #exit criteria selector
                 if exit_criteria_selecctor == 1:
@@ -922,17 +913,17 @@ def run_simulation(stock_to_trade):
                 
                 
             
-stock_to_trade = 'TSLA'
+""" stock_to_trade = 'TSLA'
 start_date_range = '2022-01-03'
 end_date_range = '2022-01-14'
 run_type = 'ADJ' 
-run_simulation(stock_to_trade) 
+run_simulation(stock_to_trade) """
 #file_path = '/input/'+symbols_file
-""" file_path = 'C:\\Users\\nolys\\Desktop\\results\\symbols.txt'
+file_path = 'C:\\Users\\nolys\\Desktop\\results\\symbols.txt'
 Sym_file = open(file_path,"r")
 
 
 if __name__ == '__main__':
     # start n worker processes
     with multiprocessing.Pool(processes=prallel_proc_amnt) as pool:
-        pool.map_async(run_simulation,iterable=Sym_file).get() """
+        pool.map_async(run_simulation,iterable=Sym_file).get()
