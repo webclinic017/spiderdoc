@@ -243,10 +243,7 @@ def show_plt(minute_ran):
     df['Datetime'] = pd.to_datetime(df.index)
     df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close']]
     
-    fig, ax = plt.subplots()
-    for level in levels:
-        plt.hlines(level[1],xmin=df['Datetime'][level[0]],\
-                xmax=max(df['Datetime']),colors='blue')
+  
     n=7
     curr_stock_historical_min = curr_stock_historical_1.iloc[argrelextrema(curr_stock_historical_1.Close.values, np.less_equal,
             order=n)[0]]['Low']
@@ -255,8 +252,6 @@ def show_plt(minute_ran):
     
     up = curr_stock_historical_bkp[curr_stock_historical_bkp.Close>=curr_stock_historical_bkp.Open]
     down = curr_stock_historical_bkp[curr_stock_historical_bkp.Close<curr_stock_historical_bkp.Open] 
-    plt.scatter(curr_stock_historical_min.index, curr_stock_historical_min, c='r')
-    plt.scatter(curr_stock_historical_max.index, curr_stock_historical_max, c='g') 
     #define colors to use
     #bar and minmax colors
     col1 = 'green'
@@ -274,8 +269,8 @@ def show_plt(minute_ran):
     #define width of candlestick elements
     width = .0002
     width2 = .00002
-    
     plt.subplots(2,1,sharex=True)
+
     plt.subplot(2,1,1)
     #plot up prices
     plt.bar(up.index,up.Close-up.Open,width,bottom=up.Open,color=col1)
@@ -286,6 +281,7 @@ def show_plt(minute_ran):
     plt.bar(down.index,down.Close-down.Open,width,bottom=down.Open,color=col2)
     plt.bar(down.index,down.High-down.Open,width2,bottom=down.Open,color=col2)
     plt.bar(down.index,down.Low-down.Close,width2,bottom=down.Close,color=col2)
+    
     plt.plot(curr_stock_historical.index,curr_stock_historical["ema_wide"],color=col3)
     plt.plot(curr_stock_historical.index,curr_stock_historical["ema_med"],color=col4)
     plt.plot(curr_stock_historical.index,curr_stock_historical["ema_thin"],color=col5)
@@ -297,13 +293,22 @@ def show_plt(minute_ran):
     positions_short =  positions[positions['Intent'] == "SHORT"]
     positions_closed_short = positions[positions['Intent'] == "CLOSE_SHORT"]
     
+    #draw s n r
+    for level in levels:
+        plt.hlines(level[1],xmin=df['Datetime'][level[0]],\
+                xmax=max(df['Datetime']),colors='blue')    
+    
+    
     plt.scatter(positions_long.index,positions_long['Price'],marker='^',color="green")
     plt.scatter(positions_closed_longs.index,positions_closed_longs['Price'],marker='^',color="red")
     plt.scatter(positions_short.index,positions_short['Price'],marker='v',color="green")
     plt.scatter(positions_closed_short.index,positions_closed_short['Price'],marker='v',color="red")
     
+    plt.scatter(curr_stock_historical_min.index, curr_stock_historical_min, c='r')
+    plt.scatter(curr_stock_historical_max.index, curr_stock_historical_max, c='g')
+    
     plt.subplot(2,1,2)
-    plt.plot(curr_stock_historical.index,curr_stock_historical["roc_sma_30"],color='r')
+    plt.plot(curr_stock_historical.index,curr_stock_historical["roc_sma_15"],color='r')
     plt.axhline(y=0, color='b', linestyle='-')
     plt.plot(curr_stock_historical.index,curr_stock_historical["roc_sma_5"],color='g')
 
@@ -443,12 +448,15 @@ def run_simulation(stock_to_trade):
         
         #roc 
         curr_stock_historical["roc_thin"] = talib.ROC(curr_stock_historical['Close'], timeperiod = 5)
+        #roc wide
+        curr_stock_historical["roc_wide"] = talib.ROC(curr_stock_historical['Close'], timeperiod = 15)
+
         
         #roc sma        
-        curr_stock_historical["roc_sma_30"] = talib.SMA(curr_stock_historical['roc_thin'], timeperiod = 30)
+        curr_stock_historical["roc_sma_15"] = talib.SMA(curr_stock_historical['roc_wide'], timeperiod = 5)
 
         #roc_roc_sma_30
-        curr_stock_historical["roc_sma_5"] = talib.SMA(curr_stock_historical['roc_thin'], timeperiod = 20)
+        curr_stock_historical["roc_sma_5"] = talib.SMA(curr_stock_historical['roc_thin'], timeperiod = 5)
         
         
         #fill trend column
@@ -475,7 +483,7 @@ def run_simulation(stock_to_trade):
         pattern_df = pd.DataFrame(columns=["Datetime"])
         pattern_df =pattern_df.loc[:,['Datetime']]
         curr_stock_historical['Datetime'] = pd.to_datetime(curr_stock_historical.index)
-        curr_stock_historical = curr_stock_historical.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','ema_thin','ema_med','ema_wide','trend','roc_sma_30','roc_sma_5']]
+        curr_stock_historical = curr_stock_historical.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','ema_thin','ema_med','ema_wide','trend','roc_sma_15','roc_sma_5']]
         ##########################################################################################################################
         #                                       RUN THROUGH DAY                                                                  #   
         ##########################################################################################################################

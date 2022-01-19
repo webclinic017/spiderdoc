@@ -1,5 +1,6 @@
 from contextlib import nullcontext
 from re import X
+from tkinter import Entry
 import yfinance as yf
 import pandas as pd
 import ta
@@ -137,7 +138,8 @@ candle_rankings = {
         "CDLSTALLEDPATTERN_Bull": 93,
         "CDLSTALLEDPATTERN_Bear": 93,
         "CDLKICKINGBYLENGTH": 96,
-        "CDLKICKINGBYLENGTH_Bear": 102
+        "CDLKICKINGBYLENGTH_Bear": 102,
+        "CDLCOUNTERATTACK_Bull" : 102
     }
 
 get_rid_of_position = False
@@ -251,7 +253,7 @@ def clean_levels(minute_ran):
                 break
     return new_levels        
             
-def show_plt(minute_ran):
+def show_plt(minute_ran,stock,start_date):
     global curr_stock_historical_bkp
     global levels
     global positions
@@ -260,10 +262,7 @@ def show_plt(minute_ran):
     df['Datetime'] = pd.to_datetime(df.index)
     df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close']]
     
-    fig, ax = plt.subplots()
-    for level in levels:
-        plt.hlines(level[1],xmin=df['Datetime'][level[0]],\
-                xmax=max(df['Datetime']),colors='blue')
+
     n=7
     curr_stock_historical_min = curr_stock_historical_1.iloc[argrelextrema(curr_stock_historical_1.Close.values, np.less_equal,
             order=n)[0]]['Low']
@@ -272,8 +271,7 @@ def show_plt(minute_ran):
     
     up = curr_stock_historical_bkp[curr_stock_historical_bkp.Close>=curr_stock_historical_bkp.Open]
     down = curr_stock_historical_bkp[curr_stock_historical_bkp.Close<curr_stock_historical_bkp.Open] 
-    plt.scatter(curr_stock_historical_min.index, curr_stock_historical_min, c='r')
-    plt.scatter(curr_stock_historical_max.index, curr_stock_historical_max, c='g') 
+    
     #define colors to use
     #bar and minmax colors
     col1 = 'green'
@@ -293,11 +291,18 @@ def show_plt(minute_ran):
     width2 = .00002
     plt.subplots(2,1,sharex=True)
     plt.subplot(2,1,1)
+    plt.title(stock+' '+start_date)
     #plot up prices
     plt.bar(up.index,up.Close-up.Open,width,bottom=up.Open,color=col1)
     plt.bar(up.index,up.High-up.Close,width2,bottom=up.Close,color=col1)
     plt.bar(up.index,up.Low-up.Open,width2,bottom=up.Open,color=col1)
 
+    for level in levels:
+        plt.hlines(level[1],xmin=df['Datetime'][level[0]],\
+                xmax=max(df['Datetime']),colors='blue')
+   
+    plt.scatter(curr_stock_historical_min.index, curr_stock_historical_min, c='purple')
+    plt.scatter(curr_stock_historical_max.index, curr_stock_historical_max, c='pink') 
     #plot down prices
     plt.bar(down.index,down.Close-down.Open,width,bottom=down.Open,color=col2)
     plt.bar(down.index,down.High-down.Open,width2,bottom=down.Open,color=col2)
@@ -313,10 +318,10 @@ def show_plt(minute_ran):
     positions_short =  positions[positions['Intent'] == "SHORT"]
     positions_closed_short = positions[positions['Intent'] == "CLOSE_SHORT"]
     
-    plt.scatter(positions_long.index,positions_long['Price'],marker='^',color="green")
-    plt.scatter(positions_closed_longs.index,positions_closed_longs['Price'],marker='^',color="red")
-    plt.scatter(positions_short.index,positions_short['Price'],marker='v',color="green")
-    plt.scatter(positions_closed_short.index,positions_closed_short['Price'],marker='v',color="red")
+    plt.scatter(positions_long['Timestamp'],positions_long['Price'],marker='^',color="green")
+    plt.scatter(positions_closed_longs['Timestamp'],positions_closed_longs['Price'],marker='^',color="red")
+    plt.scatter(positions_short['Timestamp'],positions_short['Price'],marker='v',color="green")
+    plt.scatter(positions_closed_short['Timestamp'],positions_closed_short['Price'],marker='v',color="red")
     
     plt.subplot(2,1,2)
     plt.plot(curr_stock_historical.index,curr_stock_historical["roc_sma_30"],color='r')
@@ -517,7 +522,7 @@ def long_criteria_satisfied_1(i,support,resistance,close):
     
     max_candle_rating = 40
     min_rrr = 1.6
-    max_rrr = 3
+    max_rrr = 5
     #when a check failed this becomes false and func returns False
     df = curr_stock_historical.iloc[:i+1,:]
     
@@ -543,7 +548,7 @@ def long_criteria_satisfied_1(i,support,resistance,close):
     elif potential_money_gained == 0:
         rrr = 2
     
-    if (rrr<min_rrr or rrr > max_rrr):
+    if (rrr<min_rrr):
         return False
     
     if roc_5 < 0:
@@ -560,17 +565,23 @@ def long_criteria_satisfied_1(i,support,resistance,close):
     
     pattern_df = get_pattern_df(i)
     candle_rating = pattern_df['pattern_val'].rolling(window=5).sum()
-    if candle_rating[-1] < 6:
+    if candle_rating[-1] < 7:
         return False
     
     return True
 
-def close_long_criteria_satisfied_1(i,close,target):
+def close_long_criteria_satisfied_1(i,close,target,entry):
     global curr_stock_historical
 
     #when a check failed this becomes false and func returns False
     df = curr_stock_historical.iloc[:i+1,:]
     
+    delta_time = i - entry
+    if delta_time > 40:
+        if get_pos_delta(close)>0:
+            return True
+    if delta_time > 60:
+        return True
     
     if close <= target:
         return False
@@ -615,7 +626,7 @@ def short_criteria_satisfied_1(i,support,resistance,close):
     elif potential_money_gained == 0:
         rrr = 2
     
-    if (rrr < min_rrr or rrr > max_rrr):
+    if (rrr < min_rrr):
         return False
 
     if roc_5 > 0:
@@ -632,16 +643,22 @@ def short_criteria_satisfied_1(i,support,resistance,close):
     
     pattern_df = get_pattern_df(i)
     candle_rating = pattern_df['pattern_val'].rolling(window=5).sum()
-    if candle_rating[-1] > -6:
+    if candle_rating[-1] > -9:
         return False
     return True
 
 
-def close_short_criteria_satisfied_1(i,close,target):
+def close_short_criteria_satisfied_1(i,close,target,entry):
     global curr_stock_historical
     
     entery_pattern_rating = 3
     max_candle_rating = 40
+    delta_time = i - entry
+    if delta_time > 40:
+        if get_pos_delta(close)>0:
+            return True
+    if delta_time > 60:
+        return True
 
     if close >= target:
         return False
@@ -850,49 +867,14 @@ def run_simulation(stock_to_trade):
                         close_short(i)
                         continue
                 #Target reached
-                if intent=='LONG':
-                    support = get_support(i,close)
-                    resistance = get_resistance(i,close)
-                    close = curr_stock_historical['Close'][i]
-                    if close >= target_price:
-                        #if all original conditions are met stay in pos
-                        if (long_criteria_satisfied_1(i,support,resistance,close)):
-                            position_is_open = True
-                            stop_loss = support
-                            if resistance != 0:
-                                target_price= get_target_price(resistance,close)
-                            else:
-                                target_price = 0  
-                            exit_criteria_selecctor = 1
-                        
-                            continue
-                        else:
-                            position_is_open=False
-                            close_long(i)
-                            continue
-                elif intent=='SHORT':
-                    support = get_support(i,close)
-                    resistance = get_resistance(i,close)
-                    close = curr_stock_historical['Close'][i]
-                    if close <= target_price:
-                        if (short_criteria_satisfied_1(i,support,resistance,close)):
-                            position_is_open = True
-                            stop_loss = resistance
-                            if resistance != 0:
-                                target_price= get_target_price(support,close)
-                            else:
-                                target_price = 0  
-                        else:
-                            position_is_open=False
-                            close_short(i)
-                        continue
+ 
                 #exit criteria selector
                 if exit_criteria_selecctor == 1:
-                    if (close_long_criteria_satisfied_1(i,close,target_price)):
+                    if (close_long_criteria_satisfied_1(i,close,target_price,entery_time)):
                         position_is_open=False
                         close_long(i)
                 elif  exit_criteria_selecctor == -1 :
-                    if (close_short_criteria_satisfied_1(i,close,target_price)):
+                    if (close_short_criteria_satisfied_1(i,close,target_price,entery_time)):
                         position_is_open=False
                         close_short(i)
                 else:
@@ -905,6 +887,7 @@ def run_simulation(stock_to_trade):
         outdir = 'C:\\Users\\nolys\\Desktop\\results\\'
         fullname =  outdir + outname
         positions.to_csv(fullname)
+        #show_plt(i,stock_to_trade,start_date_range)
     if (stock_not_avail):
         return
 

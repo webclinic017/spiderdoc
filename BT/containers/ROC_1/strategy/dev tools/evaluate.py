@@ -141,7 +141,10 @@ shorts_won                = len(delta_short_positions_won.index)
 
 percent_won               = (trades_won_amnt  / delta_amount ) * 100 
 percent_loss              = (trades_lost_amnt / delta_amount ) * 100
-percent_shrots_won        = (shorts_won / short_amount ) * 100
+try:
+    percent_shrots_won        = (shorts_won / short_amount ) * 100
+except :
+    percent_shrots_won        = '-'
 percent_longs_won         = (longs_won / long_amount ) * 100
 # ================= STREAKS =========================
 streaks = win_calc_streak()
