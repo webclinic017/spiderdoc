@@ -190,7 +190,7 @@ def clean_levels(minute_ran):
     global curr_stock_historical_bkp
     df =curr_stock_historical_bkp
     df['Datetime'] = pd.to_datetime(curr_stock_historical_bkp.index)
-    df = curr_stock_historical_bkp.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','ema_thin','ema_med','ema_wide','trend']]
+    df = curr_stock_historical_bkp.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','ema_thin','ema_med','trend']]
     df =curr_stock_historical_bkp.iloc[0:minute_ran,:]
 
     new_levels = []
@@ -282,7 +282,6 @@ def show_plt(minute_ran):
     plt.bar(down.index,down.High-down.Open,width2,bottom=down.Open,color=col2)
     plt.bar(down.index,down.Low-down.Close,width2,bottom=down.Close,color=col2)
     
-    plt.plot(curr_stock_historical.index,curr_stock_historical["ema_wide"],color=col3)
     plt.plot(curr_stock_historical.index,curr_stock_historical["ema_med"],color=col4)
     plt.plot(curr_stock_historical.index,curr_stock_historical["ema_thin"],color=col5)
     
@@ -439,8 +438,6 @@ def run_simulation(stock_to_trade):
             stock_not_avail = True
             break
 
-        #ema 60
-        curr_stock_historical['ema_wide']= ta.trend.sma_indicator(curr_stock_historical['Close'],window=60,fillna=False)
         #ema 30
         curr_stock_historical['ema_med']= ta.trend.sma_indicator(curr_stock_historical['Close'],window=30,fillna=False)
         #ema 10
@@ -453,7 +450,7 @@ def run_simulation(stock_to_trade):
 
         
         #roc sma        
-        curr_stock_historical["roc_sma_15"] = talib.SMA(curr_stock_historical['roc_wide'], timeperiod = 5)
+        curr_stock_historical["roc_sma_15"] = talib.SMA(curr_stock_historical['roc_thin'], timeperiod = 15)
 
         #roc_roc_sma_30
         curr_stock_historical["roc_sma_5"] = talib.SMA(curr_stock_historical['roc_thin'], timeperiod = 5)
@@ -461,15 +458,11 @@ def run_simulation(stock_to_trade):
         
         #fill trend column
         conditions = [
-            (curr_stock_historical['ema_wide'].lt(curr_stock_historical['ema_med'])) & (curr_stock_historical['ema_med'].lt(curr_stock_historical['ema_thin'])),
-            (curr_stock_historical['ema_wide'].gt(curr_stock_historical['ema_med'])) & (curr_stock_historical['ema_med'].gt(curr_stock_historical['ema_thin'])),
-            (curr_stock_historical['ema_wide'].gt(curr_stock_historical['ema_med'])) & (curr_stock_historical['ema_med'].lt(curr_stock_historical['ema_thin'])) & (curr_stock_historical['ema_wide'].lt(curr_stock_historical['ema_thin'])),
-            (curr_stock_historical['ema_wide'].lt(curr_stock_historical['ema_med'])) & (curr_stock_historical['ema_med'].gt(curr_stock_historical['ema_thin'])) & (curr_stock_historical['ema_wide'].gt(curr_stock_historical['ema_thin'])),
-            (curr_stock_historical['ema_med'].lt(curr_stock_historical['ema_thin'])) & (curr_stock_historical['ema_thin'].lt(curr_stock_historical['ema_wide'])) & (curr_stock_historical['ema_wide'].gt(curr_stock_historical['ema_med'])),
-            (curr_stock_historical['ema_med'].gt(curr_stock_historical['ema_thin'])) & (curr_stock_historical['ema_thin'].gt(curr_stock_historical['ema_wide'])) & (curr_stock_historical['ema_wide'].lt(curr_stock_historical['ema_med']))
-                    ]    
+            (curr_stock_historical['ema_med'].lt(curr_stock_historical['ema_thin'])),
+            (curr_stock_historical['ema_med'].gt(curr_stock_historical['ema_thin']))
+                    ]     
     
-        choices = ['clear_up','clear_down',' up_shift_3',' down_shift_3','up_shift_2','down_shift_2']
+        choices = ['clear_up','clear_down']
         curr_stock_historical['trend'] = np.select(conditions, choices, default=0 )
         levels = []
         
@@ -483,7 +476,7 @@ def run_simulation(stock_to_trade):
         pattern_df = pd.DataFrame(columns=["Datetime"])
         pattern_df =pattern_df.loc[:,['Datetime']]
         curr_stock_historical['Datetime'] = pd.to_datetime(curr_stock_historical.index)
-        curr_stock_historical = curr_stock_historical.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','ema_thin','ema_med','ema_wide','trend','roc_sma_15','roc_sma_5']]
+        curr_stock_historical = curr_stock_historical.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','ema_thin','ema_med','trend','roc_sma_15','roc_sma_5']]
         ##########################################################################################################################
         #                                       RUN THROUGH DAY                                                                  #   
         ##########################################################################################################################

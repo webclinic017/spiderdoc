@@ -139,7 +139,8 @@ candle_rankings = {
         "CDLSTALLEDPATTERN_Bear": 93,
         "CDLKICKINGBYLENGTH": 96,
         "CDLKICKINGBYLENGTH_Bear": 102,
-        "CDLCOUNTERATTACK_Bull" : 102
+        "CDLCOUNTERATTACK_Bull" : 102,
+        "CDLCOUNTERATTACK_Bear": 102
     }
 
 get_rid_of_position = False
@@ -209,7 +210,7 @@ def clean_levels(minute_ran):
     global curr_stock_historical_bkp
     df =curr_stock_historical_bkp
     df['Datetime'] = pd.to_datetime(curr_stock_historical_bkp.index)
-    df = curr_stock_historical_bkp.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','ema_thin','ema_med','ema_wide','trend']]
+    df = curr_stock_historical_bkp.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','ema_thin','ema_med','trend']]
     df =curr_stock_historical_bkp.iloc[0:minute_ran,:]
 
     new_levels = []
@@ -307,7 +308,6 @@ def show_plt(minute_ran,stock,start_date):
     plt.bar(down.index,down.Close-down.Open,width,bottom=down.Open,color=col2)
     plt.bar(down.index,down.High-down.Open,width2,bottom=down.Open,color=col2)
     plt.bar(down.index,down.Low-down.Close,width2,bottom=down.Close,color=col2)
-    plt.plot(curr_stock_historical.index,curr_stock_historical["ema_wide"],color=col3)
     plt.plot(curr_stock_historical.index,curr_stock_historical["ema_med"],color=col4)
     plt.plot(curr_stock_historical.index,curr_stock_historical["ema_thin"],color=col5)
     
@@ -318,13 +318,13 @@ def show_plt(minute_ran,stock,start_date):
     positions_short =  positions[positions['Intent'] == "SHORT"]
     positions_closed_short = positions[positions['Intent'] == "CLOSE_SHORT"]
     
-    plt.scatter(positions_long['Timestamp'],positions_long['Price'],marker='^',color="green")
-    plt.scatter(positions_closed_longs['Timestamp'],positions_closed_longs['Price'],marker='^',color="red")
-    plt.scatter(positions_short['Timestamp'],positions_short['Price'],marker='v',color="green")
-    plt.scatter(positions_closed_short['Timestamp'],positions_closed_short['Price'],marker='v',color="red")
+    plt.scatter(positions_long['Timestamp'],positions_long['Price'],marker='^',color="yellow")
+    plt.scatter(positions_closed_longs['Timestamp'],positions_closed_longs['Price'],marker='^',color="orange")
+    plt.scatter(positions_short['Timestamp'],positions_short['Price'],marker='v',color="yellow")
+    plt.scatter(positions_closed_short['Timestamp'],positions_closed_short['Price'],marker='v',color="orange")
     
     plt.subplot(2,1,2)
-    plt.plot(curr_stock_historical.index,curr_stock_historical["roc_sma_30"],color='r')
+    plt.plot(curr_stock_historical.index,curr_stock_historical["roc_sma_15"],color='r')
     plt.axhline(y=0, color='b', linestyle='-')
     plt.plot(curr_stock_historical.index,curr_stock_historical["roc_sma_5"],color='g')
     
@@ -528,6 +528,58 @@ def no_resistance_tp(close,support):
     delta = close - support
     return  close + (delta * 2)
 
+def enter_long(i):
+    global curr_stock_historical
+    df=curr_stock_historical
+    
+    roc_5 = df['roc_sma_5'][i]
+    roc_15 = df['roc_sma_15'][i]
+    
+    p_roc_5 = df['roc_sma_5'][i-10]
+    p_roc_15 = df['roc_sma_15'][i-10]
+    
+    delta_roc_5 = df['roc_5_delta'][i]
+    delta_roc_15 = df['roc_15_delta'][i]
+
+    trend = df['trend'][i]
+    
+    if trend != 'clear_up':
+        return False
+    
+        
+    if roc_5 <= roc_15:
+        return False
+    if roc_5 < 0:
+        return False
+    if roc_15 < 0 :
+        return False
+
+    if delta_roc_5 < 0:
+        return False
+    if delta_roc_15 < 0:
+        return False
+    
+    
+    return True
+
+def exit_long(i,entry):
+    global curr_stock_historical
+    df=curr_stock_historical
+    
+    roc_5 = df['roc_sma_5'][i]
+    roc_15 = df['roc_sma_15'][i]
+    close= df['Close'][i]
+    
+    if roc_5 <= roc_15:
+        return True
+    
+
+    
+    
+    return False
+
+    
+
 def run_simulation(stock_to_trade):    
     get_rid_of_position = False
     position_is_open=False
@@ -563,7 +615,7 @@ def run_simulation(stock_to_trade):
         positions              = pd.DataFrame(columns=['Timestamp','Action','Amount','Price','TValue','Intent','Balance'])
         #for eval 
         #positions['Timestamp'] = pd.to_datetime(positions.index)
-        positions = positions.loc[:,['Timestamp','Action','Amount','TValue','Intent',"Balance"]]
+        positions = positions.loc[:,['Timestamp','Action','Amount','Price','TValue','Intent',"Balance"]]
 
         curr_date=curr_date + timedelta(days=1) 
         if run_type != 'REAL' :
@@ -590,7 +642,6 @@ def run_simulation(stock_to_trade):
             break
 
         #ema 60
-        curr_stock_historical['ema_wide']= talib.SMA(curr_stock_historical['Close'],timeperiod=60)
         #ema 30
         curr_stock_historical['ema_med']= talib.SMA(curr_stock_historical['Close'],timeperiod=30)
         #ema 10
@@ -600,26 +651,22 @@ def run_simulation(stock_to_trade):
         curr_stock_historical["roc_thin"] = talib.ROCP(curr_stock_historical['Close'], timeperiod = 5)
         
         #roc sma        
-        curr_stock_historical["roc_sma_30"] = talib.SMA(curr_stock_historical['roc_thin'], timeperiod = 30)
+        curr_stock_historical["roc_sma_15"] = talib.SMA(curr_stock_historical['roc_thin'], timeperiod = 15)
 
-        #roc_roc_sma_30
+        #roc_roc_sma_15
         curr_stock_historical["roc_sma_5"] = talib.SMA(curr_stock_historical['roc_thin'], timeperiod = 5)
 
         #roc of roc
         curr_stock_historical["roc_roc_5"] = talib.ROCP(curr_stock_historical['roc_sma_5'], timeperiod = 1)
-        curr_stock_historical["roc_roc_30"] = talib.ROCP(curr_stock_historical['roc_sma_30'], timeperiod = 1)
+        curr_stock_historical["roc_roc_30"] = talib.ROCP(curr_stock_historical['roc_sma_15'], timeperiod = 1)
 
         #fill trend column
         conditions = [
-            (curr_stock_historical['ema_wide'].lt(curr_stock_historical['ema_med'])) & (curr_stock_historical['ema_med'].lt(curr_stock_historical['ema_thin'])),
-            (curr_stock_historical['ema_wide'].gt(curr_stock_historical['ema_med'])) & (curr_stock_historical['ema_med'].gt(curr_stock_historical['ema_thin'])),
-            (curr_stock_historical['ema_wide'].gt(curr_stock_historical['ema_med'])) & (curr_stock_historical['ema_med'].lt(curr_stock_historical['ema_thin'])) & (curr_stock_historical['ema_wide'].lt(curr_stock_historical['ema_thin'])),
-            (curr_stock_historical['ema_wide'].lt(curr_stock_historical['ema_med'])) & (curr_stock_historical['ema_med'].gt(curr_stock_historical['ema_thin'])) & (curr_stock_historical['ema_wide'].gt(curr_stock_historical['ema_thin'])),
-            (curr_stock_historical['ema_med'].lt(curr_stock_historical['ema_thin'])) & (curr_stock_historical['ema_thin'].lt(curr_stock_historical['ema_wide'])) & (curr_stock_historical['ema_wide'].gt(curr_stock_historical['ema_med'])),
-            (curr_stock_historical['ema_med'].gt(curr_stock_historical['ema_thin'])) & (curr_stock_historical['ema_thin'].gt(curr_stock_historical['ema_wide'])) & (curr_stock_historical['ema_wide'].lt(curr_stock_historical['ema_med']))
+            (curr_stock_historical['ema_med'].lt(curr_stock_historical['ema_thin'])),
+            (curr_stock_historical['ema_med'].gt(curr_stock_historical['ema_thin']))
                     ]    
     
-        choices = ['clear_up','clear_down',' up_shift_3',' down_shift_3','up_shift_2','down_shift_2']
+        choices = ['clear_up','clear_down']
         curr_stock_historical['trend'] = np.select(conditions, choices, default=0 )
         levels = []
         
@@ -632,8 +679,17 @@ def run_simulation(stock_to_trade):
         
         pattern_df = pd.DataFrame(columns=["Datetime"])
         pattern_df =pattern_df.loc[:,['Datetime']]
+        curr_stock_historical =get_pattern_df(420)
         curr_stock_historical['Datetime'] = pd.to_datetime(curr_stock_historical.index)
-        curr_stock_historical = curr_stock_historical.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','ema_thin','ema_med','ema_wide','trend','roc_sma_5','roc_sma_30','roc_roc_5','roc_roc_30']]
+        
+        #calc Roc_prev_delta
+        curr_stock_historical["roc_sma_5_shift"] = curr_stock_historical["roc_sma_5"].shift(1)
+        curr_stock_historical['roc_5_delta'] =curr_stock_historical["roc_sma_5"] - curr_stock_historical["roc_sma_5_shift"]
+        
+        curr_stock_historical["roc_sma_15_shift"] = curr_stock_historical["roc_sma_15"].shift(1)
+        curr_stock_historical['roc_15_delta'] =curr_stock_historical["roc_sma_15"] - curr_stock_historical["roc_sma_15_shift"]
+        
+        curr_stock_historical = curr_stock_historical.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','ema_thin','ema_med','trend','roc_sma_5','roc_sma_15','pattern_val','candlestick_pattern','roc_5_delta','roc_15_delta']]
         ##########################################################################################################################
         #                                       RUN THROUGH DAY                                                                  #   
         ##########################################################################################################################
@@ -670,14 +726,43 @@ def run_simulation(stock_to_trade):
 
             #possible to enter osotion only between 10:30 - 15:30 and when no positions are open
             if (position_is_open==False and i < 300 and i > 60):
-                pass
+                if(enter_long(i) == True):
+                    position_is_open = True
+                    stock_amnt_to_order = stock_amnt_order(close,support)
+                    stop_loss = support
+                    if resistance != 0:
+                        target_price= get_target_price(resistance,close)
+                    else:
+                        target_price = no_resistance_tp(close,support)
+                    
+                    buy_long(i,stock_amnt_to_order)
+                    print( ' +++++++++++++++++++ ')
+                    entry_time = i 
+            elif ( position_is_open ==True):
+                if (exit_long(i,entry_time) == True):
+                    position_is_open=False
+                    close_long(i)
+                    print( ' ============ ')
                     #DAY FINISHED COMPUTING
 
+        last_intent = positions.iloc[-1]['Intent']    
+        if last_intent == 'LONG':
+            close_long(i)
+            
         outname = "ROC_1-"+stock_to_trade+"-X-"+datetime.strftime(curr_date,"%Y-%m-%d")+".csv"
         #outdir = '/output/'
         outdir = 'C:\\Users\\nolys\\Desktop\\results\\'
         fullname =  outdir + outname
         positions.to_csv(fullname)
+        
+        """ outname = "ROC_1-"+stock_to_trade+"-X-"+datetime.strftime(curr_date,"%Y-%m-%d")+"-STOCK.csv"
+        #outdir = '/output/'
+        outdir = 'C:\\Users\\nolys\\Desktop\\results\\'
+        fullname =  outdir + outname
+        curr_stock_historical.to_csv(fullname) """
+        
+        #pd.set_option('display.max_columns', None,'display.max_rows', None)
+        #print(positions)
         #show_plt(i,stock_to_trade,start_date_range)
     if (stock_not_avail):
         return
@@ -686,12 +771,11 @@ def run_simulation(stock_to_trade):
                     
                 
                 
-            
 """ stock_to_trade = 'TSLA'
 start_date_range = '2022-01-03'
-end_date_range = '2022-01-14'
+end_date_range = '2022-01-04'
 run_type = 'ADJ' 
-run_simulation(stock_to_trade) """
+run_simulation(stock_to_trade) """   
 #file_path = '/input/'+symbols_file
 file_path = 'C:\\Users\\nolys\\Desktop\\results\\symbols.txt'
 Sym_file = open(file_path,"r")
@@ -700,4 +784,4 @@ Sym_file = open(file_path,"r")
 if __name__ == '__main__':
     # start n worker processes
     with multiprocessing.Pool(processes=prallel_proc_amnt) as pool:
-        pool.map_async(run_simulation,iterable=Sym_file).get()
+        pool.map_async(run_simulation,iterable=Sym_file).get() 
