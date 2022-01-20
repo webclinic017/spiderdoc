@@ -516,8 +516,8 @@ def run_simulation(stock_to_trade):
                 
             
 stock_to_trade = 'AAPL'
-start_date_range = '2021-12-22'
-end_date_range = '2021-12-23'
+start_date_range = '2022-01-03'
+end_date_range = '2022-01-04'
 run_type = 'ADJ'
 run_simulation(stock_to_trade)
 """ file_path = '/input/'+symbols_file
