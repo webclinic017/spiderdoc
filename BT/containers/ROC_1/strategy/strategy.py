@@ -608,9 +608,14 @@ def exit_long(i,entry):
     global curr_stock_historical
     df=curr_stock_historical
     
+    
     roc_5 = df['roc_sma_5'][i]
     roc_15 = df['roc_sma_15'][i]
     close= df['Close'][i]
+    
+    if get_pos_delta(close) < 0:
+        return False
+    
     roc_roc_5 =df['roc_roc_5'][i]
     if roc_5 <= roc_15:
         return True
