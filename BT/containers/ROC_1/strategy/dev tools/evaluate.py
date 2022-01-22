@@ -64,12 +64,9 @@ def gen_delta_positions_per_sym(sym):
     for filename in all_files:
         positions = pd.read_csv(filename)  #read single file
         positions.rename(columns = {'Unnamed: 0':'minute_in_day'}, inplace = True) 
-        if(not positions.empty):
-            if(positions.iloc[-1]['Intent'] == "SHORT" or positions.iloc[-1]['Intent'] == "LONG") :  #drop open positions at EOD
-                positions.drop(index=positions.index[-1],axis=0, inplace=True) 
         li.append(positions)  #add file to concatination to list
     
-        positions = pd.concat(li, axis=0)  #combine all files to single df
+    positions = pd.concat(li, axis=0,ignore_index=True)  #combine all files to single df
     positions= positions.reset_index(drop=True) #fix indexting issue
     return positions
     #my own attempt

@@ -152,7 +152,7 @@ run_type = sys.argv[4]
 prallel_proc_amnt = sys.argv[5] """
 
 start_date_range = '2022-01-03'
-end_date_range = '2022-01-14'
+end_date_range = '2022-01-21'
 run_type = 'REAL'
 prallel_proc_amnt = 16
 
@@ -384,17 +384,29 @@ def close_long(i):
 
 def get_support(i,close):
     global levels
-    for level in reversed(levels):
-       if level[1] <  close:
-           return level[1]
-    return 0 
+    li = []
+    for level in levels:
+        li.append(level[1])
+    arr = np.asarray(li)
+    try:
+        val = arr[arr > close].min()
+    except :
+        return 0
+    return val
+        
 
 def get_resistance(i,close):
     global levels
-    for level in reversed(levels):
-       if level[1] >  close:
-           return level[1]
-    return 0 
+    li = []
+    for level in levels:
+        li.append(level[1])
+    arr = np.asarray(li)
+    try:
+        val = arr[arr < close].max()
+    except:
+        return 0
+ 
+    return val 
 
 def set_stop_and_target(i):
     global curr_stock_historical
@@ -528,39 +540,69 @@ def no_resistance_tp(close,support):
     delta = close - support
     return  close + (delta * 2)
 
-def enter_long(i):
+
+def get_arg_rel_extrema_trend(i):
+    
+    global curr_stock_historical
+    n = 7
+    df = curr_stock_historical_bkp.iloc[0:i,:]
+    df_min = df.iloc[argrelextrema(df.Close.values, np.less_equal,
+            order=n)[0]]['Low']
+    df_max = df.iloc[argrelextrema(df.Close.values, np.greater_equal,
+            order=n)[0]]['High']
+    if len(df_min) < 5:
+        return 'unclear'
+    if df_min[-1] > df_min[-2] :
+        return 'up'
+    if df_min[-1] < df_min[-2] :
+        return 'down'
+def enter_long(i,res,sup):
     global curr_stock_historical
     df=curr_stock_historical
-    
-    roc_5 = df['roc_sma_5'][i]
-    roc_15 = df['roc_sma_15'][i]
-    
-    p_roc_5 = df['roc_sma_5'][i-10]
-    p_roc_15 = df['roc_sma_15'][i-10]
-    
-    delta_roc_5 = df['roc_5_delta'][i]
-    delta_roc_15 = df['roc_15_delta'][i]
-
+    close = df['Close'][i]
+    rsi = df['rsi'][i]
     trend = df['trend'][i]
     
-    if trend != 'clear_up':
+    if sup == 0:
         return False
     
-        
-    if roc_5 <= roc_15:
+    if rsi > 30:
         return False
-    if roc_5 < 0:
-        return False
-    if roc_15 < 0 :
-        return False
+    
+    
+    stock_amnt_to_order = stock_amnt_order(close,res)
+    potential_money_risked = potential_delta(stock_amnt_to_order,close,sup)
+    potential_money_gained = potential_delta(stock_amnt_to_order,close,res)
 
-    if delta_roc_5 < 0:
+    if potential_money_gained != 0:
+        rrr =  potential_money_gained /potential_money_risked
+    elif potential_money_gained == 0:
+        rrr = 2
+
+    if (rrr<1.9):
         return False
-    if delta_roc_15 < 0:
-        return False
+    if  '_Bull' in df['candlestick_pattern'][i]:
+        best_candle_rating=candle_rankings.get(df['candlestick_pattern'][i],100)
+        candle_rating = df['pattern_val'][i]
+        
+        """ if candle_rating > 7 and best_candle_rating < 60:
+            return True
+        
+        elif candle_rating > 5 and best_candle_rating < 40:
+            return True
+        """
+        if candle_rating > 3 and best_candle_rating < 20:
+                return True
+        elif candle_rating > 6 and best_candle_rating < 40:
+                return True
+        elif candle_rating > 7 and best_candle_rating < 60:
+            return True
+        
+    
+    return False
     
     
-    return True
+    
 
 def exit_long(i,entry):
     global curr_stock_historical
@@ -569,11 +611,12 @@ def exit_long(i,entry):
     roc_5 = df['roc_sma_5'][i]
     roc_15 = df['roc_sma_15'][i]
     close= df['Close'][i]
-    
+    roc_roc_5 =df['roc_roc_5'][i]
     if roc_5 <= roc_15:
         return True
     
-
+    if roc_roc_5 < 0:
+        return True
     
     
     return False
@@ -635,11 +678,12 @@ def run_simulation(stock_to_trade):
         ########################################################################################################################
         #get historical data from yfinance for this day
         try:
+            print(curr_date.strftime('%Y-%m-%d') + ' - ' + stock_to_trade)
             curr_stock_historical = yf.download(stock_to_trade,curr_date,tommorow_date,interval='1m')
             curr_stock_historical.head()
         except:
             stock_not_avail = True
-            break
+            continue
 
         #ema 60
         #ema 30
@@ -659,6 +703,9 @@ def run_simulation(stock_to_trade):
         #roc of roc
         curr_stock_historical["roc_roc_5"] = talib.ROCP(curr_stock_historical['roc_sma_5'], timeperiod = 1)
         curr_stock_historical["roc_roc_30"] = talib.ROCP(curr_stock_historical['roc_sma_15'], timeperiod = 1)
+        
+        curr_stock_historical['rsi'] = talib.RSI(curr_stock_historical['Close'], timeperiod=14)
+
 
         #fill trend column
         conditions = [
@@ -689,10 +736,11 @@ def run_simulation(stock_to_trade):
         curr_stock_historical["roc_sma_15_shift"] = curr_stock_historical["roc_sma_15"].shift(1)
         curr_stock_historical['roc_15_delta'] =curr_stock_historical["roc_sma_15"] - curr_stock_historical["roc_sma_15_shift"]
         
-        curr_stock_historical = curr_stock_historical.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','ema_thin','ema_med','trend','roc_sma_5','roc_sma_15','pattern_val','candlestick_pattern','roc_5_delta','roc_15_delta']]
+        curr_stock_historical = curr_stock_historical.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','ema_thin','ema_med','trend','roc_sma_5','roc_sma_15','pattern_val','candlestick_pattern','roc_5_delta','roc_15_delta','roc_roc_5','rsi']]
         ##########################################################################################################################
         #                                       RUN THROUGH DAY                                                                  #   
         ##########################################################################################################################
+
         for i in range(2,curr_stock_historical.shape[0]-2):
             #search for snr live
             if isSupport(curr_stock_historical,i):
@@ -726,7 +774,7 @@ def run_simulation(stock_to_trade):
 
             #possible to enter osotion only between 10:30 - 15:30 and when no positions are open
             if (position_is_open==False and i < 300 and i > 60):
-                if(enter_long(i) == True):
+                if(enter_long(i,resistance,support) == True):
                     position_is_open = True
                     stock_amnt_to_order = stock_amnt_order(close,support)
                     stop_loss = support
@@ -765,7 +813,7 @@ def run_simulation(stock_to_trade):
         #print(positions)
         #show_plt(i,stock_to_trade,start_date_range)
     if (stock_not_avail):
-        return
+        pass
 
                 
                     
@@ -773,9 +821,9 @@ def run_simulation(stock_to_trade):
                 
 """ stock_to_trade = 'TSLA'
 start_date_range = '2022-01-03'
-end_date_range = '2022-01-04'
+end_date_range = '2022-01-14'
 run_type = 'ADJ' 
-run_simulation(stock_to_trade) """   
+run_simulation(stock_to_trade)   """  
 #file_path = '/input/'+symbols_file
 file_path = 'C:\\Users\\nolys\\Desktop\\results\\symbols.txt'
 Sym_file = open(file_path,"r")
@@ -784,4 +832,4 @@ Sym_file = open(file_path,"r")
 if __name__ == '__main__':
     # start n worker processes
     with multiprocessing.Pool(processes=prallel_proc_amnt) as pool:
-        pool.map_async(run_simulation,iterable=Sym_file).get() 
+        pool.map_async(run_simulation,iterable=Sym_file).get()  
