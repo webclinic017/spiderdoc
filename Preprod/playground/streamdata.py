@@ -2,6 +2,7 @@ import datetime
 import alpaca_trade_api as tradeapi
 import pandas as pd
 import websocket ,json
+import talib
 import config
 ########## account info ############################
 API_ID = 'PKNI20IYWW6VBFJ45L20'
@@ -35,6 +36,17 @@ def to_df(msg):
         df['Close'] = closes
         
         print(df)
+
+        if len(df) > 15:
+            df["roc_thin"] = talib.ROCP(df['Close'], timeperiod = 5 )
+            df["roc_sma_5"] = talib.SMA(df['roc_thin'], timeperiod = 5)
+            df["roc_roc_5"] = talib.ROCP(df['roc_sma_5'], timeperiod = 1)
+            df['rsi'] = talib.RSI(df['Close'], timeperiod=14)
+            print(df)    
+        
+        
+
+        
     
     
    
