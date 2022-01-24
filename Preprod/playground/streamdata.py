@@ -29,7 +29,7 @@ def on_open(ws):
     
 
     ws.send(json.dumps(auth_data))
-    listen_message = {"action":"subscribe","bars":[symbol]}
+    listen_message = {"action":"subscribe","bars":['AMZN','TSLA','MSFT']}
 
     ws.send(json.dumps(listen_message))
 def on_message(ws, message):
