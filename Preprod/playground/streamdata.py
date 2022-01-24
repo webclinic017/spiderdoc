@@ -169,7 +169,7 @@ def to_df(msg):
         df['Close'] = closes
                 
 
-        if len(df) > 15:
+        if len(df) > 31:
             df["roc_thin"] = talib.ROCP(df['Close'], timeperiod = 5 )
             
             df["roc_sma_5"] = talib.SMA(df['roc_thin'], timeperiod = 5)
@@ -179,29 +179,32 @@ def to_df(msg):
 
 
             df['rsi'] = talib.RSI(df['Close'], timeperiod=14)
+            
             print(df)
+            
             if len(api.list_positions())  == 0 and len(api.list_orders()) == 0:
-                if df['rsi'][-1] < 30:
-                    candle_df = get_pattern_df(df)
-                    if  '_Bull' in df['candlestick_pattern'][-1]:
-                        best_candle_rating=candle_rankings.get(df['candlestick_pattern'][-1],100)
-                        candle_rating = df['pattern_val'][-1]
-                        
-                        """ if candle_rating > 7 and best_candle_rating < 60:
-                            return True
-                        
-                        elif candle_rating > 5 and best_candle_rating < 40:
-                            return True
-                        """
-                        if candle_rating > 3 and best_candle_rating < 20:
-                            stock_amnt = stock_amnt_order(closes[-1])
-                            api.submit_order(symbol=symbol,qty=stock_amnt,side='buy',type='market',time_in_force='gtc')
-                        elif candle_rating > 6 and best_candle_rating < 40:
-                            stock_amnt = stock_amnt_order(closes[-1])
-                            api.submit_order(symbol=symbol,qty=stock_amnt,side='buy',type='market',time_in_force='gtc')
-                        elif candle_rating > 7 and best_candle_rating < 60:
-                            stock_amnt = stock_amnt_order(closes[-1])
-                            api.submit_order(symbol=symbol,qty=stock_amnt,side='buy',type='market',time_in_force='gtc')
+                if df["roc_sma_5"][-1] > df["roc_sma_15"][-1]:
+                    if df['rsi'][-1] < 30:
+                        candle_df = get_pattern_df(df)
+                        if  '_Bull' in df['candlestick_pattern'][-1]:
+                            best_candle_rating=candle_rankings.get(df['candlestick_pattern'][-1],100)
+                            candle_rating = df['pattern_val'][-1]
+                            
+                            """ if candle_rating > 7 and best_candle_rating < 60:
+                                return True
+                            
+                            elif candle_rating > 5 and best_candle_rating < 40:
+                                return True
+                            """
+                            if candle_rating > 3 and best_candle_rating < 20:
+                                stock_amnt = stock_amnt_order(closes[-1])
+                                api.submit_order(symbol=symbol,qty=stock_amnt,side='buy',type='market',time_in_force='gtc')
+                            elif candle_rating > 6 and best_candle_rating < 40:
+                                stock_amnt = stock_amnt_order(closes[-1])
+                                api.submit_order(symbol=symbol,qty=stock_amnt,side='buy',type='market',time_in_force='gtc')
+                            elif candle_rating > 7 and best_candle_rating < 60:
+                                stock_amnt = stock_amnt_order(closes[-1])
+                                api.submit_order(symbol=symbol,qty=stock_amnt,side='buy',type='market',time_in_force='gtc')
             elif len(api.list_positions())  >= 1:
                 roc_5 = df['roc_sma_5'][-1]
                 
@@ -291,7 +294,7 @@ def stock_amnt_order(close):
 def on_open(ws):
     print("opened")
     global symbol
-    auth_data = {"action": "auth", "key": 'PKAM4QPHOM4UPBGMF90C', "secret": '9PdtZ8mifNBGKc8rnVfuZJRMVlFh7shCougkoMal'}
+    auth_data ={"action": "auth", "key": "PKAM4QPHOM4UPBGMF90C", "secret": "9PdtZ8mifNBGKc8rnVfuZJRMVlFh7shCougkoMal"}
     
 
     ws.send(json.dumps(auth_data))
@@ -301,13 +304,12 @@ def on_open(ws):
 def on_message(ws, message):
     global api
     message = message[1:-1]
-    print (str(len(api.list_positions())))
     print(message)
     to_df(message)
 def on_close(ws,var1,var2):
     print("closed connection")
 
-global opens,timestamps,closes,highs,lows,levels,in_position,symbol,api
+global opens,timestamps,closes,highs,lows,levels,symbol,api
 opens = []
 timestamps =[]
 closes = []
@@ -317,10 +319,8 @@ levels = []
 symbol = input('enter sym name:')
 api = tradeapi.REST(key_id = API_ID,secret_key = API_KEY,base_url = api_endpoint)
 
-in_position = False
 
-
-socket = "wss://paper-api.alpaca.markets/stream"
+socket = "wss://stream.data.alpaca.markets/v2/iex"
 ws = websocket.WebSocketApp(socket,on_open=on_open,on_message=on_message,on_close=on_close)
 ws.run_forever()
 

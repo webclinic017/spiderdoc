@@ -290,8 +290,8 @@ def show_plt(minute_ran,stock,start_date):
     #define width of candlestick elements
     width = .0002
     width2 = .00002
-    plt.subplots(2,1,sharex=True)
-    plt.subplot(2,1,1)
+    plt.subplots(3,1,sharex=True)
+    plt.subplot(3,1,1)
     plt.title(stock+' '+start_date)
     #plot up prices
     plt.bar(up.index,up.Close-up.Open,width,bottom=up.Open,color=col1)
@@ -308,8 +308,6 @@ def show_plt(minute_ran,stock,start_date):
     plt.bar(down.index,down.Close-down.Open,width,bottom=down.Open,color=col2)
     plt.bar(down.index,down.High-down.Open,width2,bottom=down.Open,color=col2)
     plt.bar(down.index,down.Low-down.Close,width2,bottom=down.Close,color=col2)
-    plt.plot(curr_stock_historical.index,curr_stock_historical["ema_med"],color=col4)
-    plt.plot(curr_stock_historical.index,curr_stock_historical["ema_thin"],color=col5)
     
     #rotate x-axis tick labels
     plt.xticks(rotation=45, ha='right')
@@ -323,10 +321,16 @@ def show_plt(minute_ran,stock,start_date):
     plt.scatter(positions_short['Timestamp'],positions_short['Price'],marker='v',color="yellow")
     plt.scatter(positions_closed_short['Timestamp'],positions_closed_short['Price'],marker='v',color="orange")
     
-    plt.subplot(2,1,2)
+    plt.subplot(3,1,2)
+    plt.plot(curr_stock_historical.index,curr_stock_historical["rsi"],color='r')
+    plt.axhline(y=30, color='b', linestyle='-')
+    
+    plt.subplot(3,1,3)
+    plt.plot(curr_stock_historical.index,curr_stock_historical["roc_sma_5"],color='g')
     plt.plot(curr_stock_historical.index,curr_stock_historical["roc_sma_15"],color='r')
     plt.axhline(y=0, color='b', linestyle='-')
-    plt.plot(curr_stock_historical.index,curr_stock_historical["roc_sma_5"],color='g')
+    
+    
     
     #display candlestick chart ,EMA_[wide,med,thin] ,first n local min/max of 1st period of the day,
     plt.show()
@@ -731,8 +735,8 @@ def run_simulation(stock_to_trade):
         
         curr_stock_historical["roc_sma_15_shift"] = curr_stock_historical["roc_sma_15"].shift(1)
         curr_stock_historical['roc_15_delta'] =curr_stock_historical["roc_sma_15"] - curr_stock_historical["roc_sma_15_shift"]
-        
-        curr_stock_historical = curr_stock_historical.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','ema_thin','ema_med','trend','roc_sma_5','roc_sma_15','pattern_val','candlestick_pattern','roc_5_delta','roc_15_delta','roc_roc_5','rsi']]
+
+        curr_stock_historical = curr_stock_historical.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume','roc_sma_5','roc_sma_15','pattern_val','candlestick_pattern','roc_5_delta','roc_15_delta','roc_roc_5','rsi']]
         ##########################################################################################################################
         #                                       RUN THROUGH DAY                                                                  #   
         ##########################################################################################################################
