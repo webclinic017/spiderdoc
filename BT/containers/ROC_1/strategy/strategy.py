@@ -561,26 +561,17 @@ def enter_long(i,res,sup):
     df=curr_stock_historical
     close = df['Close'][i]
     rsi = df['rsi'][i]
-    trend = df['trend'][i]
+    roc_5 = df['roc_sma_5'][i]
+    roc_15 = df['roc_sma_15'][i]
+
+
     
-    if sup == 0:
-        return False
+    if roc_5 < roc_15:
+        return False        
     
     if rsi > 30:
         return False
     
-    
-    stock_amnt_to_order = stock_amnt_order(close,res)
-    potential_money_risked = potential_delta(stock_amnt_to_order,close,sup)
-    potential_money_gained = potential_delta(stock_amnt_to_order,close,res)
-
-    if potential_money_gained != 0:
-        rrr =  potential_money_gained /potential_money_risked
-    elif potential_money_gained == 0:
-        rrr = 2
-
-    if (rrr<1.9):
-        return False
     if  '_Bull' in df['candlestick_pattern'][i]:
         best_candle_rating=candle_rankings.get(df['candlestick_pattern'][i],100)
         candle_rating = df['pattern_val'][i]
@@ -808,33 +799,34 @@ def run_simulation(stock_to_trade):
         fullname =  outdir + outname
         positions.to_csv(fullname)
         
-        """ outname = "ROC_1-"+stock_to_trade+"-X-"+datetime.strftime(curr_date,"%Y-%m-%d")+"-STOCK.csv"
+        outname = "ROC_1-"+stock_to_trade+"-X-"+datetime.strftime(curr_date,"%Y-%m-%d")+"-STOCK.csv"
         #outdir = '/output/'
         outdir = 'C:\\Users\\nolys\\Desktop\\results\\'
         fullname =  outdir + outname
-        curr_stock_historical.to_csv(fullname) """
+        curr_stock_historical.to_csv(fullname) 
         
         #pd.set_option('display.max_columns', None,'display.max_rows', None)
         #print(positions)
-        #show_plt(i,stock_to_trade,start_date_range)
+        show_plt(i,stock_to_trade,start_date_range)
     if (stock_not_avail):
         pass
 
                 
                     
-                
-                
-""" stock_to_trade = 'TSLA'
-start_date_range = '2022-01-03'
-end_date_range = '2022-01-14'
-run_type = 'ADJ' 
-run_simulation(stock_to_trade)   """  
-#file_path = '/input/'+symbols_file
-file_path = 'C:\\Users\\nolys\\Desktop\\results\\symbols.txt'
-Sym_file = open(file_path,"r")
+sim_scope = 1                
+if sim_scope == 1:               
+    stock_to_trade = 'A'
+    start_date_range = '2022-01-07'
+    end_date_range = '2022-01-08'
+    run_type = 'ADJ' 
+    run_simulation(stock_to_trade)     
+else :
+    #file_path = '/input/'+symbols_file
+    file_path = 'C:\\Users\\nolys\\Desktop\\results\\symbols.txt'
+    Sym_file = open(file_path,"r")
 
 
-if __name__ == '__main__':
-    # start n worker processes
-    with multiprocessing.Pool(processes=prallel_proc_amnt) as pool:
-        pool.map_async(run_simulation,iterable=Sym_file).get()  
+    if __name__ == '__main__':
+        # start n worker processes
+        with multiprocessing.Pool(processes=prallel_proc_amnt) as pool:
+            pool.map_async(run_simulation,iterable=Sym_file).get()  

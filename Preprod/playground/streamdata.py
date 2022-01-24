@@ -138,12 +138,12 @@ candle_rankings = {
 
 
 ########## account info ############################
-API_ID = 'PKNI20IYWW6VBFJ45L20'
-API_KEY = 'KqgCbJH1KY3O8ydTXn60GUEZTOrOYnjLGmkIez0E'
+API_ID = 'PKAM4QPHOM4UPBGMF90C'
+API_KEY = '9PdtZ8mifNBGKc8rnVfuZJRMVlFh7shCougkoMal'
 api_endpoint = 'https://paper-api.alpaca.markets'
 ####################################################
 def to_df(msg):
-    global levels , in_position
+    global levels , in_position ,api
     df =pd.DataFrame()
     a_json = json.loads(msg)
     candle_open = a_json['o']
@@ -180,7 +180,7 @@ def to_df(msg):
 
             df['rsi'] = talib.RSI(df['Close'], timeperiod=14)
             print(df)
-            if in_position == False:
+            if len(api.list_positions())  == 0 and len(api.list_orders()) == 0:
                 if df['rsi'][-1] < 30:
                     candle_df = get_pattern_df(df)
                     if  '_Bull' in df['candlestick_pattern'][-1]:
@@ -194,21 +194,27 @@ def to_df(msg):
                             return True
                         """
                         if candle_rating > 3 and best_candle_rating < 20:
-                            print("enter_long +++++++++++++++++++++++++++++")
+                            stock_amnt = stock_amnt_order(closes[-1])
+                            api.submit_order(symbol=symbol,qty=stock_amnt,side='buy',type='market',time_in_force='gtc')
                         elif candle_rating > 6 and best_candle_rating < 40:
-                                print("enter_long ++++++++++++++++++++++++++")
+                            stock_amnt = stock_amnt_order(closes[-1])
+                            api.submit_order(symbol=symbol,qty=stock_amnt,side='buy',type='market',time_in_force='gtc')
                         elif candle_rating > 7 and best_candle_rating < 60:
-                            print('enter_long +++++++++++++++++++++++++++++')
-            else:
+                            stock_amnt = stock_amnt_order(closes[-1])
+                            api.submit_order(symbol=symbol,qty=stock_amnt,side='buy',type='market',time_in_force='gtc')
+            elif len(api.list_positions())  >= 1:
                 roc_5 = df['roc_sma_5'][-1]
                 
                 roc_15 = df['roc_sma_15'][-1]
                 
                 roc_roc_5 = df["roc_roc_5"][-1]
+                
                 if roc_5 <= roc_15:
-                    print('exit long +++++++++++++')
+                    stock_amnt = api.list_positions()[1].qty
+                    api.submit_order(symbol=symbol,qty=stock_amnt,side='sell',type='market',time_in_force='gtc',order_class='bracket')
                 if roc_roc_5 < 0:
-                    print('exit long ++++++++++++')
+                    stock_amnt = api.list_positions()[1].qty
+                    api.submit_order(symbol=symbol,qty=stock_amnt,side='sell',type='market',time_in_force='gtc',order_class='bracket')
             
 def get_pattern_df(df):
     global candle_rankings
@@ -273,43 +279,63 @@ def get_pattern_df(df):
     df.drop(candle_names, axis = 1, inplace = True)
     return df         
 
+
+def stock_amnt_order(close):
+    global api
+    account = api.get_account()
+    balance = account.buying_power
+    amount = int(balance / close) -1 
+    return amount
+
+
 def on_open(ws):
     print("opened")
-    auth_data = {"action": "auth", "key": 'PKNI20IYWW6VBFJ45L20', "secret": 'KqgCbJH1KY3O8ydTXn60GUEZTOrOYnjLGmkIez0E'}
+    global symbol
+    auth_data = {"action": "auth", "key": 'PKAM4QPHOM4UPBGMF90C', "secret": '9PdtZ8mifNBGKc8rnVfuZJRMVlFh7shCougkoMal'}
     
 
     ws.send(json.dumps(auth_data))
-    symbol = input()
     listen_message = {"action":"subscribe","bars":[symbol]}
 
     ws.send(json.dumps(listen_message))
 def on_message(ws, message):
+    global api
     message = message[1:-1]
+    print (str(len(api.list_positions())))
     print(message)
     to_df(message)
 def on_close(ws,var1,var2):
     print("closed connection")
 
-global opens,timestamps,closes,highs,lows,levels,in_position
+global opens,timestamps,closes,highs,lows,levels,in_position,symbol,api
 opens = []
 timestamps =[]
 closes = []
 highs = []
 lows=[]
 levels = []
+symbol = input('enter sym name:')
+api = tradeapi.REST(key_id = API_ID,secret_key = API_KEY,base_url = api_endpoint)
+
 in_position = False
 
 
-socket = "wss://stream.data.alpaca.markets/v1beta1/crypto"
-symbol = 'BTCUSD'
+socket = "wss://paper-api.alpaca.markets/stream"
 ws = websocket.WebSocketApp(socket,on_open=on_open,on_message=on_message,on_close=on_close)
 ws.run_forever()
 
 
-api = tradeapi.REST(key_id = API_ID,secret_key = API_KEY,base_url = api_endpoint)
 
 # Get our account information.
 account = api.get_account()
+portfolio = api.list_positions()
+
+
+print (str(len(api.list_positions())))
+#api.submit_order(symbol='TSLA',qty=1,side='buy',type='market',time_in_force='gtc')
+x = api.list_orders()
+
+print(api.list_orders()[1].qty)
 
 # Check if our account is restricted from trading.
 if account.trading_blocked:
