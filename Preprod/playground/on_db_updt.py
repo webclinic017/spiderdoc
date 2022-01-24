@@ -6,31 +6,39 @@ import multiprocessing
 def get_from_db(symbol):
     
     closes = []
+    last_update = 0
+
+    symbol=symbol.strip('\n')
+
+    
     con = psycopg2.connect(host='localhost', database='initial_ohlc_db' ,user = 'postgres', password ='Ariel2234')
     cur = con.cursor()
-    cur.execute("SELECT timestamp FROM dbo.init_ohlc where symbol = '"+symbol+"' ORDER BY TIMESTAMP DESC LIMIT 1")
+    while True:
+        cur.execute("SELECT timestamp FROM dbo.init_ohlc where symbol = '"+symbol+"' ORDER BY TIMESTAMP DESC LIMIT 1")
 
-    rows = cur.fetchall()
+        rows = cur.fetchall()
 
-    for r in rows:
-        ts = r[0]
-        date_obj = dt.strptime(ts, '%Y-%m-%dT%H:%M:%SZ')
-        dt.strftime(date_obj, '%y-%m-%d %H:%M:%S%z')
-        now = dt.now().minute
-        if now-1 == date_obj.minute:
-            cur.execute("SELECT close FROM dbo.init_ohlc where symbol = '"+symbol+"' ORDER BY TIMESTAMP DESC LIMIT 15")
-            rows = cur.fetchall()
-            for r in rows:
-                close = r[0]
-                closes.append(close)
-            print(f"closes for {symbol}")
-            print(closes)
+        for r in rows:
+            ts = r[0]
+            time_obj = dt.strptime(ts, '%Y-%m-%dT%H:%M:%SZ')
+            dt.strftime(time_obj, '%y-%m-%d %H:%M:%S%z')
+            now = dt.now().minute
+            
+            if time_obj != last_update:
+                cur.execute("SELECT close FROM dbo.init_ohlc where symbol = '"+symbol+"' ORDER BY TIMESTAMP DESC LIMIT 15")
+                rows = cur.fetchall()
+                for r in rows:
+                    close = r[0]
+                    closes.append(close)
+                print(f"closes for {symbol}")
+                print(closes)
+                last_update = time_obj
                 
-        else:
-            print('not recent')
-            time.sleep(10)
-
-get_from_db('TSLA')
+                closes = []
+                    
+            else:
+                print(f'not recent for {symbol}')
+                time.sleep(10)
         
 #file_path = '/input/'+symbols_file
 file_path = 'C:\\Users\\nolys\\Desktop\\results\\symbols.txt'
