@@ -611,9 +611,6 @@ def exit_long(i,entry):
     if roc_5 <= roc_15:
         return True
     
-    if roc_roc_5 < 0:
-        return True
-    
     
     return False
 
