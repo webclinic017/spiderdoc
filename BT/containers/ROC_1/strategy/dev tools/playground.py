@@ -307,16 +307,16 @@ def show_plt(minute_ran):
     plt.scatter(curr_stock_historical_max.index, curr_stock_historical_max, c='g')
     
     plt.subplot(3,1,2)
-    plt.plot(curr_stock_historical.index,curr_stock_historical["roc_sma_15"],color='r')
-    plt.axhline(y=0, color='b', linestyle='-')
-    plt.plot(curr_stock_historical.index,curr_stock_historical["roc_sma_5"],color='g')
+    plt.plot(curr_stock_historical.index,curr_stock_historical["ADX"],color='b')
+    plt.axhline(y=25, color='b', linestyle='-')
+    plt.plot(curr_stock_historical.index,curr_stock_historical["MDI"],color='r')
+    plt.plot(curr_stock_historical.index,curr_stock_historical["PDI"],color='g')
+
     
     plt.subplot(3,1,3)
-    plt.plot(curr_stock_historical.index,curr_stock_historical["PDI"],color='g')
-    plt.plot(curr_stock_historical.index,curr_stock_historical["MDI"],color='r')
+    plt.plot(curr_stock_historical.index,curr_stock_historical["rsi"],color='b')
     plt.axhline(y=30, color='b', linestyle='-')
     plt.axhline(y=70, color='b', linestyle='-')
-    plt.plot(curr_stock_historical.index,curr_stock_historical["ADX"],color='b')
 
     
 
@@ -468,7 +468,9 @@ def run_simulation(stock_to_trade):
         curr_stock_historical['rsi'] = talib.RSI(curr_stock_historical['Close'], timeperiod=14)
 
         curr_stock_historical['ADX'] = talib.ADX(curr_stock_historical['High'], curr_stock_historical['Low'], curr_stock_historical['Close'], timeperiod=14)
+
         curr_stock_historical['MDI'] = talib.MINUS_DI(curr_stock_historical['High'], curr_stock_historical['Low'], curr_stock_historical['Close'], timeperiod=14)
+
         curr_stock_historical['PDI'] = talib.PLUS_DI(curr_stock_historical['High'], curr_stock_historical['Low'], curr_stock_historical['Close'], timeperiod=14)
 
         

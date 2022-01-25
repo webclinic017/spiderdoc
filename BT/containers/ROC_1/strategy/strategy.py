@@ -603,13 +603,9 @@ def exit_long(i,entry):
     global curr_stock_historical
     df=curr_stock_historical
     
-    
     roc_5 = df['roc_sma_5'][i]
     roc_15 = df['roc_sma_15'][i]
     close= df['Close'][i]
-    
-    if get_pos_delta(close) < 0:
-        return False
     
     roc_roc_5 =df['roc_roc_5'][i]
     if roc_5 <= roc_15:
@@ -796,6 +792,7 @@ def run_simulation(stock_to_trade):
         last_intent = positions.iloc[-1]['Intent']    
         if last_intent == 'LONG':
             close_long(i)
+            position_is_open = False
             
         outname = "ROC_1-"+stock_to_trade+"-X-"+datetime.strftime(curr_date,"%Y-%m-%d")+".csv"
         #outdir = '/output/'
@@ -803,21 +800,21 @@ def run_simulation(stock_to_trade):
         fullname =  outdir + outname
         positions.to_csv(fullname)
         
-        outname = "ROC_1-"+stock_to_trade+"-X-"+datetime.strftime(curr_date,"%Y-%m-%d")+"-STOCK.csv"
+        """ outname = "ROC_1-"+stock_to_trade+"-X-"+datetime.strftime(curr_date,"%Y-%m-%d")+"-STOCK.csv"
         #outdir = '/output/'
         outdir = 'C:\\Users\\nolys\\Desktop\\results\\'
         fullname =  outdir + outname
-        curr_stock_historical.to_csv(fullname) 
+        curr_stock_historical.to_csv(fullname)  """
         
         #pd.set_option('display.max_columns', None,'display.max_rows', None)
         #print(positions)
-        show_plt(i,stock_to_trade,start_date_range)
+        #show_plt(i,stock_to_trade,start_date_range)
     if (stock_not_avail):
         pass
 
                 
                     
-sim_scope = 1                
+sim_scope = 0                
 if sim_scope == 1:               
     stock_to_trade = 'A'
     start_date_range = '2022-01-07'
