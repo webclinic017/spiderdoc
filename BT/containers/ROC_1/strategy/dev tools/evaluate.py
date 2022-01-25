@@ -222,7 +222,10 @@ Daily_df = Daily_df.loc[:,['Stock','Date','Daily_delta']]
 k=0
 for sym in Sym_file:
     sym=sym.strip('\n')
-    positions_p_sym=gen_delta_positions_per_sym(sym)
+    try:
+        positions_p_sym=gen_delta_positions_per_sym(sym)
+    except:
+        continue
     positions_p_sym = positions_p_sym.loc[:,['minute_in_day','Timestamp','Action','Amount','TValue','Intent',"Balance"]]
     df = positions_p_sym
    
@@ -247,6 +250,8 @@ for sym in Sym_file:
             k         +=1
             start_idx = i
             do_calc   = False
+pd.set_option("display.max_rows", None, "display.max_columns", None)
+            
 print(Daily_df)
         #set flag to true
         #when date changes set flag to flase
