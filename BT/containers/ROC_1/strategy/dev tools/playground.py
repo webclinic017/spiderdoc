@@ -269,9 +269,9 @@ def show_plt(minute_ran):
     #define width of candlestick elements
     width = .0002
     width2 = .00002
-    plt.subplots(2,1,sharex=True)
+    plt.subplots(3,1,sharex=True)
 
-    plt.subplot(2,1,1)
+    plt.subplot(3,1,1)
     #plot up prices
     plt.bar(up.index,up.Close-up.Open,width,bottom=up.Open,color=col1)
     plt.bar(up.index,up.High-up.Close,width2,bottom=up.Close,color=col1)
@@ -306,10 +306,20 @@ def show_plt(minute_ran):
     plt.scatter(curr_stock_historical_min.index, curr_stock_historical_min, c='r')
     plt.scatter(curr_stock_historical_max.index, curr_stock_historical_max, c='g')
     
-    plt.subplot(2,1,2)
+    plt.subplot(3,1,2)
     plt.plot(curr_stock_historical.index,curr_stock_historical["roc_sma_15"],color='r')
     plt.axhline(y=0, color='b', linestyle='-')
     plt.plot(curr_stock_historical.index,curr_stock_historical["roc_sma_5"],color='g')
+    
+    plt.subplot(3,1,3)
+    plt.plot(curr_stock_historical.index,curr_stock_historical["PDI"],color='g')
+    plt.plot(curr_stock_historical.index,curr_stock_historical["MDI"],color='r')
+    plt.axhline(y=30, color='b', linestyle='-')
+    plt.axhline(y=70, color='b', linestyle='-')
+    plt.plot(curr_stock_historical.index,curr_stock_historical["ADX"],color='b')
+
+    
+
 
     #display candlestick chart ,EMA_[wide,med,thin] ,first n local min/max of 1st period of the day,
     plt.show()
@@ -455,6 +465,13 @@ def run_simulation(stock_to_trade):
         #roc_roc_sma_30
         curr_stock_historical["roc_sma_5"] = talib.SMA(curr_stock_historical['roc_thin'], timeperiod = 5)
         
+        curr_stock_historical['rsi'] = talib.RSI(curr_stock_historical['Close'], timeperiod=14)
+
+        curr_stock_historical['ADX'] = talib.ADX(curr_stock_historical['High'], curr_stock_historical['Low'], curr_stock_historical['Close'], timeperiod=14)
+        curr_stock_historical['MDI'] = talib.MINUS_DI(curr_stock_historical['High'], curr_stock_historical['Low'], curr_stock_historical['Close'], timeperiod=14)
+        curr_stock_historical['PDI'] = talib.PLUS_DI(curr_stock_historical['High'], curr_stock_historical['Low'], curr_stock_historical['Close'], timeperiod=14)
+
+        
         
         #fill trend column
         conditions = [
@@ -476,7 +493,7 @@ def run_simulation(stock_to_trade):
         pattern_df = pd.DataFrame(columns=["Datetime"])
         pattern_df =pattern_df.loc[:,['Datetime']]
         curr_stock_historical['Datetime'] = pd.to_datetime(curr_stock_historical.index)
-        curr_stock_historical = curr_stock_historical.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','ema_thin','ema_med','trend','roc_sma_15','roc_sma_5']]
+        curr_stock_historical = curr_stock_historical.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','ema_thin','ema_med','trend','roc_sma_15','roc_sma_5','rsi','ADX','MDI','PDI']]
         ##########################################################################################################################
         #                                       RUN THROUGH DAY                                                                  #   
         ##########################################################################################################################
@@ -508,9 +525,9 @@ def run_simulation(stock_to_trade):
                 
                 
             
-stock_to_trade = 'AAPL'
-start_date_range = '2022-01-03'
-end_date_range = '2022-01-04'
+stock_to_trade = 'APO'
+start_date_range = '2022-01-05'
+end_date_range = '2022-01-06'
 run_type = 'ADJ'
 run_simulation(stock_to_trade)
 """ file_path = '/input/'+symbols_file
