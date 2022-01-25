@@ -29,9 +29,16 @@ def on_open(ws):
     
 
     ws.send(json.dumps(auth_data))
-    listen_message = {"action":"subscribe","bars":['AMZN','TSLA','MSFT']}
+    
+    file_path = 'C:\\Users\\nolys\\Desktop\\results\\symbols.txt'
+    Sym_file = open(file_path,"r")
+    
+    for sym in Sym_file:
+        sym=sym.strip('\n')
+        listen_message = {"action":"subscribe","bars":[sym]}
+        ws.send(json.dumps(listen_message))
+    
 
-    ws.send(json.dumps(listen_message))
 def on_message(ws, message):
     global api
     message = message[1:-1]
