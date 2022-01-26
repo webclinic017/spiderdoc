@@ -322,8 +322,11 @@ def show_plt(minute_ran,stock,start_date):
     plt.scatter(positions_closed_short['Timestamp'],positions_closed_short['Price'],marker='v',color="orange")
     
     plt.subplot(3,1,2)
-    plt.plot(curr_stock_historical.index,curr_stock_historical["rsi"],color='r')
+    plt.plot(curr_stock_historical.index,curr_stock_historical["ADX"],color='b')
     plt.axhline(y=30, color='b', linestyle='-')
+    plt.plot(curr_stock_historical.index,curr_stock_historical["PDI"],color='g')
+    plt.plot(curr_stock_historical.index,curr_stock_historical["MDI"],color='r')
+
     
     plt.subplot(3,1,3)
     plt.plot(curr_stock_historical.index,curr_stock_historical["roc_sma_5"],color='g')
@@ -563,36 +566,25 @@ def get_arg_rel_extrema_trend(i):
 def enter_long(i,res,sup):
     global curr_stock_historical
     df=curr_stock_historical
-    close = df['Close'][i]
-    rsi = df['rsi'][i]
+    adx = df['ADX'][i]
+    pdi = df['PDI'][i]
+    mdi = df['MDI'][i]
+    
     roc_5 = df['roc_sma_5'][i]
     roc_15 = df['roc_sma_15'][i]
-
-
     
-    if roc_5 < roc_15:
-        return False        
-    
-    if rsi > 30:
+    if pdi < 35:
         return False
     
-    if  '_Bull' in df['candlestick_pattern'][i]:
-        best_candle_rating=candle_rankings.get(df['candlestick_pattern'][i],100)
-        candle_rating = df['pattern_val'][i]
-        
-        """ if candle_rating > 7 and best_candle_rating < 60:
-            return True
-        
-        elif candle_rating > 5 and best_candle_rating < 40:
-            return True
-        """
-        if candle_rating > 3 and best_candle_rating < 20:
-                return True
-        elif candle_rating > 6 and best_candle_rating < 40:
-                return True
-        elif candle_rating > 7 and best_candle_rating < 60:
-            return True
-        
+    if adx < 26:
+        return False
+    
+    if pdi < mdi :
+        return False
+    
+    if roc_5 < roc_15:
+        return False
+    
     
     return False
     
@@ -600,13 +592,14 @@ def enter_long(i,res,sup):
 def exit_long(i,entry):
     global curr_stock_historical
     df=curr_stock_historical
-    
-    roc_5 = df['roc_sma_5'][i]
-    roc_15 = df['roc_sma_15'][i]
+    adx = df['ADX'][i]
+    pdi = df['PDI'][i]
+    mdi = df['MDI'][i]
     close= df['Close'][i]
     
-    roc_roc_5 =df['roc_roc_5'][i]
-    if roc_5 <= roc_15:
+    if adx <= 25:
+        return True
+    if pdi < mdi:
         return True
     
     
@@ -696,8 +689,10 @@ def run_simulation(stock_to_trade):
         curr_stock_historical["roc_roc_30"] = talib.ROCP(curr_stock_historical['roc_sma_15'], timeperiod = 1)
         
         curr_stock_historical['rsi'] = talib.RSI(curr_stock_historical['Close'], timeperiod=14)
-
-
+        
+        curr_stock_historical['ADX'] = talib.ADX(curr_stock_historical['High'], curr_stock_historical['Low'], curr_stock_historical['Close'], timeperiod=14)
+        curr_stock_historical['PDI'] = talib.PLUS_DI(curr_stock_historical['High'], curr_stock_historical['Low'], curr_stock_historical['Close'], timeperiod=14)                
+        curr_stock_historical['MDI'] = talib.MINUS_DI(curr_stock_historical['High'], curr_stock_historical['Low'], curr_stock_historical['Close'], timeperiod=14)
         #fill trend column
         conditions = [
             (curr_stock_historical['ema_med'].lt(curr_stock_historical['ema_thin'])),
@@ -721,13 +716,8 @@ def run_simulation(stock_to_trade):
         curr_stock_historical['Datetime'] = pd.to_datetime(curr_stock_historical.index)
         
         #calc Roc_prev_delta
-        curr_stock_historical["roc_sma_5_shift"] = curr_stock_historical["roc_sma_5"].shift(1)
-        curr_stock_historical['roc_5_delta'] =curr_stock_historical["roc_sma_5"] - curr_stock_historical["roc_sma_5_shift"]
-        
-        curr_stock_historical["roc_sma_15_shift"] = curr_stock_historical["roc_sma_15"].shift(1)
-        curr_stock_historical['roc_15_delta'] =curr_stock_historical["roc_sma_15"] - curr_stock_historical["roc_sma_15_shift"]
 
-        curr_stock_historical = curr_stock_historical.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume','roc_sma_5','roc_sma_15','pattern_val','candlestick_pattern','roc_5_delta','roc_15_delta','roc_roc_5','rsi']]
+        curr_stock_historical = curr_stock_historical.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume','roc_sma_5','roc_sma_15','pattern_val','candlestick_pattern','ADX','PDI','MDI','rsi']]
         ##########################################################################################################################
         #                                       RUN THROUGH DAY                                                                  #   
         ##########################################################################################################################
@@ -799,7 +789,7 @@ def run_simulation(stock_to_trade):
         #outdir = '/output/'
         outdir = 'C:\\Users\\nolys\\Desktop\\results\\'
         fullname =  outdir + outname
-        curr_stock_historical.to_csv(fullname)  """
+        curr_stock_historical.to_csv(fullname) """
         
         #pd.set_option('display.max_columns', None,'display.max_rows', None)
         #print(positions)
