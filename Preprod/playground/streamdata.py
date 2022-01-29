@@ -1,6 +1,9 @@
 import psycopg2
 import alpaca_trade_api as tradeapi
 import websocket ,json
+from threading import Thread
+from datetime import datetime
+
 
 ########## account info ############################
 API_ID = 'PKAM4QPHOM4UPBGMF90C'
@@ -10,13 +13,16 @@ api_endpoint = 'https://paper-api.alpaca.markets'
 def to_db(msg):
     global in_position ,api,con,cur
     a_json = json.loads(msg)
-    symbol       = a_json['S']
-    candle_open  = a_json['o']
-    candle_close = a_json['c']
-    candle_high  = a_json['h']
-    candle_low   = a_json['l']
-    candle_ts    = a_json['t']
-    
+    try:
+        symbol       = a_json['sym']
+        candle_open  = a_json['o']
+        candle_close = a_json['c']
+        candle_high  = a_json['h']
+        candle_low   = a_json['l']        
+        candle_ts    = a_json['s']
+        candle_ts = datetime.fromtimestamp(candle_ts/1000).strftime('%Y-%m-%d %H:%M:%S')
+    except:
+        return    
     
     cur.execute("insert into dbo.init_ohlc (symbol, timestamp, open, low, high, close) values (%s, %s, %s, %s, %s, %s)", 
                 (symbol, candle_ts, candle_open,candle_low,candle_high, candle_close))
@@ -24,27 +30,31 @@ def to_db(msg):
 
 def on_open(ws):
     print("opened")
-    global symbol
-    auth_data ={"action": "auth", "key": "PKAM4QPHOM4UPBGMF90C", "secret": "9PdtZ8mifNBGKc8rnVfuZJRMVlFh7shCougkoMal"}
-    
-
+    auth_data ={"action": "auth", "params": "irRpDyMt97nWSfC8ARHR5_Z4EQf6isB6"}
     ws.send(json.dumps(auth_data))
+    
+    
+    listen_message = {"action":"subscribe", "params":"AM.*"}
+    ws.send(json.dumps(listen_message))
+
     
     file_path = 'C:\\DEVOPS\\python apps\\spiderdoc\\spiderdoc\\Preprod\\symbols.txt'
     
     Sym_file = open(file_path,"r")
     
-    for sym in Sym_file:
+    """ for sym in Sym_file:
         sym=sym.strip('\n')
-        listen_message = {"action":"subscribe","bars":[sym]}
+        listen_message = {"action":"subscribe", "params":"AM.*"}
         ws.send(json.dumps(listen_message))
-    
+     """
 
 def on_message(ws, message):
     global api
     message = message[1:-1]
     print(message)
     to_db(message)
+    
+    #to_db(message)
 def on_close(ws,var1,var2):
     print("closed connection")
 
@@ -60,7 +70,7 @@ con = psycopg2.connect(host='localhost', database='initial_ohlc_db' ,user = 'pos
 cur = con.cursor()
 
 
-socket = "wss://stream.data.alpaca.markets/v2/iex"
+socket = "wss://socket.polygon.io/stocks"
 ws = websocket.WebSocketApp(socket,on_open=on_open,on_message=on_message,on_close=on_close)
 ws.run_forever()
 

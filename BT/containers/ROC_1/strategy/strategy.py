@@ -14,6 +14,7 @@ from datetime import timedelta,time,datetime
 import sys
 import multiprocessing
 from itertools import compress
+import time
 pd.options.mode.chained_assignment = None  # default='warn'
 
 global candle_rankings
@@ -398,7 +399,6 @@ def get_support(i,close):
         return 0
     return val
         
-
 def get_resistance(i,close):
     global levels
     li = []
@@ -567,11 +567,13 @@ def enter_long(i,res,sup):
     rsi = df['rsi'][i]
     roc_5 = df['roc_sma_5'][i]
     roc_15 = df['roc_sma_15'][i]
+    d_roc_15 = df['roc_15_delta'][i]
 
-
+    if d_roc_15 < 0:
+        return False
     
     if roc_5 < roc_15:
-        return False        
+        return False  
     
     if rsi > 30:
         return False
@@ -603,10 +605,10 @@ def exit_long(i,entry):
     
     roc_5 = df['roc_sma_5'][i]
     roc_15 = df['roc_sma_15'][i]
-    close= df['Close'][i]
     
-    roc_roc_5 =df['roc_roc_5'][i]
-    if roc_5 <= roc_15:
+    d_roc_15 = df['roc_15_delta'][i]
+    
+    if  d_roc_15 < 0:
         return True
     
     
@@ -668,6 +670,8 @@ def run_simulation(stock_to_trade):
         #                                     ===================================================
         ########################################################################################################################
         #get historical data from yfinance for this day
+        start_time= time.time()
+
         try:
             print(curr_date.strftime('%Y-%m-%d') + ' - ' + stock_to_trade)
             curr_stock_historical = yf.download(stock_to_trade,curr_date,tommorow_date,interval='1m')
@@ -721,10 +725,10 @@ def run_simulation(stock_to_trade):
         curr_stock_historical['Datetime'] = pd.to_datetime(curr_stock_historical.index)
         
         #calc Roc_prev_delta
-        curr_stock_historical["roc_sma_5_shift"] = curr_stock_historical["roc_sma_5"].shift(1)
+        curr_stock_historical["roc_sma_5_shift"] = curr_stock_historical["roc_sma_5"].shift(5)
         curr_stock_historical['roc_5_delta'] =curr_stock_historical["roc_sma_5"] - curr_stock_historical["roc_sma_5_shift"]
         
-        curr_stock_historical["roc_sma_15_shift"] = curr_stock_historical["roc_sma_15"].shift(1)
+        curr_stock_historical["roc_sma_15_shift"] = curr_stock_historical["roc_sma_15"].shift(5)
         curr_stock_historical['roc_15_delta'] =curr_stock_historical["roc_sma_15"] - curr_stock_historical["roc_sma_15_shift"]
 
         curr_stock_historical = curr_stock_historical.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume','roc_sma_5','roc_sma_15','pattern_val','candlestick_pattern','roc_5_delta','roc_15_delta','roc_roc_5','rsi']]
@@ -734,7 +738,9 @@ def run_simulation(stock_to_trade):
 
         for i in range(2,curr_stock_historical.shape[0]-2):
             #search for snr live
-            if isSupport(curr_stock_historical,i):
+            start_time= time.time()
+
+            """ if isSupport(curr_stock_historical,i):
                 l = curr_stock_historical['Low'][i]
                 if isFarFromLevel(l,levels,s):
                     levels.append((i,l))
@@ -744,7 +750,7 @@ def run_simulation(stock_to_trade):
                 l = curr_stock_historical['High'][i]
                 if isFarFromLevel(l,levels,s):
                     levels.append((i,l))
-                    levels = clean_levels(i)
+                    levels = clean_levels(i) """
 
             
             #what was the intent of the previos trade in positions
@@ -782,6 +788,8 @@ def run_simulation(stock_to_trade):
                     position_is_open=False
                     close_long(i)
                     print( ' ============ ')
+            executionTime = (time.time() - start_time)
+            print('Execution time in seconds: ' + str(executionTime))
                     #DAY FINISHED COMPUTING
 
         last_intent = positions.iloc[-1]['Intent']    
@@ -804,16 +812,17 @@ def run_simulation(stock_to_trade):
         #pd.set_option('display.max_columns', None,'display.max_rows', None)
         #print(positions)
         #show_plt(i,stock_to_trade,start_date_range)
+        
     if (stock_not_avail):
         pass
 
                 
                     
-sim_scope = 0                
+sim_scope = 1              
 if sim_scope == 1:               
-    stock_to_trade = 'A'
-    start_date_range = '2022-01-07'
-    end_date_range = '2022-01-08'
+    stock_to_trade = 'AACG'
+    start_date_range = '2022-01-11'
+    end_date_range = '2022-01-12'
     run_type = 'ADJ' 
     run_simulation(stock_to_trade)     
 else :
