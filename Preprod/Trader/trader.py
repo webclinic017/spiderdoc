@@ -267,10 +267,8 @@ def look_for_exit(df,sym):
 def main(i):
     
     
-    
-    
     #run alll the time
-    global candle_names ,api
+    global worker_num,candle_names ,api
     candle_names = talib.get_function_groups()['Pattern Recognition']
 
     ########## account info ############################
@@ -285,7 +283,7 @@ def main(i):
     #this is whre we get out symbols from 
     
         #file_path = '/input/'+symbols_file
-        file_path = 'C:\DEVOPS\python apps\spiderdoc\spiderdoc\Preprod\Trader\input\Sym_1_'+str(i)
+        file_path = 'C:\DEVOPS\python apps\spiderdoc\spiderdoc\Preprod\Trader\input\symbols_'+str(worker_num)+'_'+str(i)+'.txt'
         Sym_file = open(file_path,"r")
         #apply strategy to all sybols
         for sym in Sym_file:
@@ -294,7 +292,9 @@ def main(i):
                 start_time= time.time()
 
                 #download data
-                df = yf.download(tickers=sym,period='30m',interval='1m')
+                df ,meta= yf.download(tickers=sym,period='30m',interval='1m')
+                print("########################")
+                print(meta)
                 #remove unfinished candle
                 df =df.iloc[0:28,:]
                 df['Datetime'] = pd.to_datetime(df.index)
@@ -363,16 +363,15 @@ def main(i):
             #these values will be put in to a sperate table
         time.sleep(10)
 
+global worker_num
 
+""" worker_num = sys.argv[1]
+parallel_proc_amnt = sys.argv[2] """
 
+worker_num = 1
+parallel_proc_amnt = 16
 
-
-
-
-main(1)
-
-""" parallel_proc_amnt = 1
 if __name__ == '__main__':
     # start n worker processes
     with multiprocessing.Pool(processes=parallel_proc_amnt) as pool:
-        pool.map_async(main,iterable=range(1,parallel_proc_amnt+1)).get()   """
+        pool.map_async(main,iterable=range(1,parallel_proc_amnt+1)).get()
