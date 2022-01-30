@@ -1,16 +1,19 @@
-from numpy import lib
+from time import sleep
 import pandas as pd
-import psycopg2
-from datetime import datetime as dt
-import time
-import multiprocessing
-import alpaca_trade_api as tradeapi
 import numpy as np
-from itertools import compress
+import yfinance as yf
+import multiprocessing
+import sys
+from datetime import datetime,timedelta
+import time
 import talib
+from itertools import compress
+import alpaca_trade_api as tradeapi
 
+
+#######################################################
+    #candle dict
 global candle_rankings
-
 candle_rankings = {
         "CDL3LINESTRIKE_Bull": 1,
         "CDL3LINESTRIKE_Bear": 2,
@@ -135,162 +138,17 @@ candle_rankings = {
         "CDLCOUNTERATTACK_Bull" : 102,
         "CDLCOUNTERATTACK_Bear": 102
     }
-
-
-def get_from_db(symbol):
-    global df,api
-    
-    timestamps  = []
-    closes      = []
-    opens       = []
-    highs       = []
-    lows        = []
-    rsis        = []
-    roc_5s      = []
-    roc_15s     = []
-    last_update = 0
-
-    symbol=symbol.strip('\n')
-
-    #open db connection and set cursor
-    con = psycopg2.connect(host='localhost', database='initial_ohlc_db' ,user = 'postgres', password ='Ariel2234')
-    cur = con.cursor()
-    
-    ########## account info ############################
-    API_ID = 'PKAM4QPHOM4UPBGMF90C'
-    API_KEY = '9PdtZ8mifNBGKc8rnVfuZJRMVlFh7shCougkoMal'
-    api_endpoint = 'https://paper-api.alpaca.markets'
-    ####################################################
-    api = tradeapi.REST(key_id = API_ID,secret_key = API_KEY,base_url = api_endpoint)
-
-    
-    while True:
-        #to make sure we work with the most recent data and to avoid redundency get the last datapoint
-        cur.execute("SELECT timestamp FROM dbo.final_ohlc where symbol = '"+symbol+"' ORDER BY TIMESTAMP DESC LIMIT 1")
-        #featch this data
-        rows = cur.fetchall()
-
-        for r in rows:
-            ts = r[0]
-            #reformat the timestamp
-        time_obj = dt.strptime(ts, '%Y-%m-%d %H:%M:%S')
-            #make sure we didnt already process this data
-        if time_obj != last_update:
-            #make sure we didnt already process this data
-            last_update = time_obj
-            
-            #run query to get the most recent data
-            cur.execute("SELECT timestamp, open, close, high, low, rsi,roc_sma_5, roc_sma_15 FROM dbo.final_ohlc where symbol = '"+symbol+"' ORDER BY TIMESTAMP DESC LIMIT 1 ")
-            rows = cur.fetchall()
-            
-            #truncates thr list that make up the df if over a threhold
-            max_len = 59
-            if len(timestamps) >= max_len:
-                cut_from = len(timestamps) - max_len 
-                timestamps  = timestamps  [cut_from:]
-                opens       = opens       [cut_from:]
-                closes      = closes      [cut_from:]
-                highs       = highs       [cut_from:]
-                lows        = lows        [cut_from:]
-                rsis        = rsis        [cut_from:]
-                roc_15s     = roc_15s     [cut_from:]
-                roc_5s      = roc_5s      [cut_from:]
-            
-            #append data form query to the list 
-            for r in rows:
-                timestamp = r[0]
-                copen     = r[1]
-                close     = r[2]
-                high      = r[3]
-                low       = r[4]
-                rsi       = r[5]
-                roc_5     = r[6]
-                roc_15    = r[7]
-                
-                timestamps.append(timestamp)
-                opens.append(copen)
-                closes.append(close)
-                highs.append(high)
-                lows.append(low)
-                rsis.append(rsi)
-                roc_5s.append(roc_5)
-                roc_15s.append(roc_15)
-            
-            #build a dataframe from lists    
-            df = pd.DataFrame()
-            df['Timestamp'] = timestamps
-            df['Open']      = opens
-            df['Low']       = lows
-            df['High']      = highs
-            df['Close']     = closes
-            df['RSI']       = rsis
-            df['roc_5']     = roc_5s
-            df['roc_15']    = roc_15s                
-            
-        if df['Timestamp'][-1] == 'NaN':
-            continue
-        if df['Open'][-1] == 'NaN':
-            continue
-        if df['Low'][-1] == 'NaN':
-            continue
-        if df['High'][-1] == 'NaN':
-            continue
-        if df['Close'][-1] == 'NaN':
-            continue
-        if df['RSI'][-1] == 'NaN':
-            continue
-        if df['roc_5'][-1] == 'NaN':
-            continue
-        if df['roc_15'][-1] == 'NaN':
-            continue
-        
-                        #STRATEGY
-        ######################################################################
-        #   when rsi dips bellow 30 check for strong bull signals with roc5 > roc 15 - BUY BUY BUY
-        #   when roc5 dips bellow roc 15 - SELL SELL SELL                           
-        if len(api.list_positions())  == 0 and len(api.list_orders()) == 0:                
-            if roc_5 > roc_15:
-                if df['rsi'][-1] < 30:
-                    candle_df = get_pattern_df(df)
-                    if  '_Bull' in candle_df['candlestick_pattern'][-1]:
-                        best_candle_rating=candle_rankings.get(candle_df['candlestick_pattern'][-1],100)
-                        candle_rating = df['pattern_val'][-1]
-                        if candle_rating > 3 and best_candle_rating < 20:
-                            stock_amnt = stock_amnt_order(closes[-1])
-                            api.submit_order(symbol=symbol,qty=stock_amnt,side='buy',type='market',time_in_force='gtc')
-                        elif candle_rating > 6 and best_candle_rating < 40:
-                            stock_amnt = stock_amnt_order(closes[-1])
-                            api.submit_order(symbol=symbol,qty=stock_amnt,side='buy',type='market',time_in_force='gtc')
-                        elif candle_rating > 7 and best_candle_rating < 60:
-                            stock_amnt = stock_amnt_order(closes[-1])
-                            api.submit_order(symbol=symbol,qty=stock_amnt,side='buy',type='market',time_in_force='gtc')
-        elif len(api.list_positions())  >= 1:
-            roc_5 = df['roc_sma_5'][-1]
-            
-            roc_15 = df['roc_sma_15'][-1]
-            
-            roc_roc_5 = df["roc_roc_5"][-1]
-            
-            if roc_5 <= roc_15:
-                stock_amnt = api.list_positions()[1].qty
-                api.submit_order(symbol=symbol,qty=stock_amnt,side='sell',type='market',time_in_force='gtc',order_class='bracket')
-            
-            
-                
-        else :
-            time.sleep(10)        
+#######################################################
 
 def get_pattern_df(df):
     global candle_rankings
 
-    
     # extract OHLC 
     op = df['Open']
     hi = df['High']
     lo = df['Low']
     cl = df['Close']
     
-    candle_names = talib.get_function_groups()['Pattern Recognition']
     # create columns for each pattern
     for candle in candle_names:
         # below is same as;
@@ -341,8 +199,7 @@ def get_pattern_df(df):
     # clean up candle columns
     df['pattern_val']=df['pattern_val'].fillna(0)
     df.drop(candle_names, axis = 1, inplace = True)
-    return df         
-
+    return df
 
 def stock_amnt_order(close):
     global api
@@ -351,13 +208,170 @@ def stock_amnt_order(close):
     amount = int(balance / close) -1 
     return amount
 
+def look_for_exit(df,sym):
+    while True:
+        try:
+            #download data
+            df = yf.download(tickers=sym,period='30m',interval='1m')
+            #remove unfinished candle
+            df =df.iloc[0:28,:]
+            df['Datetime'] = pd.to_datetime(df.index)
+            df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume']]
+            print('FORMATED!')
 
 
-file_path = 'C:\\DEVOPS\\python apps\\spiderdoc\\spiderdoc\\Preprod\\symbols.txt'
-Sym_file = open(file_path,"r")
+        except :
+            print(f"SYMBOL : {sym} - was not found")
+            continue
+            
+        curr_minute = datetime.now().minute
+        curr_minute -= 1
+        
+        ts_minutes = df['Datetime'][-1].minute
+        if ts_minutes != curr_minute:
+            continue
+        else:
+            print(f'Sym : {sym} is up to date')
+        
+        df =get_pattern_df(df)
 
+        df['roc_thin'] = talib.ROCP(df['close'], timeperiod = 5)
+        
+        df['roc_sma_5'] = talib.SMA(df['roc_thin'], timeperiod = 5)
+
+        df['roc_sma_15'] = talib.SMA(df['roc_thin'], timeperiod = 15)
+        
+        df['rsi'] = talib.RSI(df['close'] ,timeperiod=14)
+        
+        df["roc_sma_15_shift"] = df["roc_sma_15"].shift(5)
+
+        df['roc_15_delta'] =df["roc_sma_15"] - df["roc_sma_15_shift"]
+
+        
+        df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume','roc_sma_5','roc_sma_15','pattern_val','candlestick_pattern','roc_15_delta','rsi']]
+        if len(api.list_positions())  >= 1:
+                roc_5 = df['roc_sma_5'][-1]
+                roc_15 = df['roc_sma_15'][-1]
+    
+                d_roc_15 = df['roc_15_delta'][-1]
+    
+                if roc_5 <= roc_15 and d_roc_15 < 0:
+                    stock_amnt = api.list_positions()[1].qty
+                    api.submit_order(symbol=sym,qty=stock_amnt,side='sell',type='market',time_in_force='gtc',order_class='bracket')
+                    print('Exited')
+                    return
+        time.sleep(10)
+            
+
+
+def main(i):
+    
+    
+    #run alll the time
+    global worker_num,candle_names ,api
+    candle_names = talib.get_function_groups()['Pattern Recognition']
+
+    ########## account info ############################
+    API_ID = 'PKAM4QPHOM4UPBGMF90C'
+    API_KEY = '9PdtZ8mifNBGKc8rnVfuZJRMVlFh7shCougkoMal'
+    api_endpoint = 'https://paper-api.alpaca.markets'
+    ####################################################
+    api = tradeapi.REST(key_id = API_ID,secret_key = API_KEY,base_url = api_endpoint)
+
+
+    while True:
+    #this is whre we get out symbols from 
+    
+        #file_path = '/input/'+symbols_file
+        file_path = 'C:\DEVOPS\python apps\spiderdoc\spiderdoc\Preprod\Trader\input\symbols_'+str(worker_num)+'_'+str(i)+'.txt'
+        Sym_file = open(file_path,"r")
+        #apply strategy to all sybols
+        for sym in Sym_file:
+            sym = sym.strip('\n')
+            try:
+                start_time= time.time()
+
+                #download data
+                df ,meta= yf.download(tickers=sym,period='30m',interval='1m')
+                print("########################")
+                print(meta)
+                #remove unfinished candle
+                df =df.iloc[0:28,:]
+                df['Datetime'] = pd.to_datetime(df.index)
+                df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume']]
+                print('FORMATED!')
+
+
+            except :
+                print(f"SYMBOL : {sym} - was not found")
+                continue
+            
+            curr_minute = datetime.now().minute
+            curr_minute -= 1
+            
+            ts_minutes = df['Datetime'][-1].minute
+            if ts_minutes != curr_minute:
+                continue
+            else:
+                print(f'Sym : {sym} is up to date')
+            
+            df =get_pattern_df(df)
+
+            df['roc_thin'] = talib.ROCP(df['close'], timeperiod = 5)
+            
+            df['roc_sma_5'] = talib.SMA(df['roc_thin'], timeperiod = 5)
+
+            df['roc_sma_15'] = talib.SMA(df['roc_thin'], timeperiod = 15)
+            
+            df['rsi'] = talib.RSI(df['close'] ,timeperiod=14)
+            
+            df["roc_sma_15_shift"] = df["roc_sma_15"].shift(5)
+
+            df['roc_15_delta'] =df["roc_sma_15"] - df["roc_sma_15_shift"]
+
+            
+            df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume','roc_sma_5','roc_sma_15','pattern_val','candlestick_pattern','roc_15_delta','rsi']]
+
+        
+            d_roc_15 = df['roc_15_delta'][-1]
+
+            if len(api.list_positions())  == 0 and len(api.list_orders()) == 0:                
+                if d_roc_15 > 0:
+                    if df['roc_sma_5'][-1] > df['roc_sma_15'][-1]:
+                        if df['rsi'][-1] < 30:
+                            candle_df = get_pattern_df(df)
+                            if  '_Bull' in df['candlestick_pattern'][-1]:
+                                best_candle_rating=candle_rankings.get(df['candlestick_pattern'][-1],100)
+                                candle_rating = df['pattern_val'][-1]
+                                if candle_rating > 3 and best_candle_rating < 20:
+                                    stock_amnt = stock_amnt_order(df['Close'][-1])
+                                    api.submit_order(symbol=sym,qty=stock_amnt,side='buy',type='market',time_in_force='gtc')
+                                    print(f"ENTERED for sym : {sym} at time {df['Datetime'][-1]}")
+                                    look_for_exit(df,sym)
+                                elif candle_rating > 6 and best_candle_rating < 40:
+                                    stock_amnt = stock_amnt_order(df['Close'][-1])
+                                    api.submit_order(symbol=sym,qty=stock_amnt,side='buy',type='market',time_in_force='gtc')
+                                    print(f"ENTERED for sym : {sym} at time {df['Datetime'][-1]}")
+                                    look_for_exit(df,sym)
+                                elif candle_rating > 7 and best_candle_rating < 60:
+                                    stock_amnt = stock_amnt_order(df['Close'][-1])
+                                    api.submit_order(symbol=sym,qty=stock_amnt,side='buy',type='market',time_in_force='gtc')
+                                    print(f"ENTERED for sym : {sym} at time {df['Datetime'][-1]}")
+                                    look_for_exit(df,sym)
+
+            
+            #these values will be put in to a sperate table
+        time.sleep(10)
+
+global worker_num
+
+""" worker_num = sys.argv[1]
+parallel_proc_amnt = sys.argv[2] """
+
+worker_num = 1
+parallel_proc_amnt = 16
 
 if __name__ == '__main__':
     # start n worker processes
-    with multiprocessing.Pool(processes=20) as pool:
-        pool.map_async(get_from_db,iterable=Sym_file).get()                
+    with multiprocessing.Pool(processes=parallel_proc_amnt) as pool:
+        pool.map_async(main,iterable=range(1,parallel_proc_amnt+1)).get()
