@@ -1,5 +1,4 @@
 pandas
 numpy
 yfinance
-ta-lib
 alpaca_trade_api

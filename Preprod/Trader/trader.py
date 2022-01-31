@@ -283,7 +283,7 @@ def main(i):
     #this is whre we get out symbols from 
     
         #file_path = '/input/'+symbols_file
-        file_path = 'C:\DEVOPS\python apps\spiderdoc\spiderdoc\Preprod\Trader\input\symbols_'+str(worker_num)+'_'+str(i)+'.txt'
+        file_path = '/input/symbols_'+str(worker_num)+'_'+str(i)+'.txt'
         Sym_file = open(file_path,"r")
         #apply strategy to all sybols
         for sym in Sym_file:
