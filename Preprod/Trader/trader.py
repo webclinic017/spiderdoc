@@ -135,6 +135,7 @@ candle_rankings = {
         "CDLSTALLEDPATTERN_Bear": 93,
         "CDLKICKINGBYLENGTH": 96,
         "CDLKICKINGBYLENGTH_Bear": 102,
+        "CDLKICKINGBYLENGTH_Bull": 102,
         "CDLCOUNTERATTACK_Bull" : 102,
         "CDLCOUNTERATTACK_Bear": 102
     }
@@ -197,7 +198,10 @@ def get_pattern_df(df):
                 df.loc[index, 'pattern_val'] = container_val
                 df.loc[index, 'candlestick_match_count'] = len(container)
     # clean up candle columns
-    df['pattern_val']=df['pattern_val'].fillna(0)
+    try:
+        df['pattern_val']=df['pattern_val'].fillna(0)
+    except:
+        df['pattern_val']=0
     df.drop(candle_names, axis = 1, inplace = True)
     return df
 
@@ -235,13 +239,13 @@ def look_for_exit(df,sym):
         
         df =get_pattern_df(df)
 
-        df['roc_thin'] = talib.ROCP(df['close'], timeperiod = 5)
+        df['roc_thin'] = talib.ROCP(df['Close'], timeperiod = 5)
         
         df['roc_sma_5'] = talib.SMA(df['roc_thin'], timeperiod = 5)
 
         df['roc_sma_15'] = talib.SMA(df['roc_thin'], timeperiod = 15)
         
-        df['rsi'] = talib.RSI(df['close'] ,timeperiod=14)
+        df['rsi'] = talib.RSI(df['Close'] ,timeperiod=14)
         
         df["roc_sma_15_shift"] = df["roc_sma_15"].shift(5)
 
@@ -256,8 +260,8 @@ def look_for_exit(df,sym):
                 d_roc_15 = df['roc_15_delta'][-1]
     
                 if roc_5 <= roc_15 and d_roc_15 < 0:
-                    stock_amnt = api.list_positions()[1].qty
-                    api.submit_order(symbol=sym,qty=stock_amnt,side='sell',type='market',time_in_force='gtc',order_class='bracket')
+                    stock_amnt = api.list_positions()[0].qty
+                    api.close_position(symbol=sym)
                     print('Exited')
                     return
         time.sleep(10)
@@ -283,24 +287,21 @@ def main(i):
     #this is whre we get out symbols from 
     
         #file_path = '/input/'+symbols_file
-        file_path = '/input/symbols_'+str(worker_num)+'_'+str(i)+'.txt'
+        file_path = 'C:\DEVOPS\python apps\spiderdoc\spiderdoc\Preprod\Trader\input\symbols_'+str(worker_num)+'_'+str(i)+'.txt'
         Sym_file = open(file_path,"r")
         #apply strategy to all sybols
         for sym in Sym_file:
             sym = sym.strip('\n')
             try:
                 start_time= time.time()
-
                 #download data
-                df ,meta= yf.download(tickers=sym,period='30m',interval='1m')
+                df = yf.download(tickers=sym,period='30m',interval='1m')
                 print("########################")
-                print(meta)
                 #remove unfinished candle
                 df =df.iloc[0:28,:]
                 df['Datetime'] = pd.to_datetime(df.index)
                 df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume']]
                 print('FORMATED!')
-
 
             except :
                 print(f"SYMBOL : {sym} - was not found")
@@ -308,22 +309,24 @@ def main(i):
             
             curr_minute = datetime.now().minute
             curr_minute -= 1
-            
-            ts_minutes = df['Datetime'][-1].minute
-            if ts_minutes != curr_minute:
-                continue
+            if len(df) > 0:
+                ts_minutes = df['Datetime'][-1].minute
+                if ts_minutes != curr_minute:
+                    continue
+                else:
+                    print(f'Sym : {sym} is up to date')
             else:
-                print(f'Sym : {sym} is up to date')
+                continue
             
             df =get_pattern_df(df)
 
-            df['roc_thin'] = talib.ROCP(df['close'], timeperiod = 5)
+            df['roc_thin'] = talib.ROCP(df['Close'], timeperiod = 5)
             
             df['roc_sma_5'] = talib.SMA(df['roc_thin'], timeperiod = 5)
 
             df['roc_sma_15'] = talib.SMA(df['roc_thin'], timeperiod = 15)
             
-            df['rsi'] = talib.RSI(df['close'] ,timeperiod=14)
+            df['rsi'] = talib.RSI(df['Close'] ,timeperiod=14)
             
             df["roc_sma_15_shift"] = df["roc_sma_15"].shift(5)
 
@@ -369,9 +372,10 @@ global worker_num
 parallel_proc_amnt = sys.argv[2] """
 
 worker_num = 1
-parallel_proc_amnt = 16
+parallel_proc_amnt = 1
+
 
 if __name__ == '__main__':
     # start n worker processes
     with multiprocessing.Pool(processes=parallel_proc_amnt) as pool:
-        pool.map_async(main,iterable=range(1,parallel_proc_amnt+1)).get()
+        pool.map_async(main,iterable=range(1,parallel_proc_amnt+1)).get() 
