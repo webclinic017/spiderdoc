@@ -212,7 +212,7 @@ def stock_amnt_order(close):
     amount = int(balance / close) -1 
     return amount
 
-def look_for_exit(df,sym,stop_loss,target_price):
+def look_for_exit(df,sym,stop_loss,target_price,type):
     while True:
         try:
             #download data
@@ -239,13 +239,22 @@ def look_for_exit(df,sym,stop_loss,target_price):
         
         close     = df['Close'][-1]
     
-        if close > target_price:
-            print('TARGET REACHED')
-            return True
-        
-        if close < stop_loss:
-            print('STOP LOSS')
-            return True
+        if type == 'LONG':
+            if close > target_price:
+                print('TARGET REACHED')
+                return True
+            
+            if close < stop_loss:
+                print('STOP LOSS')
+                return True
+        elif type == 'SHORT':
+            if close < target_price:
+                print('TARGET REACHED')
+                return True
+            
+            if close > stop_loss:
+                print('STOP LOSS')
+                return True
     
         time.sleep(10)
                 
@@ -354,8 +363,24 @@ def main(i):
                                     stock_amnt = stock_amnt_order(df['Close'][-1])
                                     api.submit_order(symbol=sym,qty=stock_amnt,side='buy',type='market',time_in_force='gtc')
                                     print("ENTERED ++++++++++++++")
-                                    look_for_exit(df,sym,stop_loss,target_price)
-                                    print("EXITED ===============")                            
+                                    look_for_exit(df,sym,stop_loss,target_price,'LONG')
+                                    print("EXITED ===============")
+            elif trend=='clear_down':
+                if adx > 25 :   
+                    if macd_hist < 0:
+                        if close < psar:
+                            if rsi > 50 :
+                                if pdi < mdi:
+                                    #stop loss at psar
+                                    stop_loss = df['psar'][-1] 
+                                    # 1:1 with risk rewared
+                                    target_price = close - (df['psar'][-1] - close )                
+                                    stock_amnt = stock_amnt_order(df['Close'][-1])
+                                    api.submit_order(symbol=sym,qty=stock_amnt,side='sell',type='market',time_in_force='gtc')
+                                    print("ENTERED ++++++++++++++")
+                                    look_for_exit(df,sym,stop_loss,target_price,'short')
+                                    print("EXITED ===============")
+                                                                
 
 
             

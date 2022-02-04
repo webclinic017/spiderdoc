@@ -1,4 +1,5 @@
 
+from asyncio.windows_events import NULL
 from numpy import NaN, True_
 import pandas as pd
 import glob
@@ -59,15 +60,23 @@ def calc_gross_profit():
     return gross_profit
 def gen_delta_positions_per_sym(sym):
     path = "C:\\Users\\nolys\\Desktop\\results\\" # TODO:CHANGE PATH TO RELEVANT PATH FOR PROJECT
-    all_files = glob.glob(path +"*-"+sym+"-*.csv")
-    li = []
-    for filename in all_files:
-        positions = pd.read_csv(filename)  #read single file
-        positions.rename(columns = {'Unnamed: 0':'minute_in_day'}, inplace = True) 
-        li.append(positions)  #add file to concatination to list
-    
-    positions = pd.concat(li, axis=0,ignore_index=True)  #combine all files to single df
-    positions= positions.reset_index(drop=True) #fix indexting issue
+    try:
+        all_files = glob.glob(path +"*-"+sym+"-*.csv")
+        li = []
+        for filename in all_files:
+            positions = pd.read_csv(filename)  #read single file
+            positions.rename(columns = {'Unnamed: 0':'minute_in_day'}, inplace = True) 
+            li.append(positions)  #add file to concatination to list
+        
+        positions = pd.concat(li, axis=0,ignore_index=True)  #combine all files to single df
+        positions= positions.reset_index(drop=True) #fix indexting issue
+    except:
+        try:
+            positions = pd.read_csv(path +"*-"+sym+"-X-*.csv")  #read single file
+            positions.rename(columns = {'Unnamed: 0':'minute_in_day'}, inplace = True) 
+        except :
+            raise ValueError ('no file for symbol')
+  
     return positions
     #my own attempt
 def win_calc_streak():

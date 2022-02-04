@@ -17,133 +17,6 @@ from itertools import compress
 import time
 pd.options.mode.chained_assignment = None  # default='warn'
 
-global candle_rankings
-
-candle_rankings = {
-        "CDL3LINESTRIKE_Bull": 1,
-        "CDL3LINESTRIKE_Bear": 2,
-        "CDL3BLACKCROWS_Bull": 3,
-        "CDL3BLACKCROWS_Bear": 3,
-        "CDLEVENINGSTAR_Bull": 4,
-        "CDLEVENINGSTAR_Bear": 4,
-        "CDLTASUKIGAP_Bull": 5,
-        "CDLTASUKIGAP_Bear": 5,
-        "CDLINVERTEDHAMMER_Bull": 6,
-        "CDLINVERTEDHAMMER_Bear": 6,
-        "CDLMATCHINGLOW_Bull": 7,
-        "CDLMATCHINGLOW_Bear": 7,
-        "CDLABANDONEDBABY_Bull": 8,
-        "CDLABANDONEDBABY_Bear": 8,
-        "CDLBREAKAWAY_Bull": 10,
-        "CDLBREAKAWAY_Bear": 10,
-        "CDLMORNINGSTAR_Bull": 12,
-        "CDLMORNINGSTAR_Bear": 12,
-        "CDLPIERCING_Bull": 13,
-        "CDLPIERCING_Bear": 13,
-        "CDLSTICKSANDWICH_Bull": 14,
-        "CDLSTICKSANDWICH_Bear": 14,
-        "CDLTHRUSTING_Bull": 15,
-        "CDLTHRUSTING_Bear": 15,
-        "CDLINNECK_Bull": 17,
-        "CDLINNECK_Bear": 17,
-        "CDL3INSIDE_Bull": 20,
-        "CDL3INSIDE_Bear": 56,
-        "CDLHOMINGPIGEON_Bull": 21,
-        "CDLHOMINGPIGEON_Bear": 21,
-        "CDLDARKCLOUDCOVER_Bull": 22,
-        "CDLDARKCLOUDCOVER_Bear": 22,
-        "CDLIDENTICAL3CROWS_Bull": 24,
-        "CDLIDENTICAL3CROWS_Bear": 24,
-        "CDLMORNINGDOJISTAR_Bull": 25,
-        "CDLMORNINGDOJISTAR_Bear": 25,
-        "CDLXSIDEGAP3METHODS_Bull": 27,
-        "CDLXSIDEGAP3METHODS_Bear": 26,
-        "CDLTRISTAR_Bull": 28,
-        "CDLTRISTAR_Bear": 76,
-        "CDLGAPSIDESIDEWHITE_Bull": 46,
-        "CDLGAPSIDESIDEWHITE_Bear": 29,
-        "CDLEVENINGDOJISTAR_Bull": 30,
-        "CDLEVENINGDOJISTAR_Bear": 30,
-        "CDL3WHITESOLDIERS_Bull": 32,
-        "CDL3WHITESOLDIERS_Bear": 32,
-        "CDLONNECK_Bull": 33,
-        "CDLONNECK_Bear": 33,
-        "CDL3OUTSIDE_Bull": 34,
-        "CDL3OUTSIDE_Bear": 39,
-        "CDLRICKSHAWMAN_Bull": 35,
-        "CDLRICKSHAWMAN_Bear": 35,
-        "CDLSEPARATINGLINES_Bull": 36,
-        "CDLSEPARATINGLINES_Bear": 40,
-        "CDLLONGLEGGEDDOJI_Bull": 37,
-        "CDLLONGLEGGEDDOJI_Bear": 37,
-        "CDLHARAMI_Bull": 38,
-        "CDLHARAMI_Bear": 72,
-        "CDLLADDERBOTTOM_Bull": 41,
-        "CDLLADDERBOTTOM_Bear": 41,
-        "CDLCLOSINGMARUBOZU_Bull": 70,
-        "CDLCLOSINGMARUBOZU_Bear": 43,
-        "CDLTAKURI_Bull": 47,
-        "CDLTAKURI_Bear": 47,
-        "CDLDOJISTAR_Bull": 49,
-        "CDLDOJISTAR_Bear": 51,
-        "CDLHARAMICROSS_Bull": 50,
-        "CDLHARAMICROSS_Bear": 80,
-        "CDLADVANCEBLOCK_Bull": 54,
-        "CDLADVANCEBLOCK_Bear": 54,
-        "CDLSHOOTINGSTAR_Bull": 55,
-        "CDLSHOOTINGSTAR_Bear": 55,
-        "CDLMARUBOZU_Bull": 71,
-        "CDLMARUBOZU_Bear": 57,
-        "CDLUNIQUE3RIVER_Bull": 60,
-        "CDLUNIQUE3RIVER_Bear": 60,
-        "CDL2CROWS_Bull": 61,
-        "CDL2CROWS_Bear": 61,
-        "CDLBELTHOLD_Bull": 62,
-        "CDLBELTHOLD_Bear": 63,
-        "CDLHAMMER_Bull": 65,
-        "CDLHAMMER_Bear": 65,
-        "CDLHIGHWAVE_Bull": 67,
-        "CDLHIGHWAVE_Bear": 67,
-        "CDLSPINNINGTOP_Bull": 69,
-        "CDLSPINNINGTOP_Bear": 73,
-        "CDLUPSIDEGAP2CROWS_Bull": 74,
-        "CDLUPSIDEGAP2CROWS_Bear": 74,
-        "CDLGRAVESTONEDOJI_Bull": 77,
-        "CDLGRAVESTONEDOJI_Bear": 77,
-        "CDLHIKKAKEMOD_Bull": 82,
-        "CDLHIKKAKEMOD_Bear": 81,
-        "CDLHIKKAKE_Bull": 85,
-        "CDLHIKKAKE_Bear": 83,
-        "CDLENGULFING_Bull": 84,
-        "CDLENGULFING_Bear": 91,
-        "CDLMATHOLD_Bull": 86,
-        "CDLMATHOLD_Bear": 86,
-        "CDLHANGINGMAN_Bull": 87,
-        "CDLHANGINGMAN_Bear": 87,
-        "CDLRISEFALL3METHODS_Bull": 94,
-        "CDLRISEFALL3METHODS_Bear": 89,
-        "CDLKICKING_Bull": 96,
-        "CDLKICKING_Bear": 102,
-        "CDLDRAGONFLYDOJI_Bull": 98,
-        "CDLDRAGONFLYDOJI_Bear": 98,
-        "CDLCONCEALBABYSWALL_Bull": 101,
-        "CDLCONCEALBABYSWALL_Bear": 101,
-        "CDL3STARSINSOUTH_Bull": 103,
-        "CDL3STARSINSOUTH_Bear": 103,
-        "CDLDOJI_Bull": 104,
-        "CDLDOJI_Bear": 104 ,
-        "CDLLONGLINE_Bull": 53,
-        "CDLLONGLINE_Bear": 53,
-        "CDLSHORTLINE_Bull": 85,
-        "CDLSHORTLINE_Bear": 66,
-        "CDLSTALLEDPATTERN_Bull": 93,
-        "CDLSTALLEDPATTERN_Bear": 93,
-        "CDLKICKINGBYLENGTH": 96,
-        "CDLKICKINGBYLENGTH_Bear": 102,
-        "CDLCOUNTERATTACK_Bull" : 102,
-        "CDLCOUNTERATTACK_Bear": 102
-    }
-
 get_rid_of_position = False
 position_is_open=False
 """ #symbols_file = sys.argv[1]
@@ -327,8 +200,7 @@ def show_plt(minute_ran,stock,start_date):
     
     plt.subplot(3,1,2)
     plt.plot(curr_stock_historical.index,curr_stock_historical["rsi"],color='b')
-    plt.axhline(y=30, color='r', linestyle='-')
-    plt.axhline(y=70, color='r', linestyle='-')
+    plt.axhline(y=50, color='r', linestyle='-')
 
     
     plt.subplot(3,1,3)
@@ -396,47 +268,6 @@ def close_long(i):
         balance=update_balance(balance,trans_value,action,intent)
     update_pos(i,curr_stock_historical['Datetime'][i],action,curr_price,stock_amnt,trans_value,intent,balance)     
 
-def get_support(i,close):
-    global levels
-    li = []
-    for level in levels:
-        li.append(level[1])
-    arr = np.asarray(li)
-    try:
-        val = arr[arr > close].min()
-    except :
-        return 0
-    return val
-        
-def get_resistance(i,close):
-    global levels
-    li = []
-    for level in levels:
-        li.append(level[1])
-    arr = np.asarray(li)
-    try:
-        val = arr[arr < close].max()
-    except:
-        return 0
- 
-    return val 
-
-def set_stop_and_target(i):
-    global curr_stock_historical
-    global balance
-    max_risk = balance * 0.02
-    close = curr_stock_historical["Close"][i]
-    trend = curr_stock_historical["trend"][i]
-    sup = get_support(i,close)
-    res= get_resistance(i,close)
-    if trend == 'clear_up':
-        rrr = ((res-close)/close) / ((close-sup)/sup)
-    if trend == 'clear_down':
-        rrr = ((close-sup)/sup) / ((res-close)/close)
-    else:
-        rrr = 0
-    return rrr
-
 def stock_amnt_order(close,level):
     global balance
     close_level_delta = abs(close-level)
@@ -451,14 +282,6 @@ def stock_amnt_order(close,level):
         stock_amnt_order=max_amnt
     return stock_amnt_order
 
-def potential_delta(stock_amnt_order,close,level):
-    if level==0:
-        return 0
-    #logical else
-    close_level_delta = abs(close-level)
-    pot_delta = close_level_delta * stock_amnt_order
-    return pot_delta
-    
 def  get_pos_delta(close):
     global positions
     intent=positions.iloc[-1]['Intent']
@@ -469,15 +292,6 @@ def  get_pos_delta(close):
     else:
         delta = (prev_price - close)* stock_amnt
     return delta
-
-def get_target_price(level,close):
-    delta = abs(close-level)
-    delta_target = delta *1.5
-    if(level >= close):
-        tp=close-delta_target
-    else:
-        tp = close + delta_target
-    return tp
       
 
 def enter_long(i):
@@ -518,19 +332,48 @@ def exit_long(i,stop_loss,target_price):
     if close < stop_loss:
         print('STOP LOSS')
         return True
-    
+       
+    return False
+
+def enter_short(i):
+    global curr_stock_historical
+    df=curr_stock_historical
+    close     = df['Close'][i]
     trend     = df['trend'][i]
     macd_hist = df['macd_hist'][i]
     psar      = df['psar'][i]
+    rsi       = df['rsi'][i]
+    adx       = df['adx'][i] 
+    pdi       = df['pdi'][i] 
+    mdi       = df['mdi'][i] 
+      
+    if trend == 'clear_down':
+        if adx > 25 :   
+            if macd_hist < 0:
+                if close < psar:
+                    if rsi > 50 :
+                        if pdi < mdi:
+                            return True
+       
+        
     
-    """ if trend == 'clear_down':
-        return True """
-    """ if macd_hist < 0:
-        if close < psar:
-            return True """
+    return False
     
     
+def exit_short(i,stop_loss,target_price):
+    global curr_stock_historical
+    df=curr_stock_historical
     
+    close     = df['Close'][i]
+    
+    if close < target_price:
+        print('TARGET REACHED')
+        return True
+    
+    if close > stop_loss:
+        print('STOP LOSS')
+        return True
+       
     return False
 
     
@@ -667,45 +510,68 @@ def run_simulation(stock_to_trade):
                     stop_loss = curr_stock_historical['psar'][i]
                     buy_long(i,stock_amnt_to_order)
                     print( ' +++++++++++++++++++ ')
-                    entry_time = i 
+                    exit_select = 1
+                elif(enter_short(i) == True):
+                    position_is_open = True
+                    stock_amnt_to_order = stock_amnt_order(close,curr_stock_historical['psar'][i])
+                    #PSAR is stop loss
+                    target_price = close - (curr_stock_historical['psar'][i] - close)                
+                    stop_loss = curr_stock_historical['psar'][i]
+                    sell_short(i,stock_amnt_to_order)
+                    print( ' +++++++++++++++++++ ')
+                    exit_select = -1
+                    
             elif ( position_is_open ==True):
-                if (exit_long(i,stop_loss,target_price) == True):
-                    position_is_open=False
-                    close_long(i)
-                    print( ' ============ ')
-                    #DAY FINISHED COMPUTING
+                if exit_select == 1:
+                    if (exit_long(i,stop_loss,target_price) == True):
+                        position_is_open=False
+                        close_long(i)
+                        print( ' ============ ')
+                        exit_select == 0
+                        #DAY FINISHED COMPUTING
+                elif  exit_select == -1:
+                    if (exit_short(i,stop_loss,target_price) == True):
+                        position_is_open=False
+                        close_short(i)
+                        print( ' ============ ')
+                        exit_select == 0
+                        #DAY FINISHED COMPUTING
+                    
 
         last_intent = positions.iloc[-1]['Intent']    
         if last_intent == 'LONG':
             close_long(i)
             position_is_open = False
             
+        if last_intent == 'SHORT':
+            close_short(i)
+            position_is_open = False
+            
         outname = "ROC_1-"+stock_to_trade+"-X-"+datetime.strftime(curr_date,"%Y-%m-%d")+".csv"
         #outdir = '/output/'
         outdir = 'C:\\Users\\nolys\\Desktop\\results\\'
         fullname =  outdir + outname
-        positions.to_csv(fullname)
-        
+        if len(positions) > 1:
+            positions.to_csv(fullname)
+            #show_plt(i,stock_to_trade,start_date_range)
+
         """ outname = "ROC_1-"+stock_to_trade+"-X-"+datetime.strftime(curr_date,"%Y-%m-%d")+"-STOCK.csv"
         #outdir = '/output/'
         outdir = 'C:\\Users\\nolys\\Desktop\\results\\'
         fullname =  outdir + outname
         curr_stock_historical.to_csv(fullname)  """
         
-        #pd.set_option('display.max_columns', None,'display.max_rows', None)
-        #print(positions)
-        #show_plt(i,stock_to_trade,start_date_range)
-        
-    if (stock_not_avail):
-        pass
+            #pd.set_option('display.max_columns', None,'display.max_rows', None)
+            #print(positions)
+
 
                 
                     
 sim_scope = 0            
 if sim_scope == 1:               
-    stock_to_trade = 'SGLY'
-    start_date_range = '2022-02-01'
-    end_date_range = '2022-02-02'
+    stock_to_trade = 'XL'
+    start_date_range = '2022-02-04'
+    end_date_range = '2022-02-05'
     run_type = 'ADJ' 
     run_simulation(stock_to_trade)     
 else :
