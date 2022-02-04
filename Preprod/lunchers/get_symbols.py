@@ -1,10 +1,8 @@
 import alpaca_trade_api as tradeapi
 import yfinance as yf
-
-
 ########## account info ############################
-API_ID = 'PKAM4QPHOM4UPBGMF90C'
-API_KEY = '9PdtZ8mifNBGKc8rnVfuZJRMVlFh7shCougkoMal'
+API_ID = 'PKLQW1C4WIB6XI2LOQ5W'
+API_KEY = 'ohdklwFBMMMHbnpIjrUplgpYupnl7viaFofhbgyd'
 api_endpoint = 'https://paper-api.alpaca.markets'
 ####################################################
 api = tradeapi.REST(key_id = API_ID,secret_key = API_KEY,base_url = api_endpoint)

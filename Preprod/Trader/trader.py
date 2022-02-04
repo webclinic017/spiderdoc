@@ -212,7 +212,7 @@ def stock_amnt_order(close):
     amount = int(balance / close) -1 
     return amount
 
-def look_for_exit(df,sym):
+def look_for_exit(df,sym,stop_loss,target_price):
     while True:
         try:
             #download data
@@ -237,35 +237,18 @@ def look_for_exit(df,sym):
         else:
             print(f'Sym : {sym} is up to date')
         
-        df =get_pattern_df(df)
-
-        df['roc_thin'] = talib.ROCP(df['Close'], timeperiod = 5)
-        
-        df['roc_sma_5'] = talib.SMA(df['roc_thin'], timeperiod = 5)
-
-        df['roc_sma_15'] = talib.SMA(df['roc_thin'], timeperiod = 15)
-        
-        df['rsi'] = talib.RSI(df['Close'] ,timeperiod=14)
-        
-        df["roc_sma_15_shift"] = df["roc_sma_15"].shift(5)
-
-        df['roc_15_delta'] =df["roc_sma_15"] - df["roc_sma_15_shift"]
-
-        
-        df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume','roc_sma_5','roc_sma_15','pattern_val','candlestick_pattern','roc_15_delta','rsi']]
-        if len(api.list_positions())  >= 1:
-                roc_5 = df['roc_sma_5'][-1]
-                roc_15 = df['roc_sma_15'][-1]
+        close     = df['Close'][-1]
     
-                d_roc_15 = df['roc_15_delta'][-1]
+        if close > target_price:
+            print('TARGET REACHED')
+            return True
+        
+        if close < stop_loss:
+            print('STOP LOSS')
+            return True
     
-                if roc_5 <= roc_15 and d_roc_15 < 0:
-                    stock_amnt = api.list_positions()[0].qty
-                    api.close_position(symbol=sym)
-                    print('Exited')
-                    return
         time.sleep(10)
-            
+                
 
 
 def main(i):
@@ -276,8 +259,8 @@ def main(i):
     candle_names = talib.get_function_groups()['Pattern Recognition']
 
     ########## account info ############################
-    API_ID = 'PKAM4QPHOM4UPBGMF90C'
-    API_KEY = '9PdtZ8mifNBGKc8rnVfuZJRMVlFh7shCougkoMal'
+    API_ID = 'PKLQW1C4WIB6XI2LOQ5W'
+    API_KEY = 'ohdklwFBMMMHbnpIjrUplgpYupnl7viaFofhbgyd'
     api_endpoint = 'https://paper-api.alpaca.markets'
     ####################################################
     api = tradeapi.REST(key_id = API_ID,secret_key = API_KEY,base_url = api_endpoint)
@@ -317,50 +300,63 @@ def main(i):
                     print(f'Sym : {sym} is up to date')
             else:
                 continue
-            
-            df =get_pattern_df(df)
+        try:  
+            df['ema60']= talib.SMA(df['Close'],timeperiod=60)
 
-            df['roc_thin'] = talib.ROCP(df['Close'], timeperiod = 5)
-            
-            df['roc_sma_5'] = talib.SMA(df['roc_thin'], timeperiod = 5)
+            df['psar'] = talib.SAR(df['High'], df['Low'], acceleration=0.02, maximum=0.2)
 
-            df['roc_sma_15'] = talib.SMA(df['roc_thin'], timeperiod = 15)
-            
-            df['rsi'] = talib.RSI(df['Close'] ,timeperiod=14)
-            
-            df["roc_sma_15_shift"] = df["roc_sma_15"].shift(5)
-
-            df['roc_15_delta'] =df["roc_sma_15"] - df["roc_sma_15_shift"]
-
-            
-            df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume','roc_sma_5','roc_sma_15','pattern_val','candlestick_pattern','roc_15_delta','rsi']]
-
+            df['macd'],df['macd_signal'],df['macd_hist'] = talib.MACD(df['Close'], fastperiod=12, slowperiod=26, signalperiod=9)
+                        
+            df['rsi'] = talib.RSI(df['Close'], timeperiod=14)
         
-            d_roc_15 = df['roc_15_delta'][-1]
+            df['adx'] = talib.ADX(df['High'], df['Low'], df['Close'], timeperiod=14)
 
-            if len(api.list_positions())  == 0 and len(api.list_orders()) == 0:                
-                if d_roc_15 > 0:
-                    if df['roc_sma_5'][-1] > df['roc_sma_15'][-1]:
-                        if df['rsi'][-1] < 30:
-                            candle_df = get_pattern_df(df)
-                            if  '_Bull' in df['candlestick_pattern'][-1]:
-                                best_candle_rating=candle_rankings.get(df['candlestick_pattern'][-1],100)
-                                candle_rating = df['pattern_val'][-1]
-                                if candle_rating > 3 and best_candle_rating < 20:
+            df['mdi'] = talib.MINUS_DI(df['High'],df['Low'], df['Close'], timeperiod=14)
+            
+            df['pdi'] = talib.PLUS_DI(df['High'],df['Low'], df['Close'], timeperiod=14)
+        except:
+            continue
+
+        #fill trend column
+        conditions = [
+            (df['ema60'].lt(df['Close'])),
+            (df['ema60'].gt(df['Close']))
+                    ]    
+    
+        choices = ['clear_up','clear_down']
+        df['trend'] = np.select(conditions, choices, default=0 )
+
+        df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume','trend','psar','macd','macd_signal','macd_hist','adx']]
+
+        close     = df['Close'][-1]
+        trend     = df['trend'][-1]
+        macd_hist = df['macd_hist'][-1]
+        psar      = df['psar'][-1]
+        rsi       = df['rsi'][-1]
+        adx       = df['adx'][i] 
+        pdi       = df['pdi'][i] 
+        mdi       = df['mdi'][i]
+        
+
+        #check aroon is not parallel and not in 100 / 0 (up or down)   
+
+        if len(api.list_positions())  == 0 and len(api.list_orders()) == 0:                
+            if trend == 'clear_up':
+                if adx > 25 :   
+                    if macd_hist > 0:
+                        if close > psar:
+                            if rsi < 50 :
+                                if pdi > mdi:
+                                    #stop loss at psar
+                                    stop_loss = df['psar'][-1] 
+                                    # 1:1 with risk rewared
+                                    target_price = close + (close- df['psar'][-1])                
                                     stock_amnt = stock_amnt_order(df['Close'][-1])
                                     api.submit_order(symbol=sym,qty=stock_amnt,side='buy',type='market',time_in_force='gtc')
-                                    print(f"ENTERED for sym : {sym} at time {df['Datetime'][-1]}")
-                                    look_for_exit(df,sym)
-                                elif candle_rating > 6 and best_candle_rating < 40:
-                                    stock_amnt = stock_amnt_order(df['Close'][-1])
-                                    api.submit_order(symbol=sym,qty=stock_amnt,side='buy',type='market',time_in_force='gtc')
-                                    print(f"ENTERED for sym : {sym} at time {df['Datetime'][-1]}")
-                                    look_for_exit(df,sym)
-                                elif candle_rating > 7 and best_candle_rating < 60:
-                                    stock_amnt = stock_amnt_order(df['Close'][-1])
-                                    api.submit_order(symbol=sym,qty=stock_amnt,side='buy',type='market',time_in_force='gtc')
-                                    print(f"ENTERED for sym : {sym} at time {df['Datetime'][-1]}")
-                                    look_for_exit(df,sym)
+                                    print("ENTERED ++++++++++++++")
+                                    look_for_exit(df,sym,stop_loss,target_price)
+                                    print("EXITED ===============")                            
+
 
             
             #these values will be put in to a sperate table
@@ -372,7 +368,7 @@ global worker_num
 parallel_proc_amnt = sys.argv[2] """
 
 worker_num = 1
-parallel_proc_amnt = 1
+parallel_proc_amnt = 16
 
 
 if __name__ == '__main__':

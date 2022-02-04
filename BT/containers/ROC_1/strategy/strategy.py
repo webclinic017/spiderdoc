@@ -152,8 +152,8 @@ end_date_range = sys.argv[3]
 run_type = sys.argv[4]
 prallel_proc_amnt = sys.argv[5] """
 
-start_date_range = '2022-01-03'
-end_date_range = '2022-01-21'
+start_date_range = '2022-01-08'
+end_date_range = '2022-02-04'
 run_type = 'REAL'
 prallel_proc_amnt = 16
 
@@ -322,13 +322,22 @@ def show_plt(minute_ran,stock,start_date):
     plt.scatter(positions_short['Timestamp'],positions_short['Price'],marker='v',color="yellow")
     plt.scatter(positions_closed_short['Timestamp'],positions_closed_short['Price'],marker='v',color="orange")
     
+    plt.plot(curr_stock_historical.index,curr_stock_historical['ema60'],color='b')
+
+    
     plt.subplot(3,1,2)
-    plt.plot(curr_stock_historical.index,curr_stock_historical["rsi"],color='r')
-    plt.axhline(y=30, color='b', linestyle='-')
+    plt.plot(curr_stock_historical.index,curr_stock_historical["rsi"],color='b')
+    plt.axhline(y=30, color='r', linestyle='-')
+    plt.axhline(y=70, color='r', linestyle='-')
+
     
     plt.subplot(3,1,3)
-    plt.plot(curr_stock_historical.index,curr_stock_historical["roc_sma_5"],color='g')
-    plt.plot(curr_stock_historical.index,curr_stock_historical["roc_sma_15"],color='r')
+    hist_up = curr_stock_historical[curr_stock_historical["macd_hist"] > 0]
+    hist_down = curr_stock_historical[curr_stock_historical["macd_hist"] < 0]
+
+    plt.bar(hist_up.index,hist_up.macd_hist,width,bottom=0,color=col1)
+    plt.bar(hist_down.index,hist_down.macd_hist, width, bottom= 0,color=col2)
+    
     plt.axhline(y=0, color='b', linestyle='-')
     
     
@@ -470,146 +479,56 @@ def get_target_price(level,close):
         tp = close + delta_target
     return tp
       
-def get_pattern_df(i):
-    global curr_stock_historical
-    global candle_rankings
 
-    df = curr_stock_historical.iloc[:i,:]
-    # extract OHLC 
-    op = df['Open']
-    hi = df['High']
-    lo = df['Low']
-    cl = df['Close']
-    
-    # create columns for each pattern
-    for candle in candle_names:
-        # below is same as;
-        # df["CDL3LINESTRIKE"] = talib.CDL3LINESTRIKE(op, hi, lo, cl)
-        df[candle] = getattr(talib, candle)(op, hi, lo, cl)
-        
-        #reduce helper cols in to one col
-        
-    df['candlestick_pattern'] = np.nan
-    df['candlestick_match_count'] = np.nan
-    for index, row in df.iterrows():
-
-        # no pattern found
-        if len(row[candle_names]) - sum(row[candle_names] == 0) == 0:
-            df.loc[index,'candlestick_pattern'] = "NO_PATTERN"
-            df.loc[index, 'candlestick_match_count'] = 0
-        # single pattern found
-        elif len(row[candle_names]) - sum(row[candle_names] == 0) == 1:
-            # bull pattern 100 or 200
-            if any(row[candle_names].values > 0):
-                pattern = list(compress(row[candle_names].keys(), row[candle_names].values != 0))[0] + '_Bull'
-                df.loc[index, 'candlestick_pattern'] = pattern
-                df.loc[index, 'candlestick_match_count'] = 1
-            # bear pattern -100 or -200
-            else:
-                pattern = list(compress(row[candle_names].keys(), row[candle_names].values != 0))[0] + '_Bear'
-                df.loc[index, 'candlestick_pattern'] = pattern
-                df.loc[index, 'candlestick_match_count'] = 1
-        # multiple patterns matched -- select best performance
-        else:
-            # filter out pattern names from bool list of values
-            patterns = list(compress(row[candle_names].keys(), row[candle_names].values != 0))
-            container = []
-            container_val = 0
-            for pattern in patterns:
-                if row[pattern] > 0:
-                    container.append(pattern + '_Bull')
-                    container_val += 1
-                else:
-                    container.append(pattern + '_Bear')
-                    container_val -= 1
-            rank_list = [candle_rankings[p] for p in container]
-            if len(rank_list) == len(container):
-                rank_index_best = rank_list.index(min(rank_list))
-                df.loc[index, 'candlestick_pattern'] = container[rank_index_best]
-                df.loc[index, 'pattern_val'] = container_val
-                df.loc[index, 'candlestick_match_count'] = len(container)
-    # clean up candle columns
-    df['pattern_val']=df['pattern_val'].fillna(0)
-    df.drop(candle_names, axis = 1, inplace = True)
-    return df
-
-
-    
-    return False   
-
-def no_support_tp(close,resistance):
-    delta = resistance - close
-    return close - (delta * 2)
-def no_resistance_tp(close,support):
-    delta = close - support
-    return  close + (delta * 2)
-
-
-def get_arg_rel_extrema_trend(i):
-    
-    global curr_stock_historical
-    n = 7
-    df = curr_stock_historical_bkp.iloc[0:i,:]
-    df_min = df.iloc[argrelextrema(df.Close.values, np.less_equal,
-            order=n)[0]]['Low']
-    df_max = df.iloc[argrelextrema(df.Close.values, np.greater_equal,
-            order=n)[0]]['High']
-    if len(df_min) < 5:
-        return 'unclear'
-    if df_min[-1] > df_min[-2] :
-        return 'up'
-    if df_min[-1] < df_min[-2] :
-        return 'down'
-def enter_long(i,res,sup):
+def enter_long(i):
     global curr_stock_historical
     df=curr_stock_historical
-    close = df['Close'][i]
-    rsi = df['rsi'][i]
-    roc_5 = df['roc_sma_5'][i]
-    roc_15 = df['roc_sma_15'][i]
-    d_roc_15 = df['roc_15_delta'][i]
-
-    if d_roc_15 < 0:
-        return False
-    
-    if roc_5 < roc_15:
-        return False  
-    
-    if rsi > 30:
-        return False
-    
-    if  '_Bull' in df['candlestick_pattern'][i]:
-        best_candle_rating=candle_rankings.get(df['candlestick_pattern'][i],100)
-        candle_rating = df['pattern_val'][i]
-        
-        """ if candle_rating > 7 and best_candle_rating < 60:
-            return True
-        
-        elif candle_rating > 5 and best_candle_rating < 40:
-            return True
-        """
-        if candle_rating > 3 and best_candle_rating < 20:
-                return True
-        elif candle_rating > 6 and best_candle_rating < 40:
-                return True
-        elif candle_rating > 7 and best_candle_rating < 60:
-            return True
+    close     = df['Close'][i]
+    trend     = df['trend'][i]
+    macd_hist = df['macd_hist'][i]
+    psar      = df['psar'][i]
+    rsi       = df['rsi'][i]
+    adx       = df['adx'][i] 
+    pdi       = df['pdi'][i] 
+    mdi       = df['mdi'][i] 
+      
+    if trend == 'clear_up':
+        if adx > 25 :   
+            if macd_hist > 0:
+                if close > psar:
+                    if rsi < 50 :
+                        if pdi > mdi:
+                            return True
+       
         
     
     return False
     
     
-def exit_long(i,entry):
+def exit_long(i,stop_loss,target_price):
     global curr_stock_historical
     df=curr_stock_historical
     
-    roc_5 = df['roc_sma_5'][i]
-    roc_15 = df['roc_sma_15'][i]
+    close     = df['Close'][i]
     
-    d_roc_15 = df['roc_15_delta'][i]
-    
-    if  d_roc_15 < 0:
+    if close > target_price:
+        print('TARGET REACHED')
         return True
+    
+    if close < stop_loss:
+        print('STOP LOSS')
+        return True
+    
+    trend     = df['trend'][i]
+    macd_hist = df['macd_hist'][i]
+    psar      = df['psar'][i]
+    
+    """ if trend == 'clear_down':
+        return True """
+    """ if macd_hist < 0:
+        if close < psar:
+            return True """
+    
     
     
     return False
@@ -679,33 +598,31 @@ def run_simulation(stock_to_trade):
         except:
             stock_not_avail = True
             continue
-
-        #ema 60
-        #ema 30
-        curr_stock_historical['ema_med']= talib.SMA(curr_stock_historical['Close'],timeperiod=30)
-        #ema 10
-        curr_stock_historical['ema_thin']= talib.SMA(curr_stock_historical['Close'],timeperiod=10)
         
-        #roc 
-        curr_stock_historical["roc_thin"] = talib.ROCP(curr_stock_historical['Close'], timeperiod = 5)
-        
-        #roc sma        
-        curr_stock_historical["roc_sma_15"] = talib.SMA(curr_stock_historical['roc_thin'], timeperiod = 15)
+        if curr_stock_historical.isnull().values.any() or len(curr_stock_historical) < 1:
+            continue
 
-        #roc_roc_sma_15
-        curr_stock_historical["roc_sma_5"] = talib.SMA(curr_stock_historical['roc_thin'], timeperiod = 5)
+        #ema 100
+        try:
+            curr_stock_historical['ema60']= talib.SMA(curr_stock_historical['Close'],timeperiod=60)
+        except :
+            print(curr_stock_historical)
 
-        #roc of roc
-        curr_stock_historical["roc_roc_5"] = talib.ROCP(curr_stock_historical['roc_sma_5'], timeperiod = 1)
-        curr_stock_historical["roc_roc_30"] = talib.ROCP(curr_stock_historical['roc_sma_15'], timeperiod = 1)
+        curr_stock_historical['psar'] = talib.SAR(curr_stock_historical['High'], curr_stock_historical['Low'], acceleration=0.02, maximum=0.2)
+
+        curr_stock_historical['macd'],curr_stock_historical['macd_signal'],curr_stock_historical['macd_hist'] = talib.MACD(curr_stock_historical['Close'], fastperiod=12, slowperiod=26, signalperiod=9)
         
         curr_stock_historical['rsi'] = talib.RSI(curr_stock_historical['Close'], timeperiod=14)
+        
+        curr_stock_historical['adx'] = talib.ADX(curr_stock_historical['High'], curr_stock_historical['Low'], curr_stock_historical['Close'], timeperiod=14)
 
-
+        curr_stock_historical['mdi'] = talib.MINUS_DI(curr_stock_historical['High'],curr_stock_historical['Low'], curr_stock_historical['Close'], timeperiod=14)
+        
+        curr_stock_historical['pdi'] = talib.PLUS_DI(curr_stock_historical['High'],curr_stock_historical['Low'], curr_stock_historical['Close'], timeperiod=14)
         #fill trend column
         conditions = [
-            (curr_stock_historical['ema_med'].lt(curr_stock_historical['ema_thin'])),
-            (curr_stock_historical['ema_med'].gt(curr_stock_historical['ema_thin']))
+            (curr_stock_historical['ema60'].lt(curr_stock_historical['Close'])),
+            (curr_stock_historical['ema60'].gt(curr_stock_historical['Close']))
                     ]    
     
         choices = ['clear_up','clear_down']
@@ -717,79 +634,45 @@ def run_simulation(stock_to_trade):
         s =  np.mean(curr_stock_historical['High'] - curr_stock_historical['Low'])    
         
         #for patter recognition (global to feach it ones only)    
-        candle_names = talib.get_function_groups()['Pattern Recognition']
         
-        pattern_df = pd.DataFrame(columns=["Datetime"])
-        pattern_df =pattern_df.loc[:,['Datetime']]
-        curr_stock_historical =get_pattern_df(420)
         curr_stock_historical['Datetime'] = pd.to_datetime(curr_stock_historical.index)
-        
-        #calc Roc_prev_delta
-        curr_stock_historical["roc_sma_5_shift"] = curr_stock_historical["roc_sma_5"].shift(5)
-        curr_stock_historical['roc_5_delta'] =curr_stock_historical["roc_sma_5"] - curr_stock_historical["roc_sma_5_shift"]
-        
-        curr_stock_historical["roc_sma_15_shift"] = curr_stock_historical["roc_sma_15"].shift(5)
-        curr_stock_historical['roc_15_delta'] =curr_stock_historical["roc_sma_15"] - curr_stock_historical["roc_sma_15_shift"]
 
-        curr_stock_historical = curr_stock_historical.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume','roc_sma_5','roc_sma_15','pattern_val','candlestick_pattern','roc_5_delta','roc_15_delta','roc_roc_5','rsi']]
+        curr_stock_historical = curr_stock_historical.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume','ema60','trend','psar','macd','macd_signal','macd_hist','rsi','adx','pdi','mdi']]
         ##########################################################################################################################
         #                                       RUN THROUGH DAY                                                                  #   
         ##########################################################################################################################
 
-        for i in range(2,curr_stock_historical.shape[0]-2):
+        for i in range(curr_stock_historical.shape[0]):
             #search for snr live
-            start_time= time.time()
-
-            """ if isSupport(curr_stock_historical,i):
-                l = curr_stock_historical['Low'][i]
-                if isFarFromLevel(l,levels,s):
-                    levels.append((i,l))
-                    levels = clean_levels(i)
-
-            elif isResistance(curr_stock_historical,i):
-                l = curr_stock_historical['High'][i]
-                if isFarFromLevel(l,levels,s):
-                    levels.append((i,l))
-                    levels = clean_levels(i) """
-
-            
+     
             #what was the intent of the previos trade in positions
             last_intent = positions.iloc[-1]['Intent']    
             #current close
             close=curr_stock_historical['Close'][i]                
             #show current state # TODO : remove            
-            
                 
                 #print(positions)  
             #############################################################
             #                     STRATEGY                              #
             #############################################################
-            support = get_support(i,close)
-            resistance = get_resistance(i,close)
-            close = curr_stock_historical['Close'][i]
             
 
             #possible to enter osotion only between 10:30 - 15:30 and when no positions are open
-            if (position_is_open==False and i < 300 and i > 60):
-                if(enter_long(i,resistance,support) == True):
+            if (position_is_open==False and i < 400 and i > 60):
+                if(enter_long(i) == True):
                     position_is_open = True
-                    stock_amnt_to_order = stock_amnt_order(close,support)
-                    stop_loss = support
-                    if resistance != 0:
-                        target_price= get_target_price(resistance,close)
-                    else:
-                        target_price = no_resistance_tp(close,support)
-                    
+                    stock_amnt_to_order = stock_amnt_order(close,curr_stock_historical['psar'][i])
+                    #PSAR is stop loss
+                    target_price = close + (close- curr_stock_historical['psar'][i])                
+                    stop_loss = curr_stock_historical['psar'][i]
                     buy_long(i,stock_amnt_to_order)
                     print( ' +++++++++++++++++++ ')
                     entry_time = i 
             elif ( position_is_open ==True):
-                if (exit_long(i,entry_time) == True):
+                if (exit_long(i,stop_loss,target_price) == True):
                     position_is_open=False
                     close_long(i)
                     print( ' ============ ')
-            executionTime = (time.time() - start_time)
-            print('Execution time in seconds: ' + str(executionTime))
                     #DAY FINISHED COMPUTING
 
         last_intent = positions.iloc[-1]['Intent']    
@@ -818,11 +701,11 @@ def run_simulation(stock_to_trade):
 
                 
                     
-sim_scope = 1              
+sim_scope = 0            
 if sim_scope == 1:               
-    stock_to_trade = 'AACG'
-    start_date_range = '2022-01-11'
-    end_date_range = '2022-01-12'
+    stock_to_trade = 'SGLY'
+    start_date_range = '2022-02-01'
+    end_date_range = '2022-02-02'
     run_type = 'ADJ' 
     run_simulation(stock_to_trade)     
 else :
