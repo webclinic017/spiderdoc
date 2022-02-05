@@ -81,28 +81,28 @@ def isFarFromLevel(l,levels,s):
 
 def clean_levels(minute_ran):
     global levels
-    global curr_stock_historical_bkp
-    df =curr_stock_historical_bkp
-    df['Datetime'] = pd.to_datetime(curr_stock_historical_bkp.index)
-    df = curr_stock_historical_bkp.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','ema_thin','ema_med','trend']]
-    df =curr_stock_historical_bkp.iloc[0:minute_ran,:]
+    global df_bkp
+    df =df_bkp
+    df['Datetime'] = pd.to_datetime(df_bkp.index)
+    df = df_bkp.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','ema_thin','ema_med','trend']]
+    df =df_bkp.iloc[0:minute_ran,:]
 
     new_levels = []
     n=10
     range_arg_extrema_counts = 2
-    curr_stock_historical_min = df.iloc[argrelextrema(df.Close.values, np.less_equal,
+    df_min = df.iloc[argrelextrema(df.Close.values, np.less_equal,
             order=n)[0]]['Low']
-    curr_stock_historical_max = df.iloc[argrelextrema(df.Close.values, np.greater_equal,
+    df_max = df.iloc[argrelextrema(df.Close.values, np.greater_equal,
             order=n)[0]]['High']
-    curr_stock_historical_min['Datetime'] = pd.to_datetime(curr_stock_historical_min.index)
+    df_min['Datetime'] = pd.to_datetime(df_min.index)
      
-    curr_stock_historical_max['Datetime'] = pd.to_datetime(curr_stock_historical_max.index)
+    df_max['Datetime'] = pd.to_datetime(df_max.index)
 
     for i in range(len(levels)):
         lvl_idx=levels[i][0]
-        for k in range(len(curr_stock_historical_min.index)-1):
-            s1 = str(curr_stock_historical_bkp['Datetime'][0])
-            s2 = str(curr_stock_historical_min['Datetime'][k])
+        for k in range(len(df_min.index)-1):
+            s1 = str(df_bkp['Datetime'][0])
+            s2 = str(df_min['Datetime'][k])
 
             format = '%Y-%m-%d %H:%M:%S%z'
             tdelta = datetime.strptime(s2, format) - datetime.strptime(s1, format)
@@ -114,9 +114,9 @@ def clean_levels(minute_ran):
                 
             """ if found_exrma_next_to_lvl==True:
             break  """         
-        for k in range(len(curr_stock_historical_max.index)-1):
-            s1 = str(curr_stock_historical_bkp['Datetime'][0])
-            s2 = str(curr_stock_historical_max['Datetime'][k])
+        for k in range(len(df_max.index)-1):
+            s1 = str(df_bkp['Datetime'][0])
+            s2 = str(df_max['Datetime'][k])
 
             format = '%Y-%m-%d %H:%M:%S%z'
             tdelta = datetime.strptime(s2, format) - datetime.strptime(s1, format)
@@ -129,23 +129,23 @@ def clean_levels(minute_ran):
     return new_levels        
             
 def show_plt(minute_ran,stock,start_date):
-    global curr_stock_historical_bkp
+    global df_bkp
     global levels
     global positions
-    curr_stock_historical_1 =curr_stock_historical_bkp.iloc[0:minute_ran,:]
-    df = curr_stock_historical_bkp.iloc[:minute_ran+1,:]
+    df_1 =df_bkp.iloc[0:minute_ran,:]
+    df = df_bkp.iloc[:minute_ran+1,:]
     df['Datetime'] = pd.to_datetime(df.index)
     df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close']]
     
 
     n=7
-    curr_stock_historical_min = curr_stock_historical_1.iloc[argrelextrema(curr_stock_historical_1.Close.values, np.less_equal,
+    df_min = df_1.iloc[argrelextrema(df_1.Close.values, np.less_equal,
             order=n)[0]]['Low']
-    curr_stock_historical_max = curr_stock_historical_1.iloc[argrelextrema(curr_stock_historical_1.Close.values, np.greater_equal,
+    df_max = df_1.iloc[argrelextrema(df_1.Close.values, np.greater_equal,
             order=n)[0]]['High']
     
-    up = curr_stock_historical_bkp[curr_stock_historical_bkp.Close>=curr_stock_historical_bkp.Open]
-    down = curr_stock_historical_bkp[curr_stock_historical_bkp.Close<curr_stock_historical_bkp.Open] 
+    up = df_bkp[df_bkp.Close>=df_bkp.Open]
+    down = df_bkp[df_bkp.Close<df_bkp.Open] 
     
     #define colors to use
     #bar and minmax colors
@@ -176,8 +176,8 @@ def show_plt(minute_ran,stock,start_date):
         plt.hlines(level[1],xmin=df['Datetime'][level[0]],\
                 xmax=max(df['Datetime']),colors='blue')
    
-    plt.scatter(curr_stock_historical_min.index, curr_stock_historical_min, c='purple')
-    plt.scatter(curr_stock_historical_max.index, curr_stock_historical_max, c='pink') 
+    plt.scatter(df_min.index, df_min, c='purple')
+    plt.scatter(df_max.index, df_max, c='pink') 
     #plot down prices
     plt.bar(down.index,down.Close-down.Open,width,bottom=down.Open,color=col2)
     plt.bar(down.index,down.High-down.Open,width2,bottom=down.Open,color=col2)
@@ -195,17 +195,17 @@ def show_plt(minute_ran,stock,start_date):
     plt.scatter(positions_short['Timestamp'],positions_short['Price'],marker='v',color="yellow")
     plt.scatter(positions_closed_short['Timestamp'],positions_closed_short['Price'],marker='v',color="orange")
     
-    plt.plot(curr_stock_historical.index,curr_stock_historical['ema60'],color='b')
+    plt.plot(df.index,df['ema60'],color='b')
 
     
     plt.subplot(3,1,2)
-    plt.plot(curr_stock_historical.index,curr_stock_historical["rsi"],color='b')
+    plt.plot(df.index,df["rsi"],color='b')
     plt.axhline(y=50, color='r', linestyle='-')
 
     
     plt.subplot(3,1,3)
-    hist_up = curr_stock_historical[curr_stock_historical["macd_hist"] > 0]
-    hist_down = curr_stock_historical[curr_stock_historical["macd_hist"] < 0]
+    hist_up = df[df["macd_hist"] > 0]
+    hist_down = df[df["macd_hist"] < 0]
 
     plt.bar(hist_up.index,hist_up.macd_hist,width,bottom=0,color=col1)
     plt.bar(hist_down.index,hist_down.macd_hist, width, bottom= 0,color=col2)
@@ -219,54 +219,54 @@ def show_plt(minute_ran,stock,start_date):
     
 def sell_short(i,stock_amnt_to_order):
     global balance
-    global curr_stock_historical
+    global df
 
     action='sell'
     intent = 'SHORT'
-    curr_price =curr_stock_historical['Close'][i]
+    curr_price =df['Close'][i]
     stock_amnt=stock_amnt_to_order
     trans_value=curr_price*stock_amnt
     if run_type == 'ADJ' or 'REAL' :
         balance=update_balance(balance,trans_value,action,intent)
-    update_pos(i,curr_stock_historical['Datetime'][i],action,curr_price,stock_amnt,trans_value,intent,balance)
+    update_pos(i,df['Datetime'][i],action,curr_price,stock_amnt,trans_value,intent,balance)
 
 def close_short(i):
     global balance
-    global curr_stock_historical
+    global df
 
     action='buy'
     intent = 'CLOSE_SHORT'
-    curr_price =curr_stock_historical['Close'][i]
+    curr_price =df['Close'][i]
     stock_amnt =positions.iloc[-1]['Amount']
     trans_value=curr_price*stock_amnt
     if run_type == 'ADJ' or 'REAL' :
         balance=update_balance(balance,trans_value,action,intent)
-    update_pos(i,curr_stock_historical['Datetime'][i],action,curr_price,stock_amnt,trans_value,intent,balance)  
+    update_pos(i,df['Datetime'][i],action,curr_price,stock_amnt,trans_value,intent,balance)  
 
 def buy_long(i,stock_amnt_to_order):
     global balance
-    global curr_stock_historical
+    global df
     action='buy'
     intent = 'LONG'
-    curr_price =curr_stock_historical['Close'][i]
+    curr_price =df['Close'][i]
     stock_amnt=stock_amnt_to_order
     trans_value=curr_price*stock_amnt
     if run_type == 'ADJ' or 'REAL' :
         balance=update_balance(balance,trans_value,action,intent)
-    update_pos(i,curr_stock_historical['Datetime'][i],action,curr_price,stock_amnt,trans_value,intent,balance)
+    update_pos(i,df['Datetime'][i],action,curr_price,stock_amnt,trans_value,intent,balance)
 
 def close_long(i):
     global balance
-    global curr_stock_historical
+    global df
 
     action='sell'
     intent = 'CLOSE_LONG'
-    curr_price =curr_stock_historical['Close'][i]
+    curr_price =df['Close'][i]
     stock_amnt=positions.iloc[-1]['Amount']
     trans_value=curr_price*stock_amnt
     if run_type == 'ADJ' or 'REAL' :
         balance=update_balance(balance,trans_value,action,intent)
-    update_pos(i,curr_stock_historical['Datetime'][i],action,curr_price,stock_amnt,trans_value,intent,balance)     
+    update_pos(i,df['Datetime'][i],action,curr_price,stock_amnt,trans_value,intent,balance)     
 
 def stock_amnt_order(close,level):
     global balance
@@ -295,8 +295,8 @@ def  get_pos_delta(close):
       
 
 def enter_long(i):
-    global curr_stock_historical
-    df=curr_stock_historical
+    global df
+    df=df
     close     = df['Close'][i]
     trend     = df['trend'][i]
     macd_hist = df['macd_hist'][i]
@@ -320,8 +320,8 @@ def enter_long(i):
     
     
 def exit_long(i,stop_loss,target_price):
-    global curr_stock_historical
-    df=curr_stock_historical
+    global df
+    df=df
     
     close     = df['Close'][i]
     
@@ -336,8 +336,8 @@ def exit_long(i,stop_loss,target_price):
     return False
 
 def enter_short(i):
-    global curr_stock_historical
-    df=curr_stock_historical
+    global df
+    df=df
     close     = df['Close'][i]
     trend     = df['trend'][i]
     macd_hist = df['macd_hist'][i]
@@ -361,8 +361,8 @@ def enter_short(i):
     
     
 def exit_short(i,stop_loss,target_price):
-    global curr_stock_historical
-    df=curr_stock_historical
+    global df
+    df=df
     
     close     = df['Close'][i]
     
@@ -386,8 +386,8 @@ def run_simulation(stock_to_trade):
     global end_date_range 
     global run_type 
     global snr
-    global curr_stock_historical
-    global curr_stock_historical_bkp
+    global df
+    global df_bkp
     global levels
     global balance
     global candle_names
@@ -436,62 +436,60 @@ def run_simulation(stock_to_trade):
 
         try:
             print(curr_date.strftime('%Y-%m-%d') + ' - ' + stock_to_trade)
-            curr_stock_historical = yf.download(stock_to_trade,curr_date,tommorow_date,interval='1m')
-            curr_stock_historical.head()
+            df = yf.download(stock_to_trade,curr_date,tommorow_date,interval='1m')
+            df.head()
         except:
             stock_not_avail = True
             continue
         
-        if curr_stock_historical.isnull().values.any() or len(curr_stock_historical) < 1:
+        if df.isnull().values.any() or len(df) < 1:
             continue
 
         #ema 100
         try:
-            curr_stock_historical['ema60']= talib.SMA(curr_stock_historical['Close'],timeperiod=60)
+            df['ema60']= talib.SMA(df['Close'],timeperiod=60)
         except :
-            print(curr_stock_historical)
+            print(df)
 
-        curr_stock_historical['psar'] = talib.SAR(curr_stock_historical['High'], curr_stock_historical['Low'], acceleration=0.02, maximum=0.2)
+        df['psar'] = talib.SAR(df['High'], df['Low'], acceleration=0.02, maximum=0.2)
 
-        curr_stock_historical['macd'],curr_stock_historical['macd_signal'],curr_stock_historical['macd_hist'] = talib.MACD(curr_stock_historical['Close'], fastperiod=12, slowperiod=26, signalperiod=9)
+        df['macd'],df['macd_signal'],df['macd_hist'] = talib.MACD(df['Close'], fastperiod=12, slowperiod=26, signalperiod=9)
         
-        curr_stock_historical['rsi'] = talib.RSI(curr_stock_historical['Close'], timeperiod=14)
+        df['rsi'] = talib.RSI(df['Close'], timeperiod=14)
         
-        curr_stock_historical['adx'] = talib.ADX(curr_stock_historical['High'], curr_stock_historical['Low'], curr_stock_historical['Close'], timeperiod=14)
+        df['adx'] = talib.ADX(df['High'], df['Low'], df['Close'], timeperiod=14)
 
-        curr_stock_historical['mdi'] = talib.MINUS_DI(curr_stock_historical['High'],curr_stock_historical['Low'], curr_stock_historical['Close'], timeperiod=14)
+        df['mdi'] = talib.MINUS_DI(df['High'],df['Low'], df['Close'], timeperiod=14)
         
-        curr_stock_historical['pdi'] = talib.PLUS_DI(curr_stock_historical['High'],curr_stock_historical['Low'], curr_stock_historical['Close'], timeperiod=14)
+        df['pdi'] = talib.PLUS_DI(df['High'],df['Low'], df['Close'], timeperiod=14)
         #fill trend column
         conditions = [
-            (curr_stock_historical['ema60'].lt(curr_stock_historical['Close'])),
-            (curr_stock_historical['ema60'].gt(curr_stock_historical['Close']))
+            (df['ema60'].lt(df['Close'])),
+            (df['ema60'].gt(df['Close']))
                     ]    
     
         choices = ['clear_up','clear_down']
-        curr_stock_historical['trend'] = np.select(conditions, choices, default=0 )
+        df['trend'] = np.select(conditions, choices, default=0 )
         levels = []
         
-        curr_stock_historical_bkp = curr_stock_historical
-        
-        s =  np.mean(curr_stock_historical['High'] - curr_stock_historical['Low'])    
-        
+        df_bkp = df
+                
         #for patter recognition (global to feach it ones only)    
         
-        curr_stock_historical['Datetime'] = pd.to_datetime(curr_stock_historical.index)
+        df['Datetime'] = pd.to_datetime(df.index)
 
-        curr_stock_historical = curr_stock_historical.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume','ema60','trend','psar','macd','macd_signal','macd_hist','rsi','adx','pdi','mdi']]
+        df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume','ema60','trend','psar','macd','macd_signal','macd_hist','rsi','adx','pdi','mdi']]
         ##########################################################################################################################
         #                                       RUN THROUGH DAY                                                                  #   
         ##########################################################################################################################
 
-        for i in range(curr_stock_historical.shape[0]):
+        for i in range(df.shape[0]):
             #search for snr live
      
             #what was the intent of the previos trade in positions
             last_intent = positions.iloc[-1]['Intent']    
             #current close
-            close=curr_stock_historical['Close'][i]                
+            close=df['Close'][i]                
             #show current state # TODO : remove            
                 
                 #print(positions)  
@@ -504,19 +502,19 @@ def run_simulation(stock_to_trade):
             if (position_is_open==False and i < 400 and i > 60):
                 if(enter_long(i) == True):
                     position_is_open = True
-                    stock_amnt_to_order = stock_amnt_order(close,curr_stock_historical['psar'][i])
+                    stock_amnt_to_order = stock_amnt_order(close,df['psar'][i])
                     #PSAR is stop loss
-                    target_price = close + (close- curr_stock_historical['psar'][i])                
-                    stop_loss = curr_stock_historical['psar'][i]
+                    target_price = close + (close- df['psar'][i])                
+                    stop_loss = df['psar'][i]
                     buy_long(i,stock_amnt_to_order)
                     print( ' +++++++++++++++++++ ')
                     exit_select = 1
                 elif(enter_short(i) == True):
                     position_is_open = True
-                    stock_amnt_to_order = stock_amnt_order(close,curr_stock_historical['psar'][i])
+                    stock_amnt_to_order = stock_amnt_order(close,df['psar'][i])
                     #PSAR is stop loss
-                    target_price = close - (curr_stock_historical['psar'][i] - close)                
-                    stop_loss = curr_stock_historical['psar'][i]
+                    target_price = close - (df['psar'][i] - close)                
+                    stop_loss = df['psar'][i]
                     sell_short(i,stock_amnt_to_order)
                     print( ' +++++++++++++++++++ ')
                     exit_select = -1
@@ -559,7 +557,7 @@ def run_simulation(stock_to_trade):
         #outdir = '/output/'
         outdir = 'C:\\Users\\nolys\\Desktop\\results\\'
         fullname =  outdir + outname
-        curr_stock_historical.to_csv(fullname)  """
+        df.to_csv(fullname)  """
         
             #pd.set_option('display.max_columns', None,'display.max_rows', None)
             #print(positions)
