@@ -1,19 +1,12 @@
-from contextlib import nullcontext
-from re import X
-from tkinter import Entry
 import yfinance as yf
 import pandas as pd
-import ta
 import talib
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.dates as mpl_dates
-from scipy.signal import argrelextrema
-from scipy import stats
 from datetime import timedelta,time,datetime
+from scipy.signal import argrelextrema
 import sys
 import multiprocessing
-from itertools import compress
 import time
 pd.options.mode.chained_assignment = None  # default='warn'
 
@@ -25,7 +18,7 @@ end_date_range = sys.argv[3]
 run_type = sys.argv[4]
 prallel_proc_amnt = sys.argv[5] """
 
-start_date_range = '2022-01-08'
+start_date_range = '2022-01-09'
 end_date_range = '2022-02-04'
 run_type = 'REAL'
 prallel_proc_amnt = 16
@@ -68,65 +61,7 @@ def update_stock_amnt (balance,stock_price,action):
 
     return stock_amnt
 
-def isSupport(df,i):
-  support = df['Low'][i] < df['Low'][i-1]  and df['Low'][i] < df['Low'][i+1] and df['Low'][i+1] < df['Low'][i+2] and df['Low'][i-1] < df['Low'][i-2]
-  return support
-
-def isResistance(df,i):
-  resistance = df['High'][i] > df['High'][i-1]  and df['High'][i] > df['High'][i+1] and df['High'][i+1] > df['High'][i+2] and df['High'][i-1] > df['High'][i-2]
-  return resistance
-
-def isFarFromLevel(l,levels,s):
-   return np.sum([abs(l-x) < s  for x in levels]) == 0
-
-def clean_levels(minute_ran):
-    global levels
-    global df_bkp
-    df =df_bkp
-    df['Datetime'] = pd.to_datetime(df_bkp.index)
-    df = df_bkp.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','ema_thin','ema_med','trend']]
-    df =df_bkp.iloc[0:minute_ran,:]
-
-    new_levels = []
-    n=10
-    range_arg_extrema_counts = 2
-    df_min = df.iloc[argrelextrema(df.Close.values, np.less_equal,
-            order=n)[0]]['Low']
-    df_max = df.iloc[argrelextrema(df.Close.values, np.greater_equal,
-            order=n)[0]]['High']
-    df_min['Datetime'] = pd.to_datetime(df_min.index)
-     
-    df_max['Datetime'] = pd.to_datetime(df_max.index)
-
-    for i in range(len(levels)):
-        lvl_idx=levels[i][0]
-        for k in range(len(df_min.index)-1):
-            s1 = str(df_bkp['Datetime'][0])
-            s2 = str(df_min['Datetime'][k])
-
-            format = '%Y-%m-%d %H:%M:%S%z'
-            tdelta = datetime.strptime(s2, format) - datetime.strptime(s1, format)
-
-            delta = tdelta.seconds / 60
-            if lvl_idx in range(int(delta)-range_arg_extrema_counts,int(delta)+range_arg_extrema_counts):
-                found_exrma_next_to_lvl =True
-                new_levels.append((lvl_idx,levels[i][1]))
-                
-            """ if found_exrma_next_to_lvl==True:
-            break  """         
-        for k in range(len(df_max.index)-1):
-            s1 = str(df_bkp['Datetime'][0])
-            s2 = str(df_max['Datetime'][k])
-
-            format = '%Y-%m-%d %H:%M:%S%z'
-            tdelta = datetime.strptime(s2, format) - datetime.strptime(s1, format)
-            delta = tdelta.seconds / 60 
-            
-            if lvl_idx in range(int(delta)-range_arg_extrema_counts,int(delta)+range_arg_extrema_counts):
-                new_levels.append((lvl_idx,levels[i][1]))
-                found_exrma_next_to_lvl =True
-                break
-    return new_levels        
+       
             
 def show_plt(minute_ran,stock,start_date):
     global df_bkp
@@ -316,8 +251,7 @@ def enter_long(i):
        
         
     
-    return False
-    
+    return False 
     
 def exit_long(i,stop_loss,target_price):
     global df
@@ -437,7 +371,6 @@ def run_simulation(stock_to_trade):
         try:
             print(curr_date.strftime('%Y-%m-%d') + ' - ' + stock_to_trade)
             df = yf.download(stock_to_trade,curr_date,tommorow_date,interval='1m')
-            df.head()
         except:
             stock_not_avail = True
             continue
@@ -504,7 +437,7 @@ def run_simulation(stock_to_trade):
                     position_is_open = True
                     stock_amnt_to_order = stock_amnt_order(close,df['psar'][i])
                     #PSAR is stop loss
-                    target_price = close + (close- df['psar'][i])                
+                    target_price = close + (close- df['psar'][i])              
                     stop_loss = df['psar'][i]
                     buy_long(i,stock_amnt_to_order)
                     print( ' +++++++++++++++++++ ')
@@ -513,7 +446,7 @@ def run_simulation(stock_to_trade):
                     position_is_open = True
                     stock_amnt_to_order = stock_amnt_order(close,df['psar'][i])
                     #PSAR is stop loss
-                    target_price = close - (df['psar'][i] - close)                
+                    target_price = close - (df['psar'][i] - close)             
                     stop_loss = df['psar'][i]
                     sell_short(i,stock_amnt_to_order)
                     print( ' +++++++++++++++++++ ')

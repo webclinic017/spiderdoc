@@ -260,8 +260,11 @@ for sym in Sym_file:
             start_idx = i
             do_calc   = False
 pd.set_option("display.max_rows", None, "display.max_columns", None)
-            
+Daily_df["Date"] = pd.to_datetime(Daily_df["Date"])
+Daily_df = Daily_df.sort_values(by="Date")
 print(Daily_df)
+df1 =Daily_df.groupby('Date')['Daily_delta'].sum()
+print(df1)
         #set flag to true
         #when date changes set flag to flase
         #retrive previos pos from when the flag was set
