@@ -72,8 +72,8 @@ def main(i):
     candle_names = talib.get_function_groups()['Pattern Recognition']
 
     ########## account info ############################
-    API_ID = 'PKLQW1C4WIB6XI2LOQ5W'
-    API_KEY = 'ohdklwFBMMMHbnpIjrUplgpYupnl7viaFofhbgyd'
+    API_ID = 'PKDELJBWRQWDJ382JUAI'
+    API_KEY = 'GsBn8An12ihLBHuwObFxhbqDGLDHeu8ThmJ1PmuO'
     api_endpoint = 'https://paper-api.alpaca.markets'
     ####################################################
     api = tradeapi.REST(key_id = API_ID,secret_key = API_KEY,base_url = api_endpoint)
@@ -93,7 +93,7 @@ def main(i):
                 #download data
                 df = yf.download(tickers=sym,period='70m',interval='1m')
                 #remove unfinished candle
-                df =df.iloc[0:28,:]
+                df =df.iloc[0:68,:]
                 df['Datetime'] = pd.to_datetime(df.index)
                 df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume']]
             except :
@@ -137,7 +137,7 @@ def main(i):
             choices = ['clear_up','clear_down']
             df['trend'] = np.select(conditions, choices, default=0 )
 
-            df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume','trend','psar','macd_hist','rsi','adx','pdi','mdi']]
+            df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume','trend','psar','macd_hist','rsi','adx','pdi','mdi','ema60']]
 
             close     = df['Close'][-1]
             trend     = df['trend'][-1]
@@ -147,17 +147,29 @@ def main(i):
             adx       = df['adx'][i] 
             pdi       = df['pdi'][i] 
             mdi       = df['mdi'][i]
+
+            ema_60 = df['ema60'][-1]
             
             print('ALL METERICS CALLED')
             #check aroon is not parallel and not in 100 / 0 (up or down)   
 
-            if len(api.list_positions())  == 0 and len(api.list_orders()) == 0:                
+            if len(api.list_positions())  == 0 and len(api.list_orders()) == 0:  
+                print('got here 0') 
+                print(trend) 
+                print(f'ema 60 : {ema_60}')  
+                print(df)          
                 if trend == 'clear_up':
-                    if adx > 25 :   
+                    print('got here 1')
+                    if adx > 25 : 
+                        print('got here 2')  
                         if macd_hist > 0:
+                            print('got here 3')
                             if close > psar:
+                                print('got here 4')
                                 if rsi < 50 :
+                                    print('got here 5')
                                     if pdi > mdi:
+                                        print('got here 6')
                                         #stop loss at psar
                                         stop_loss = df['psar'][-1] 
                                         # 1:1 with risk rewared
@@ -169,11 +181,17 @@ def main(i):
                                         print("EXITED ===============")
                 #Short check
                 elif trend=='clear_down':
-                    if adx > 25 :   
+                    print('got here 1')
+                    if adx > 25 :  
+                        print('got here 2') 
                         if macd_hist < 0:
+                            print('got here 3')
                             if close < psar:
+                                print('got here 4')
                                 if rsi > 50 :
+                                    print('got here 5')
                                     if pdi < mdi:
+                                        print('got here 6')
                                         #stop loss at psar
                                         stop_loss = df['psar'][-1] 
                                         # 1:1 with risk rewared
@@ -189,7 +207,7 @@ def main(i):
 
             
             #these values will be put in to a sperate table
-        time.sleep(100)
+        time.sleep(10)
 
 global worker_num
 
