@@ -82,22 +82,20 @@ def main(i):
     while True:
     #this is whre we get out symbols from 
     
-        #file_path = '/input/'+symbols_file
-        file_path = 'C:\DEVOPS\python apps\spiderdoc\spiderdoc\Preprod\Trader\input\symbols_'+str(worker_num)+'_'+str(i)+'.txt'
+        file_path = '/input/symbols_'+str(worker_num)+'_'+str(i)+'.txt'
+        #file_path = 'C:\DEVOPS\python apps\spiderdoc\spiderdoc\Preprod\Trader\input\symbols_'+str(worker_num)+'_'+str(i)+'.txt'
         Sym_file = open(file_path,"r")
         #apply strategy to all sybols
+        start_time = time.time()
         for sym in Sym_file:
             sym = sym.strip('\n')
             try:
                 #download data
                 df = yf.download(tickers=sym,period='70m',interval='1m')
-                print("########################")
                 #remove unfinished candle
                 df =df.iloc[0:28,:]
                 df['Datetime'] = pd.to_datetime(df.index)
                 df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume']]
-                print('FORMATED!')
-
             except :
                 print(f"SYMBOL : {sym} - was not found")
                 continue
@@ -112,84 +110,86 @@ def main(i):
                     print(f'Sym : {sym} is up to date')
             else:
                 continue
-        try:  
-            df['ema60']= talib.SMA(df['Close'],timeperiod=60)
+            try:  
+                df['ema60']= talib.SMA(df['Close'].to_numpy(),timeperiod=60)
 
-            df['psar'] = talib.SAR(df['High'], df['Low'], acceleration=0.02, maximum=0.2)
+                df['psar'] = talib.SAR(df['High'].to_numpy(), df['Low'].to_numpy(), acceleration=0.02, maximum=0.2)
 
-            df['macd'],df['macd_signal'],df['macd_hist'] = talib.MACD(df['Close'], fastperiod=12, slowperiod=26, signalperiod=9)
-                        
-            df['rsi'] = talib.RSI(df['Close'], timeperiod=14)
-        
-            df['adx'] = talib.ADX(df['High'], df['Low'], df['Close'], timeperiod=14)
-
-            df['mdi'] = talib.MINUS_DI(df['High'],df['Low'], df['Close'], timeperiod=14)
+                df['macd'],df['macd_signal'],df['macd_hist'] = talib.MACD(df['Close'].to_numpy(), fastperiod=12, slowperiod=26, signalperiod=9)
+                            
+                df['rsi'] = talib.RSI(df['Close'].to_numpy(), timeperiod=14)
             
-            df['pdi'] = talib.PLUS_DI(df['High'],df['Low'], df['Close'], timeperiod=14)
-        except:
-            continue
+                df['adx'] = talib.ADX(df['High'].to_numpy(), df['Low'].to_numpy(), df['Close'].to_numpy(), timeperiod=14)
 
-        #fill trend column
-        conditions = [
-            (df['ema60'].lt(df['Close'])),
-            (df['ema60'].gt(df['Close']))
-                    ]    
-    
-        choices = ['clear_up','clear_down']
-        df['trend'] = np.select(conditions, choices, default=0 )
+                df['mdi'] = talib.MINUS_DI(df['High'].to_numpy(),df['Low'].to_numpy(), df['Close'].to_numpy(), timeperiod=14)
+                
+                df['pdi'] = talib.PLUS_DI(df['High'].to_numpy(),df['Low'].to_numpy(), df['Close'].to_numpy(), timeperiod=14)
+            except:
+                print('failed to calc metrics')
+                continue
 
-        df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume','trend','psar','macd','macd_signal','macd_hist','adx']]
-
-        close     = df['Close'][-1]
-        trend     = df['trend'][-1]
-        macd_hist = df['macd_hist'][-1]
-        psar      = df['psar'][-1]
-        rsi       = df['rsi'][-1]
-        adx       = df['adx'][i] 
-        pdi       = df['pdi'][i] 
-        mdi       = df['mdi'][i]
+            #fill trend column
+            conditions = [
+                (df['ema60'].lt(df['Close'])),
+                (df['ema60'].gt(df['Close']))
+                        ]    
         
+            choices = ['clear_up','clear_down']
+            df['trend'] = np.select(conditions, choices, default=0 )
 
-        #check aroon is not parallel and not in 100 / 0 (up or down)   
+            df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume','trend','psar','macd_hist','rsi','adx','pdi','mdi']]
 
-        if len(api.list_positions())  == 0 and len(api.list_orders()) == 0:                
-            if trend == 'clear_up':
-                if adx > 25 :   
-                    if macd_hist > 0:
-                        if close > psar:
-                            if rsi < 50 :
-                                if pdi > mdi:
-                                    #stop loss at psar
-                                    stop_loss = df['psar'][-1] 
-                                    # 1:1 with risk rewared
-                                    target_price = close + (close- df['psar'][-1])                
-                                    stock_amnt = stock_amnt_order(df['Close'][-1])
-                                    api.submit_order(symbol=sym,qty=stock_amnt,side='buy',type='market',time_in_force='gtc')
-                                    print("ENTERED ++++++++++++++")
-                                    look_for_exit(df,sym,stop_loss,target_price,'LONG')
-                                    print("EXITED ===============")
-            #Short check
-            elif trend=='clear_down':
-                if adx > 25 :   
-                    if macd_hist < 0:
-                        if close < psar:
-                            if rsi > 50 :
-                                if pdi < mdi:
-                                    #stop loss at psar
-                                    stop_loss = df['psar'][-1] 
-                                    # 1:1 with risk rewared
-                                    target_price = close - (df['psar'][-1] - close )                
-                                    stock_amnt = stock_amnt_order(df['Close'][-1])
-                                    api.submit_order(symbol=sym,qty=stock_amnt,side='sell',type='market',time_in_force='gtc')
-                                    print("ENTERED ++++++++++++++")
-                                    look_for_exit(df,sym,stop_loss,target_price,'short')
-                                    print("EXITED ===============")
-                                                                
+            close     = df['Close'][-1]
+            trend     = df['trend'][-1]
+            macd_hist = df['macd_hist'][-1]
+            psar      = df['psar'][-1]
+            rsi       = df['rsi'][-1]
+            adx       = df['adx'][i] 
+            pdi       = df['pdi'][i] 
+            mdi       = df['mdi'][i]
+            
+            print('ALL METERICS CALLED')
+            #check aroon is not parallel and not in 100 / 0 (up or down)   
+
+            if len(api.list_positions())  == 0 and len(api.list_orders()) == 0:                
+                if trend == 'clear_up':
+                    if adx > 25 :   
+                        if macd_hist > 0:
+                            if close > psar:
+                                if rsi < 50 :
+                                    if pdi > mdi:
+                                        #stop loss at psar
+                                        stop_loss = df['psar'][-1] 
+                                        # 1:1 with risk rewared
+                                        target_price = close + (close- df['psar'][-1])                
+                                        stock_amnt = stock_amnt_order(df['Close'][-1])
+                                        api.submit_order(symbol=sym,qty=stock_amnt,side='buy',type='market',time_in_force='gtc')
+                                        print("ENTERED ++++++++++++++")
+                                        look_for_exit(df,sym,stop_loss,target_price,'LONG')
+                                        print("EXITED ===============")
+                #Short check
+                elif trend=='clear_down':
+                    if adx > 25 :   
+                        if macd_hist < 0:
+                            if close < psar:
+                                if rsi > 50 :
+                                    if pdi < mdi:
+                                        #stop loss at psar
+                                        stop_loss = df['psar'][-1] 
+                                        # 1:1 with risk rewared
+                                        target_price = close - (df['psar'][-1] - close )                
+                                        stock_amnt = stock_amnt_order(df['Close'][-1])
+                                        api.submit_order(symbol=sym,qty=stock_amnt,side='sell',type='market',time_in_force='gtc')
+                                        print("ENTERED ++++++++++++++")
+                                        look_for_exit(df,sym,stop_loss,target_price,'short')
+                                        print("EXITED ===============")
+
+        print("--- %s seconds ---" % (time.time() - start_time))                                                           
 
 
             
             #these values will be put in to a sperate table
-        time.sleep(10)
+        time.sleep(100)
 
 global worker_num
 

@@ -360,13 +360,12 @@ def run_simulation(stock_to_trade):
         if curr_date.weekday() == 5 or curr_date.weekday() == 6 :
             continue
             #define up and down prices
-        exit_criteria_selecctor = 0
         ########################################################################################################################
         #                                      Data and Metrics for this day are calculated Here
         #                                     ===================================================
         ########################################################################################################################
         #get historical data from yfinance for this day
-        start_time= time.time()
+        #start_time = time.time()
 
         try:
             print(curr_date.strftime('%Y-%m-%d') + ' - ' + stock_to_trade)
@@ -379,22 +378,21 @@ def run_simulation(stock_to_trade):
             continue
 
         #ema 100
-        try:
-            df['ema60']= talib.SMA(df['Close'],timeperiod=60)
-        except :
-            print(df)
-
-        df['psar'] = talib.SAR(df['High'], df['Low'], acceleration=0.02, maximum=0.2)
-
-        df['macd'],df['macd_signal'],df['macd_hist'] = talib.MACD(df['Close'], fastperiod=12, slowperiod=26, signalperiod=9)
         
-        df['rsi'] = talib.RSI(df['Close'], timeperiod=14)
+        df['ema60']= talib.SMA(df['Close'].to_numpy(),timeperiod=60)
         
-        df['adx'] = talib.ADX(df['High'], df['Low'], df['Close'], timeperiod=14)
 
-        df['mdi'] = talib.MINUS_DI(df['High'],df['Low'], df['Close'], timeperiod=14)
+        df['psar'] = talib.SAR(df['High'].to_numpy(), df['Low'].to_numpy(), acceleration=0.02, maximum=0.2)
+
+        df['macd'],df['macd_signal'],df['macd_hist'] = talib.MACD(df['Close'].to_numpy(), fastperiod=12, slowperiod=26, signalperiod=9)
         
-        df['pdi'] = talib.PLUS_DI(df['High'],df['Low'], df['Close'], timeperiod=14)
+        df['rsi'] = talib.RSI(df['Close'].to_numpy(), timeperiod=14)
+        
+        df['adx'] = talib.ADX(df['High'].to_numpy(), df['Low'].to_numpy(), df['Close'].to_numpy(), timeperiod=14)
+
+        df['mdi'] = talib.MINUS_DI(df['High'].to_numpy(),df['Low'].to_numpy(), df['Close'].to_numpy(), timeperiod=14)
+        
+        df['pdi'] = talib.PLUS_DI(df['High'].to_numpy(),df['Low'].to_numpy(), df['Close'].to_numpy(), timeperiod=14)
         #fill trend column
         conditions = [
             (df['ema60'].lt(df['Close'])),
@@ -479,9 +477,11 @@ def run_simulation(stock_to_trade):
             position_is_open = False
             
         outname = "ROC_1-"+stock_to_trade+"-X-"+datetime.strftime(curr_date,"%Y-%m-%d")+".csv"
-        #outdir = '/output/'
-        outdir = 'C:\\Users\\nolys\\Desktop\\results\\'
+        outdir = '/output/'
+        #outdir = 'C:\\Users\\nolys\\Desktop\\results\\'
         fullname =  outdir + outname
+        #print("--- %s seconds ---" % (time.time() - start_time))
+
         if len(positions) > 1:
             positions.to_csv(fullname)
             #show_plt(i,stock_to_trade,start_date_range)
@@ -506,8 +506,9 @@ if sim_scope == 1:
     run_type = 'ADJ' 
     run_simulation(stock_to_trade)     
 else :
-    #file_path = '/input/'+symbols_file
-    file_path = 'C:\\Users\\nolys\\Desktop\\results\\symbols.txt'
+    file_path = '/input/Symbols'
+    #file_path = '/home/ubuntu/spiderdoc/spiderdoc/BT/containers/ROC_1/input/Symbols'
+    #file_path = 'C:\\Users\\nolys\\Desktop\\results\\symbols.txt'
     Sym_file = open(file_path,"r")
 
 

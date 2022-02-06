@@ -1,12 +1,7 @@
-
-from asyncio.windows_events import NULL
-from numpy import NaN, True_
 import pandas as pd
 import glob
 from itertools import islice
 from datetime import datetime,timedelta,time
-import matplotlib.pyplot as plt
-from pandas.core import indexing 
 
 delta_positions=pd.DataFrame(columns=['Timestamp_start','Timestamp_end','Value','Intent'])
 delta_long_position=pd.DataFrame(columns=['Timestamp_start','Timestamp_end','Value','Intent'])
@@ -15,7 +10,8 @@ trades_won=pd.DataFrame(columns=['Timestamp_start','Timestamp_end','Value','Inte
 trades_lost=pd.DataFrame(columns=['Timestamp_start','Timestamp_end','Value','Intent'])
 def concat_positions():
     #get all data from csv into a single df - 0 rows deleted - open positions deleted
-    path = "C:\\Users\\nolys\\Desktop\\results\\" # TODO:CHANGE PATH TO RELEVANT PATH FOR PROJECT
+    #path = "C:\\Users\\nolys\\Desktop\\results\\" # TODO:CHANGE PATH TO RELEVANT PATH FOR PROJECT
+    path = '/output/'
     all_files = glob.glob(path + "*.csv")
     li = []
     for filename in all_files:
@@ -59,7 +55,8 @@ def calc_gross_profit():
             gross_profit = gross_profit + delta_positions.loc[index]["Value"]
     return gross_profit
 def gen_delta_positions_per_sym(sym):
-    path = "C:\\Users\\nolys\\Desktop\\results\\" # TODO:CHANGE PATH TO RELEVANT PATH FOR PROJECT
+    #path = "C:\\Users\\nolys\\Desktop\\results\\" # TODO:CHANGE PATH TO RELEVANT PATH FOR PROJECT
+    path = '/output/'
     try:
         all_files = glob.glob(path +"*-"+sym+"-*.csv")
         li = []
@@ -224,7 +221,9 @@ print("max_lose_streak_length : "+     str(max_lose_streak_length))
 print('#####################################################')
 print('############# positions per symbols #################')
 print('#####################################################')
-file_path = 'C:\\Users\\nolys\\Desktop\\results\\symbols.txt'
+
+#file_path = 'C:\\Users\\nolys\\Desktop\\results\\symbols.txt'
+file_path = '/home/ubuntu/spiderdoc/spiderdoc/BT/containers/ROC_1/input/Symbols'
 Sym_file  = open(file_path,"r")
 Daily_df = pd.DataFrame(columns=['Stock','Date','Daily_delta'])
 Daily_df = Daily_df.loc[:,['Stock','Date','Daily_delta']]
