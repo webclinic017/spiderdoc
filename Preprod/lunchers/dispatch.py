@@ -1,5 +1,5 @@
 import os,subprocess,multiprocessing
-
+import yfinance as yf
 
 def gen_sym_files():
     
@@ -93,4 +93,6 @@ for host in active_hosts:
     #used to specify to dest server which Symbols_n is his
     i += 1 """
 
-gen_sym_files()
+df = yf.download(tickers='AAPl',period='15m',interval='1m')
+print(df)
+#gen_sym_files()
