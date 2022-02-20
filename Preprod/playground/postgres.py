@@ -1,7 +1,6 @@
 import psycopg2,time
 from datetime import datetime,timedelta
 import yfinance as yf
-from get_all_tickers import get_tickers as gt
 
 con = psycopg2.connect(host='localhost', database='initial_ohlc_db' ,user = 'postgres', password ='Ariel2234')
 curr = con.cursor()

@@ -19,12 +19,13 @@ def stock_amnt_order(close):
     return amount
 
 def look_for_exit(df,sym,stop_loss,target_price,type):
+    global api
     while True:
         try:
             #download data
-            df = yf.download(tickers=sym,period='30m',interval='1m')
+            df = yf.download(tickers=sym,period='3m',interval='1m')
             #remove unfinished candle
-            df =df.iloc[0:28,:]
+            df =df.iloc[0:2,:]
             df['Datetime'] = pd.to_datetime(df.index)
             df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume']]
             print('FORMATED!')
@@ -48,18 +49,22 @@ def look_for_exit(df,sym,stop_loss,target_price,type):
         if type == 'LONG':
             if close > target_price:
                 print('TARGET REACHED')
+                api.close_position(symbol=sym)
                 return True
             
             if close < stop_loss:
                 print('STOP LOSS')
+                api.close_position(symbol=sym)
                 return True
         elif type == 'SHORT':
             if close < target_price:
                 print('TARGET REACHED')
+                api.close_position(symbol=sym)
                 return True
             
             if close > stop_loss:
                 print('STOP LOSS')
+                api.close_position(symbol=sym)
                 return True
     
         time.sleep(10)
@@ -72,8 +77,8 @@ def main(i):
     candle_names = talib.get_function_groups()['Pattern Recognition']
 
     ########## account info ############################
-    API_ID = 'PKDELJBWRQWDJ382JUAI'
-    API_KEY = 'GsBn8An12ihLBHuwObFxhbqDGLDHeu8ThmJ1PmuO'
+    API_ID = 'PKSN7XLSQICEB8BLU4S9'
+    API_KEY = 'baOGnrJjAeBQfpe8Ql4NHfDwImo45RkkMUt2Vjat'
     api_endpoint = 'https://paper-api.alpaca.markets'
     ####################################################
     api = tradeapi.REST(key_id = API_ID,secret_key = API_KEY,base_url = api_endpoint)
@@ -92,24 +97,30 @@ def main(i):
             try:
                 #download data
                 df = yf.download(tickers=sym,period='70m',interval='1m')
-                #remove unfinished candle
-                df =df.iloc[0:68,:]
                 df['Datetime'] = pd.to_datetime(df.index)
                 df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume']]
+                df.index = pd.to_datetime(df.index, format = '%Y-%m-%d %H:%M:%S%z').strftime('%Y-%m-%d %H:%M:%S')
+                df.index = pd.to_datetime(df.index)
+                df = df.resample('1T').interpolate(method='linear', limit_direction='forward', axis=0)
             except :
                 print(f"SYMBOL : {sym} - was not found")
                 continue
             
-            curr_minute = datetime.now().minute
-            curr_minute -= 1
-            if len(df) > 0:
-                ts_minutes = df['Datetime'][-1].minute
+            curr_minute = datetime.now().minute -1
+            ts_minutes = df['Datetime'][-1].minute
+            if ts_minutes != curr_minute:
+                ts_minutes = df['Datetime'][-2].minute
                 if ts_minutes != curr_minute:
                     continue
                 else:
+                    df =df.iloc[:-2,:]
                     print(f'Sym : {sym} is up to date')
+                    print(df)
             else:
-                continue
+                print(f'Sym : {sym} is up to date')
+                print(df)
+
+
             try:  
                 df['ema60']= talib.SMA(df['Close'].to_numpy(),timeperiod=60)
 

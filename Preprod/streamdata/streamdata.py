@@ -31,13 +31,11 @@ def on_open(ws):
     auth_data ={"action": "auth", "params": "NYoCQ79AEJpaEDB4U4LwbZCN1RcZ7yIK"}
     ws.send(json.dumps(auth_data))
             
-    listen_message = {"action":"subscribe", "params":"AM.*"}
+    listen_message = {"action":"subscribe", "params":"A.*"}
     ws.send(json.dumps(listen_message))
     
 
 def on_message(ws, message):
-    global api
-    #message = message[1:-1]
     message = message[1:-1]
     to_db(message)
 

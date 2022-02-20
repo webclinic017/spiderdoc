@@ -2,3 +2,5 @@ pandas
 numpy
 yfinance
 alpaca_trade_api
+sqlalchemy
+ psycopg2-binary
