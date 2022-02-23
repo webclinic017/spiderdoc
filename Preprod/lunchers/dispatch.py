@@ -6,7 +6,7 @@ def gen_sym_files():
     number_of_procs = 32
     sym_per_worker = 3000
     
-    file_path = '/home/ubuntu/spiderdoc/spiderdoc/Preprod/Trader/symbols.txt'
+    file_path = '/home/ubuntu/spiderdoc/Preprod/Trader/symbols.txt'
     #file_path = 'C:\DEVOPS\python apps\spiderdoc\spiderdoc\Preprod\symbols.txt'
     Sym_file = open(file_path,"r")
     x = len(Sym_file.readlines())
@@ -24,14 +24,14 @@ def gen_sym_files():
     sym_count = int(x/sym_per_worker)
     for i in range(1,sym_count+1):
         file_path = 'C:\DEVOPS\python apps\spiderdoc\spiderdoc\Preprod\Trader\input\symbols_'+str(i)+'.txt'
-        file_path = '/home/ubuntu/spiderdoc/spiderdoc/Preprod/Trader/input/symbols_'+str(i)+'.txt'
+        file_path = '/home/ubuntu/spiderdoc/Preprod/Trader/input/symbols_'+str(i)+'.txt'
         Sym_file = open(file_path,"a")
         for k in range(sym_per_worker):
             Sym_file.write(li[line]+'\n')
             line += 1
     print(str(sym_count))
     for i in range(1,sym_count+1):
-        file_path = '/home/ubuntu/spiderdoc/spiderdoc/Preprod/Trader/input/symbols_'+str(i)+'.txt'
+        file_path = '/home/ubuntu/spiderdoc/Preprod/Trader/input/symbols_'+str(i)+'.txt'
         #file_path = 'C:\DEVOPS\python apps\spiderdoc\spiderdoc\Preprod\Trader\input\symbols_'+str(i)+'.txt'
         Sym_file = open(file_path,"r")
         x = len(Sym_file.readlines())
@@ -44,7 +44,7 @@ def gen_sym_files():
             li.append(Sym_file.readline().strip('\n'))
         
         for j in range (1,number_of_procs+1):   
-            new_file_path = '/home/ubuntu/spiderdoc/spiderdoc/Preprod/Trader/input/symbols_'+str(i)+"_"+str(j)+'.txt'
+            new_file_path = '/home/ubuntu/spiderdoc/Preprod/Trader/input/symbols_'+str(i)+"_"+str(j)+'.txt'
             final_Sym_file = open(new_file_path,"a")
 
             for k in range(int(x/number_of_procs)):
