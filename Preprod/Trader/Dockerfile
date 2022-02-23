@@ -23,6 +23,7 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 FROM python:3.7-slim AS build-image
+ENV TZ="America/New_York"
 COPY --from=compile-image /opt/venv /opt/venv
 
 # Make sure we use the virtualenv:

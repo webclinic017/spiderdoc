@@ -1,0 +1,1 @@
+30 16 * * * /usr/bin/sh /home/ubuntu/spiderdoc/spiderdoc/Preprod/lunchers/docker-run.sh

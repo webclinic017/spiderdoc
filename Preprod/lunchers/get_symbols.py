@@ -14,7 +14,7 @@ k = 0
 for asset in list:
     if asset.tradable == True:
         list2.append(asset)
-
+i= 0
 for asset in list2:
     try:
         df = yf.download(tickers=asset.symbol,period='60m',interval='1m')
