@@ -3,8 +3,8 @@ import yfinance as yf
 
 def gen_sym_files():
     
-    number_of_procs = 16
-    sym_per_worker = 1200
+    number_of_procs = 32
+    sym_per_worker = 3000
     
     file_path = '/home/ubuntu/spiderdoc/spiderdoc/Preprod/Trader/symbols.txt'
     #file_path = 'C:\DEVOPS\python apps\spiderdoc\spiderdoc\Preprod\symbols.txt'

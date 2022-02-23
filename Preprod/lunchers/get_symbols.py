@@ -23,4 +23,4 @@ for asset in list2:
             print(f"symbol {asset.symbol} Added - {k}/{i}")
             k += 1
     finally:
-        i=+1
+        i+=1
