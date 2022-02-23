@@ -11,6 +11,7 @@ import time
 import talib
 from itertools import compress
 import alpaca_trade_api as tradeapi
+import gc
 
 def is_time_between(begin_time, end_time, check_time=None):
     # If check time is not given, default to current UTC time
@@ -243,8 +244,9 @@ def main(i):
 
             
             #these values will be put in to a sperate table
+        gc.collect()   
         time.sleep(10)
-
+        
 global worker_num
 
 """ worker_num = sys.argv[1]
