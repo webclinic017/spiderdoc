@@ -189,7 +189,7 @@ def main(i):
 
             ema_60 = df['ema60'][-1]
             
-            print('ALL METERICS CALLED')
+            print(f'[{datetime.now()}] [INFO] {sym} Checking Conds') 
             #check aroon is not parallel and not in 100 / 0 (up or down)   
             now = datetime.now().time()
             tm0=tm(16,0,0)
@@ -236,9 +236,9 @@ def main(i):
                                         print(f'[{datetime.now()}] [ENTER] {sym} [SHORT] target= {target_price} stop= {stop_loss} amnt={stock_amnt} close= {close}')
                                         look_for_exit(df,sym,stop_loss,target_price,'SHORT',stock_amnt)
 
-        print(f"--- %s seconds --- {worker_num}" % (time.time() - start_time) )  
-        print(f' down_fail_c ={down_fail_c } not_in_time_c = {not_in_time_c} to_short_c = {to_short_c}  -  worker :{worker_num}')
-        print(f"total fails :{down_fail_c+not_in_time_c+to_short_c} / 76")                                                         
+        print(f'[{datetime.now()}] [SUMMERY] {worker_num} %s' % (time.time() - start_time)) 
+        print(f'[{datetime.now()}] [SUMMERY] down_fail_c= {down_fail_c } not_in_time_c= {not_in_time_c} to_short_c= {to_short_c}  -  worker: {worker_num}')
+        print(f"[{datetime.now()}] [SUMMERY] total fails: {down_fail_c+not_in_time_c+to_short_c}")                                                         
 
 
             
