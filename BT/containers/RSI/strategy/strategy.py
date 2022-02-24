@@ -8,6 +8,7 @@ from scipy.signal import argrelextrema
 import sys
 import multiprocessing
 import time
+import gc
 pd.options.mode.chained_assignment = None  # default='warn'
 
 get_rid_of_position = False
@@ -234,14 +235,10 @@ def enter_long(i):
     au        = df['aroonup'][i]
     ad       = df['aroondown'][i]
       
-    if trend == 'clear_up':
-        if ad == 0 and au == 100:
-            if psar < close:
-                if rsi < 50:
-                    if adx >= 25:
-                        if pdi > mdi:
-                            return True
-    
+    if rsi < 30:
+        if psar < close:
+            return True
+
         
     
     return False 
@@ -275,12 +272,10 @@ def enter_short(i):
     
     au        = df['aroonup'][i]
     ad        = df['aroondown'][i]
-      
-    if trend == 'clear_down':   
-        if au == 0 and ad == 100:
-            if psar > close:
-                if rsi > 30:
-                    return True
+        
+    if rsi > 70:
+        if psar > close:
+            return True
        
         
     
@@ -362,7 +357,7 @@ def run_simulation(stock_to_trade):
 
         try:
             print(curr_date.strftime('%Y-%m-%d') + ' - ' + stock_to_trade)
-            df = yf.download(stock_to_trade,curr_date,tommorow_date,interval='1m')
+            df = yf.download(stock_to_trade,curr_date,tommorow_date,interval='1m', progress=False,show_errors=False)
         except:
             stock_not_avail = True
             continue
@@ -373,27 +368,11 @@ def run_simulation(stock_to_trade):
         #ema 100
         
         
-        df['ema60']= talib.SMA(df['Close'],timeperiod=60)
         
         df['psar'] = talib.SAR(df['High'], df['Low'], acceleration=0.02, maximum=0.2)
         
         df['rsi'] = talib.RSI(df['Close'], timeperiod=14)
         
-        df['adx'] = talib.ADX(df['High'], df['Low'], df['Close'], timeperiod=14)
-
-        df['mdi'] = talib.MINUS_DI(df['High'],df['Low'], df['Close'], timeperiod=14)
-        
-        df['pdi'] = talib.PLUS_DI(df['High'],df['Low'], df['Close'], timeperiod=14)
-        
-        df['aroondown'], df['aroonup'] = talib.AROON(df['High'], df['Low'], timeperiod=14)
-        #fill trend column
-        conditions = [
-            (df['ema60'].lt(df['Close'])),
-            (df['ema60'].gt(df['Close']))
-                    ]    
-    
-        choices = ['clear_up','clear_down']
-        df['trend'] = np.select(conditions, choices, default=0 )
         levels = []
         
         df_bkp = df
@@ -402,7 +381,7 @@ def run_simulation(stock_to_trade):
         
         df['Datetime'] = pd.to_datetime(df.index)
 
-        df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume','ema60','trend','psar','aroonup','aroondown','rsi','adx','pdi','mdi']]
+        df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume','psar','rsi']]
         ##########################################################################################################################
         #                                       RUN THROUGH DAY                                                                  #   
         ##########################################################################################################################
@@ -459,7 +438,7 @@ def run_simulation(stock_to_trade):
                         exit_select == 0
                         #DAY FINISHED COMPUTING
                     
-
+        gc.collect()
         last_intent = positions.iloc[-1]['Intent']    
         if last_intent == 'LONG':
             close_long(i)
