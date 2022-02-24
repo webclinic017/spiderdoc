@@ -1,6 +1,5 @@
 from contextlib import nullcontext
 from re import X
-from tkinter import Entry
 import yfinance as yf
 import pandas as pd
 import ta
@@ -9,10 +8,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mpl_dates
 from scipy.signal import argrelextrema
-from scipy import stats
+from sklearn.cluster import KMeans
 from datetime import timedelta,time,datetime
 import sys
 import multiprocessing
+from sklearn.metrics import silhouette_score
+
 from itertools import compress
 pd.options.mode.chained_assignment = None  # default='warn'
 
@@ -138,25 +139,17 @@ candle_rankings = {
         "CDLSTALLEDPATTERN_Bull": 93,
         "CDLSTALLEDPATTERN_Bear": 93,
         "CDLKICKINGBYLENGTH": 96,
-        "CDLKICKINGBYLENGTH_Bear": 102,
-        "CDLCOUNTERATTACK_Bull" : 102,
-        "CDLCOUNTERATTACK_Bear": 102
+        "CDLKICKINGBYLENGTH_Bear": 102
     }
 
 get_rid_of_position = False
 position_is_open=False
-""" #symbols_file = sys.argv[1]
+""" symbols_file = sys.argv[1]
 start_date_range = sys.argv[2]
 end_date_range = sys.argv[3]
 run_type = sys.argv[4]
-prallel_proc_amnt = sys.argv[5] """
-
-start_date_range = '2022-01-03'
-end_date_range = '2022-01-21'
-run_type = 'REAL'
-prallel_proc_amnt = 16
-
-prallel_proc_amnt=int(prallel_proc_amnt) 
+prallel_proc_amnt = sys.argv[5]
+prallel_proc_amnt=int(prallel_proc_amnt) """
 
 positions              = pd.DataFrame(columns=['Timestamp','Action','Amount','Price','TValue','Intent','Balance'])
 #for eval 
@@ -170,9 +163,8 @@ positions.set_index('Timestamp')
 #                                           FUNCTIONS
 ########################################################################################################################
 
-def update_pos(index,datetime,action,price,amount,tvalue,intent,balance) :
+def update_pos(index,action,price,amount,tvalue,intent,balance) :
     global positions
-    positions.loc[index,'Timestamp']=datetime
     positions.loc[index,'Action']=action
     positions.loc[index,'Amount']=amount
     positions.loc[index,'Price']=price
@@ -180,19 +172,6 @@ def update_pos(index,datetime,action,price,amount,tvalue,intent,balance) :
     positions.loc[index,'Intent']=intent
     positions.loc[index,'Balance']=balance
 
-def update_balance (balance,trans_value,action,intent):  
-    if (action == 'buy') :
-        balance = balance - trans_value
-    else:
-        balance = balance + trans_value
-    return balance
-
-def update_stock_amnt (balance,stock_price,action):
-    tmp_mod=balance % stock_price
-    tmp_balace=balance-tmp_mod
-    stock_amnt=tmp_balace / stock_price
-
-    return stock_amnt
 
 def isSupport(df,i):
   support = df['Low'][i] < df['Low'][i-1]  and df['Low'][i] < df['Low'][i+1] and df['Low'][i+1] < df['Low'][i+2] and df['Low'][i-1] < df['Low'][i-2]
@@ -204,6 +183,7 @@ def isResistance(df,i):
 
 def isFarFromLevel(l,levels,s):
    return np.sum([abs(l-x) < s  for x in levels]) == 0
+#returns list of risk factor,if min / max  return null
 
 def clean_levels(minute_ran):
     global levels
@@ -254,7 +234,7 @@ def clean_levels(minute_ran):
                 break
     return new_levels        
             
-def show_plt(minute_ran,stock,start_date):
+def show_plt(minute_ran):
     global curr_stock_historical_bkp
     global levels
     global positions
@@ -263,7 +243,7 @@ def show_plt(minute_ran,stock,start_date):
     df['Datetime'] = pd.to_datetime(df.index)
     df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close']]
     
-
+  
     n=7
     curr_stock_historical_min = curr_stock_historical_1.iloc[argrelextrema(curr_stock_historical_1.Close.values, np.less_equal,
             order=n)[0]]['Low']
@@ -272,7 +252,6 @@ def show_plt(minute_ran,stock,start_date):
     
     up = curr_stock_historical_bkp[curr_stock_historical_bkp.Close>=curr_stock_historical_bkp.Open]
     down = curr_stock_historical_bkp[curr_stock_historical_bkp.Close<curr_stock_historical_bkp.Open] 
-    
     #define colors to use
     #bar and minmax colors
     col1 = 'green'
@@ -291,23 +270,20 @@ def show_plt(minute_ran,stock,start_date):
     width = .0002
     width2 = .00002
     plt.subplots(3,1,sharex=True)
+
     plt.subplot(3,1,1)
-    plt.title(stock+' '+start_date)
     #plot up prices
     plt.bar(up.index,up.Close-up.Open,width,bottom=up.Open,color=col1)
     plt.bar(up.index,up.High-up.Close,width2,bottom=up.Close,color=col1)
     plt.bar(up.index,up.Low-up.Open,width2,bottom=up.Open,color=col1)
 
-    for level in levels:
-        plt.hlines(level[1],xmin=df['Datetime'][level[0]],\
-                xmax=max(df['Datetime']),colors='blue')
-   
-    plt.scatter(curr_stock_historical_min.index, curr_stock_historical_min, c='purple')
-    plt.scatter(curr_stock_historical_max.index, curr_stock_historical_max, c='pink') 
     #plot down prices
     plt.bar(down.index,down.Close-down.Open,width,bottom=down.Open,color=col2)
     plt.bar(down.index,down.High-down.Open,width2,bottom=down.Open,color=col2)
     plt.bar(down.index,down.Low-down.Close,width2,bottom=down.Close,color=col2)
+    
+    plt.plot(curr_stock_historical.index,curr_stock_historical["ema_med"],color=col4)
+    plt.plot(curr_stock_historical.index,curr_stock_historical["ema_thin"],color=col5)
     
     #rotate x-axis tick labels
     plt.xticks(rotation=45, ha='right')
@@ -316,163 +292,38 @@ def show_plt(minute_ran,stock,start_date):
     positions_short =  positions[positions['Intent'] == "SHORT"]
     positions_closed_short = positions[positions['Intent'] == "CLOSE_SHORT"]
     
-    plt.scatter(positions_long['Timestamp'],positions_long['Price'],marker='^',color="yellow")
-    plt.scatter(positions_closed_longs['Timestamp'],positions_closed_longs['Price'],marker='^',color="orange")
-    plt.scatter(positions_short['Timestamp'],positions_short['Price'],marker='v',color="yellow")
-    plt.scatter(positions_closed_short['Timestamp'],positions_closed_short['Price'],marker='v',color="orange")
+    #draw s n r
+    for level in levels:
+        plt.hlines(level[1],xmin=df['Datetime'][level[0]],\
+                xmax=max(df['Datetime']),colors='blue')    
+    
+    
+    plt.scatter(positions_long.index,positions_long['Price'],marker='^',color="green")
+    plt.scatter(positions_closed_longs.index,positions_closed_longs['Price'],marker='^',color="red")
+    plt.scatter(positions_short.index,positions_short['Price'],marker='v',color="green")
+    plt.scatter(positions_closed_short.index,positions_closed_short['Price'],marker='v',color="red")
+    
+    plt.scatter(curr_stock_historical_min.index, curr_stock_historical_min, c='r')
+    plt.scatter(curr_stock_historical_max.index, curr_stock_historical_max, c='g')
     
     plt.subplot(3,1,2)
     plt.plot(curr_stock_historical.index,curr_stock_historical["ADX"],color='b')
-    plt.axhline(y=30, color='b', linestyle='-')
-    plt.plot(curr_stock_historical.index,curr_stock_historical["PDI"],color='g')
+    plt.axhline(y=25, color='b', linestyle='-')
     plt.plot(curr_stock_historical.index,curr_stock_historical["MDI"],color='r')
+    plt.plot(curr_stock_historical.index,curr_stock_historical["PDI"],color='g')
 
     
     plt.subplot(3,1,3)
-    plt.plot(curr_stock_historical.index,curr_stock_historical["roc_sma_5"],color='g')
-    plt.plot(curr_stock_historical.index,curr_stock_historical["roc_sma_15"],color='r')
-    plt.axhline(y=0, color='b', linestyle='-')
+    plt.plot(curr_stock_historical.index,curr_stock_historical["rsi"],color='b')
+    plt.axhline(y=30, color='b', linestyle='-')
+    plt.axhline(y=70, color='b', linestyle='-')
+
     
-    
-    
+
+
     #display candlestick chart ,EMA_[wide,med,thin] ,first n local min/max of 1st period of the day,
     plt.show()
-    
-def sell_short(i,stock_amnt_to_order):
-    global balance
-    global curr_stock_historical
-
-    action='sell'
-    intent = 'SHORT'
-    curr_price =curr_stock_historical['Close'][i]
-    stock_amnt=stock_amnt_to_order
-    trans_value=curr_price*stock_amnt
-    if run_type == 'ADJ' or 'REAL' :
-        balance=update_balance(balance,trans_value,action,intent)
-    update_pos(i,curr_stock_historical['Datetime'][i],action,curr_price,stock_amnt,trans_value,intent,balance)
-
-def close_short(i):
-    global balance
-    global curr_stock_historical
-
-    action='buy'
-    intent = 'CLOSE_SHORT'
-    curr_price =curr_stock_historical['Close'][i]
-    stock_amnt =positions.iloc[-1]['Amount']
-    trans_value=curr_price*stock_amnt
-    if run_type == 'ADJ' or 'REAL' :
-        balance=update_balance(balance,trans_value,action,intent)
-    update_pos(i,curr_stock_historical['Datetime'][i],action,curr_price,stock_amnt,trans_value,intent,balance)  
-
-def buy_long(i,stock_amnt_to_order):
-    global balance
-    global curr_stock_historical
-    action='buy'
-    intent = 'LONG'
-    curr_price =curr_stock_historical['Close'][i]
-    stock_amnt=stock_amnt_to_order
-    trans_value=curr_price*stock_amnt
-    if run_type == 'ADJ' or 'REAL' :
-        balance=update_balance(balance,trans_value,action,intent)
-    update_pos(i,curr_stock_historical['Datetime'][i],action,curr_price,stock_amnt,trans_value,intent,balance)
-
-def close_long(i):
-    global balance
-    global curr_stock_historical
-
-    action='sell'
-    intent = 'CLOSE_LONG'
-    curr_price =curr_stock_historical['Close'][i]
-    stock_amnt=positions.iloc[-1]['Amount']
-    trans_value=curr_price*stock_amnt
-    if run_type == 'ADJ' or 'REAL' :
-        balance=update_balance(balance,trans_value,action,intent)
-    update_pos(i,curr_stock_historical['Datetime'][i],action,curr_price,stock_amnt,trans_value,intent,balance)     
-
-def get_support(i,close):
-    global levels
-    li = []
-    for level in levels:
-        li.append(level[1])
-    arr = np.asarray(li)
-    try:
-        val = arr[arr > close].min()
-    except :
-        return 0
-    return val
-        
-
-def get_resistance(i,close):
-    global levels
-    li = []
-    for level in levels:
-        li.append(level[1])
-    arr = np.asarray(li)
-    try:
-        val = arr[arr < close].max()
-    except:
-        return 0
- 
-    return val 
-
-def set_stop_and_target(i):
-    global curr_stock_historical
-    global balance
-    max_risk = balance * 0.02
-    close = curr_stock_historical["Close"][i]
-    trend = curr_stock_historical["trend"][i]
-    sup = get_support(i,close)
-    res= get_resistance(i,close)
-    if trend == 'clear_up':
-        rrr = ((res-close)/close) / ((close-sup)/sup)
-    if trend == 'clear_down':
-        rrr = ((close-sup)/sup) / ((res-close)/close)
-    else:
-        rrr = 0
-    return rrr
-
-def stock_amnt_order(close,level):
-    global balance
-    close_level_delta = abs(close-level)
-    max_amnt=int(balance/close)
-    max_tval=max_amnt * close
-    starting_max_risk=close_level_delta*max_amnt
-    desired_max_risk= balance * 0.02
-    if starting_max_risk >= desired_max_risk:
-        devide_coff=(starting_max_risk/desired_max_risk)
-        stock_amnt_order = (max_amnt / devide_coff)
-    else:
-        stock_amnt_order=max_amnt
-    return stock_amnt_order
-
-def potential_delta(stock_amnt_order,close,level):
-    if level==0:
-        return 0
-    #logical else
-    close_level_delta = abs(close-level)
-    pot_delta = close_level_delta * stock_amnt_order
-    return pot_delta
-    
-def  get_pos_delta(close):
-    global positions
-    intent=positions.iloc[-1]['Intent']
-    stock_amnt = positions.iloc[-1]['Amount']
-    prev_price = positions.iloc[-1]['Price']
-    if intent == "LONG":
-        delta = (close - prev_price)* stock_amnt
-    else:
-        delta = (prev_price - close)* stock_amnt
-    return delta
-
-def get_target_price(level,close):
-    delta = abs(close-level)
-    delta_target = delta *1.5
-    if(level >= close):
-        tp=close-delta_target
-    else:
-        tp = close + delta_target
-    return tp
-      
+   
 def get_pattern_df(i):
     global curr_stock_historical
     global candle_rankings
@@ -536,77 +387,6 @@ def get_pattern_df(i):
     df.drop(candle_names, axis = 1, inplace = True)
     return df
 
-
-    
-    return False   
-
-def no_support_tp(close,resistance):
-    delta = resistance - close
-    return close - (delta * 2)
-def no_resistance_tp(close,support):
-    delta = close - support
-    return  close + (delta * 2)
-
-
-def get_arg_rel_extrema_trend(i):
-    
-    global curr_stock_historical
-    n = 7
-    df = curr_stock_historical_bkp.iloc[0:i,:]
-    df_min = df.iloc[argrelextrema(df.Close.values, np.less_equal,
-            order=n)[0]]['Low']
-    df_max = df.iloc[argrelextrema(df.Close.values, np.greater_equal,
-            order=n)[0]]['High']
-    if len(df_min) < 5:
-        return 'unclear'
-    if df_min[-1] > df_min[-2] :
-        return 'up'
-    if df_min[-1] < df_min[-2] :
-        return 'down'
-def enter_long(i,res,sup):
-    global curr_stock_historical
-    df=curr_stock_historical
-    adx = df['ADX'][i]
-    pdi = df['PDI'][i]
-    mdi = df['MDI'][i]
-    
-    roc_5 = df['roc_sma_5'][i]
-    roc_15 = df['roc_sma_15'][i]
-    
-    if pdi < 35:
-        return False
-    
-    if adx < 26:
-        return False
-    
-    if pdi < mdi :
-        return False
-    
-    if roc_5 < roc_15:
-        return False
-    
-    
-    return False
-    
-    
-def exit_long(i,entry):
-    global curr_stock_historical
-    df=curr_stock_historical
-    adx = df['ADX'][i]
-    pdi = df['PDI'][i]
-    mdi = df['MDI'][i]
-    close= df['Close'][i]
-    
-    if adx <= 25:
-        return True
-    if pdi < mdi:
-        return True
-    
-    
-    return False
-
-    
-
 def run_simulation(stock_to_trade):    
     get_rid_of_position = False
     position_is_open=False
@@ -639,16 +419,16 @@ def run_simulation(stock_to_trade):
     #                                           New Day initilazion
     #                                           ==================
     #########################################################################################################################                                            
-        positions              = pd.DataFrame(columns=['Timestamp','Action','Amount','Price','TValue','Intent','Balance'])
+        positions              = pd.DataFrame(columns=['Timestamp','Action','Amount','Price','TValue','Intent'])
         #for eval 
-        #positions['Timestamp'] = pd.to_datetime(positions.index)
-        positions = positions.loc[:,['Timestamp','Action','Amount','Price','TValue','Intent',"Balance"]]
-
+        positions_short        = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
+        positions_closed_short = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
+        positions_long         = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
+        positions_closed_longs = pd.DataFrame(columns=['Action','Price','Amount','TValue','Intent'])
         curr_date=curr_date + timedelta(days=1) 
+        update_pos('0000-00-00 00:00:00-00:00','NA',0,0,0,'NA',balance)
         if run_type != 'REAL' :
             balance=10000
-        update_pos(0,'0000-00-00 00:00:00-00:00','NA',0,0,0,'NA',balance)
-
         tommorow_date =curr_date + timedelta(days=1)
         get_rid_of_position = False 
         #skips loop run if staurday
@@ -662,42 +442,44 @@ def run_simulation(stock_to_trade):
         ########################################################################################################################
         #get historical data from yfinance for this day
         try:
-            print(curr_date.strftime('%Y-%m-%d') + ' - ' + stock_to_trade)
             curr_stock_historical = yf.download(stock_to_trade,curr_date,tommorow_date,interval='1m')
             curr_stock_historical.head()
         except:
             stock_not_avail = True
-            continue
+            break
 
-        #ema 60
         #ema 30
-        curr_stock_historical['ema_med']= talib.SMA(curr_stock_historical['Close'],timeperiod=30)
+        curr_stock_historical['ema_med']= ta.trend.sma_indicator(curr_stock_historical['Close'],window=30,fillna=False)
         #ema 10
-        curr_stock_historical['ema_thin']= talib.SMA(curr_stock_historical['Close'],timeperiod=10)
+        curr_stock_historical['ema_thin']= ta.trend.sma_indicator(curr_stock_historical['Close'],window=10,fillna=False)
         
         #roc 
-        curr_stock_historical["roc_thin"] = talib.ROCP(curr_stock_historical['Close'], timeperiod = 5)
+        curr_stock_historical["roc_thin"] = talib.ROC(curr_stock_historical['Close'], timeperiod = 5)
+        #roc wide
+        curr_stock_historical["roc_wide"] = talib.ROC(curr_stock_historical['Close'], timeperiod = 15)
+
         
         #roc sma        
         curr_stock_historical["roc_sma_15"] = talib.SMA(curr_stock_historical['roc_thin'], timeperiod = 15)
 
-        #roc_roc_sma_15
+        #roc_roc_sma_30
         curr_stock_historical["roc_sma_5"] = talib.SMA(curr_stock_historical['roc_thin'], timeperiod = 5)
-
-        #roc of roc
-        curr_stock_historical["roc_roc_5"] = talib.ROCP(curr_stock_historical['roc_sma_5'], timeperiod = 1)
-        curr_stock_historical["roc_roc_30"] = talib.ROCP(curr_stock_historical['roc_sma_15'], timeperiod = 1)
         
         curr_stock_historical['rsi'] = talib.RSI(curr_stock_historical['Close'], timeperiod=14)
-        
+
         curr_stock_historical['ADX'] = talib.ADX(curr_stock_historical['High'], curr_stock_historical['Low'], curr_stock_historical['Close'], timeperiod=14)
-        curr_stock_historical['PDI'] = talib.PLUS_DI(curr_stock_historical['High'], curr_stock_historical['Low'], curr_stock_historical['Close'], timeperiod=14)                
+
         curr_stock_historical['MDI'] = talib.MINUS_DI(curr_stock_historical['High'], curr_stock_historical['Low'], curr_stock_historical['Close'], timeperiod=14)
+
+        curr_stock_historical['PDI'] = talib.PLUS_DI(curr_stock_historical['High'], curr_stock_historical['Low'], curr_stock_historical['Close'], timeperiod=14)
+
+        
+        
         #fill trend column
         conditions = [
             (curr_stock_historical['ema_med'].lt(curr_stock_historical['ema_thin'])),
             (curr_stock_historical['ema_med'].gt(curr_stock_historical['ema_thin']))
-                    ]    
+                    ]     
     
         choices = ['clear_up','clear_down']
         curr_stock_historical['trend'] = np.select(conditions, choices, default=0 )
@@ -712,16 +494,11 @@ def run_simulation(stock_to_trade):
         
         pattern_df = pd.DataFrame(columns=["Datetime"])
         pattern_df =pattern_df.loc[:,['Datetime']]
-        curr_stock_historical =get_pattern_df(420)
         curr_stock_historical['Datetime'] = pd.to_datetime(curr_stock_historical.index)
-        
-        #calc Roc_prev_delta
-
-        curr_stock_historical = curr_stock_historical.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume','roc_sma_5','roc_sma_15','pattern_val','candlestick_pattern','ADX','PDI','MDI','rsi']]
+        curr_stock_historical = curr_stock_historical.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','ema_thin','ema_med','trend','roc_sma_15','roc_sma_5','rsi','ADX','MDI','PDI']]
         ##########################################################################################################################
         #                                       RUN THROUGH DAY                                                                  #   
         ##########################################################################################################################
-
         for i in range(2,curr_stock_historical.shape[0]-2):
             #search for snr live
             if isSupport(curr_stock_historical,i):
@@ -729,90 +506,37 @@ def run_simulation(stock_to_trade):
                 if isFarFromLevel(l,levels,s):
                     levels.append((i,l))
                     levels = clean_levels(i)
-
             elif isResistance(curr_stock_historical,i):
                 l = curr_stock_historical['High'][i]
                 if isFarFromLevel(l,levels,s):
                     levels.append((i,l))
                     levels = clean_levels(i)
-
             
             #what was the intent of the previos trade in positions
             last_intent = positions.iloc[-1]['Intent']    
             #current close
             close=curr_stock_historical['Close'][i]                
             #show current state # TODO : remove            
-            
-                
+            #if i % 30 == 0:
+                #levels = clean_levels(i)
                 #print(positions)  
-            #############################################################
-            #                     STRATEGY                              #
-            #############################################################
-            support = get_support(i,close)
-            resistance = get_resistance(i,close)
-            close = curr_stock_historical['Close'][i]
-            
-
-            #possible to enter osotion only between 10:30 - 15:30 and when no positions are open
-            if (position_is_open==False and i < 300 and i > 60):
-                if(enter_long(i,resistance,support) == True):
-                    position_is_open = True
-                    stock_amnt_to_order = stock_amnt_order(close,support)
-                    stop_loss = support
-                    if resistance != 0:
-                        target_price= get_target_price(resistance,close)
-                    else:
-                        target_price = no_resistance_tp(close,support)
-                    
-                    buy_long(i,stock_amnt_to_order)
-                    print( ' +++++++++++++++++++ ')
-                    entry_time = i 
-            elif ( position_is_open ==True):
-                if (exit_long(i,entry_time) == True):
-                    position_is_open=False
-                    close_long(i)
-                    print( ' ============ ')
-                    #DAY FINISHED COMPUTING
-
-        last_intent = positions.iloc[-1]['Intent']    
-        if last_intent == 'LONG':
-            close_long(i)
-            position_is_open = False
-            
-        outname = "ROC_1-"+stock_to_trade+"-X-"+datetime.strftime(curr_date,"%Y-%m-%d")+".csv"
-        #outdir = '/output/'
-        outdir = 'C:\\Users\\nolys\\Desktop\\results\\'
-        fullname =  outdir + outname
-        positions.to_csv(fullname)
-        
-        """ outname = "ROC_1-"+stock_to_trade+"-X-"+datetime.strftime(curr_date,"%Y-%m-%d")+"-STOCK.csv"
-        #outdir = '/output/'
-        outdir = 'C:\\Users\\nolys\\Desktop\\results\\'
-        fullname =  outdir + outname
-        curr_stock_historical.to_csv(fullname) """
-        
-        #pd.set_option('display.max_columns', None,'display.max_rows', None)
-        #print(positions)
-        #show_plt(i,stock_to_trade,start_date_range)
-    if (stock_not_avail):
-        pass
+        show_plt(i)
 
                 
                     
-sim_scope = 0                
-if sim_scope == 1:               
-    stock_to_trade = 'A'
-    start_date_range = '2022-01-07'
-    end_date_range = '2022-01-08'
-    run_type = 'ADJ' 
-    run_simulation(stock_to_trade)     
-else :
-    #file_path = '/input/'+symbols_file
-    file_path = 'C:\\Users\\nolys\\Desktop\\results\\symbols.txt'
-    Sym_file = open(file_path,"r")
+                
+                
+            
+stock_to_trade = 'APO'
+start_date_range = '2022-01-05'
+end_date_range = '2022-01-06'
+run_type = 'ADJ'
+run_simulation(stock_to_trade)
+""" file_path = '/input/'+symbols_file
+Sym_file = open(file_path,"r")
 
 
-    if __name__ == '__main__':
-        # start n worker processes
-        with multiprocessing.Pool(processes=prallel_proc_amnt) as pool:
-            pool.map_async(run_simulation,iterable=Sym_file).get()  
+if __name__ == '__main__':
+    # start n worker processes
+    with multiprocessing.Pool(processes=prallel_proc_amnt) as pool:
+        pool.map_async(run_simulation,iterable=Sym_file).get()   """
