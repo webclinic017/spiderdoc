@@ -82,7 +82,7 @@ def look_for_exit(df,sym,stop_loss,target_price,type,amnt):
                 print(f'[{datetime.now()}] [BUY POWER] {api.get_account().buying_power}')
                 print(f'[{datetime.now()}] [EQUITY] {api.get_account().equity}')
                 return True
-    
+        gc.collect()
         time.sleep(10)
                 
 def main(i):
