@@ -18,8 +18,8 @@ end_date_range = sys.argv[3]
 run_type = sys.argv[4]
 prallel_proc_amnt = sys.argv[5] """
 
-start_date_range = '2022-01-09'
-end_date_range = '2022-02-04'
+start_date_range = '2022-02-01'
+end_date_range = '2022-02-25'
 run_type = 'REAL'
 prallel_proc_amnt = 16
 
@@ -379,20 +379,20 @@ def run_simulation(stock_to_trade):
 
         #ema 100
         
-        df['ema60']= talib.SMA(df['Close'].to_numpy(),timeperiod=60)
+        df['ema60']= talib.SMA(df['Close'],timeperiod=60)
         
 
-        df['psar'] = talib.SAR(df['High'].to_numpy(), df['Low'].to_numpy(), acceleration=0.02, maximum=0.2)
+        df['psar'] = talib.SAR(df['High'], df['Low'], acceleration=0.02, maximum=0.2)
 
-        df['macd'],df['macd_signal'],df['macd_hist'] = talib.MACD(df['Close'].to_numpy(), fastperiod=12, slowperiod=26, signalperiod=9)
+        df['macd'],df['macd_signal'],df['macd_hist'] = talib.MACD(df['Close'], fastperiod=12, slowperiod=26, signalperiod=9)
         
-        df['rsi'] = talib.RSI(df['Close'].to_numpy(), timeperiod=14)
+        df['rsi'] = talib.RSI(df['Close'], timeperiod=14)
         
-        df['adx'] = talib.ADX(df['High'].to_numpy(), df['Low'].to_numpy(), df['Close'].to_numpy(), timeperiod=14)
+        df['adx'] = talib.ADX(df['High'], df['Low'], df['Close'], timeperiod=14)
 
-        df['mdi'] = talib.MINUS_DI(df['High'].to_numpy(),df['Low'].to_numpy(), df['Close'].to_numpy(), timeperiod=14)
+        df['mdi'] = talib.MINUS_DI(df['High'],df['Low'], df['Close'], timeperiod=14)
         
-        df['pdi'] = talib.PLUS_DI(df['High'].to_numpy(),df['Low'].to_numpy(), df['Close'].to_numpy(), timeperiod=14)
+        df['pdi'] = talib.PLUS_DI(df['High'],df['Low'], df['Close'], timeperiod=14)
         #fill trend column
         conditions = [
             (df['ema60'].lt(df['Close'])),
@@ -477,8 +477,8 @@ def run_simulation(stock_to_trade):
             position_is_open = False
             
         outname = "ROC_1-"+stock_to_trade+"-X-"+datetime.strftime(curr_date,"%Y-%m-%d")+".csv"
-        outdir = '/output/'
-        #outdir = 'C:\\Users\\nolys\\Desktop\\results\\'
+        #outdir = '/output/'
+        outdir = 'C:\\Users\\nolys\\Desktop\\results\\'
         fullname =  outdir + outname
         #print("--- %s seconds ---" % (time.time() - start_time))
 
@@ -506,9 +506,9 @@ if sim_scope == 1:
     run_type = 'ADJ' 
     run_simulation(stock_to_trade)     
 else :
-    file_path = '/input/Symbols'
+    #file_path = '/input/Symbols'
     #file_path = '/home/ubuntu/spiderdoc/spiderdoc/BT/containers/ROC_1/input/Symbols'
-    #file_path = 'C:\\Users\\nolys\\Desktop\\results\\symbols.txt'
+    file_path = 'C:\\Users\\nolys\\Desktop\\results\\symbols.txt'
     Sym_file = open(file_path,"r")
 
 

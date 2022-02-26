@@ -195,17 +195,17 @@ def main(i):
             now = datetime.now().time()
             tm0=tm(16,0,0)
             if  now < tm0:  
-                print(f'[{datetime.now()}] [CHECK 0] {sym} Checking Conds')         
+                print(f'[{datetime.now()}] [CHECK 1 0] {sym} Checking Conds')         
                 if trend == 'clear_up':
-                    print(f'[{datetime.now()}] [CHECK 1] {sym} [LONG] adx= {adx}')
+                    print(f'[{datetime.now()}] [CHECK 1 1] {sym} [LONG] adx= {adx}')
                     if adx > 25 : 
-                        print(f'[{datetime.now()}] [CHECK 2] {sym} [LONG] macd= {macd_hist}')  
+                        print(f'[{datetime.now()}] [CHECK 1 2] {sym} [LONG] macd= {macd_hist}')  
                         if macd_hist > 0:
-                            print(f'[{datetime.now()}] [CHECK 3] {sym} [LONG] close= {close} psar= {psar}')
+                            print(f'[{datetime.now()}] [CHECK 1 3] {sym} [LONG] close= {close} psar= {psar}')
                             if close > psar:
-                                print(f'[{datetime.now()}] [CHECK 4] {sym} [LONG] rsi= {rsi}')
+                                print(f'[{datetime.now()}] [CHECK 1 4] {sym} [LONG] rsi= {rsi}')
                                 if rsi < 50 :
-                                    print(f'[{datetime.now()}] [CHECK 5] {sym} [LONG] pdi= {pdi} mdi= {mdi}')
+                                    print(f'[{datetime.now()}] [CHECK 1 5] {sym} [LONG] pdi= {pdi} mdi= {mdi}')
                                     if pdi > mdi:
                                         #stop loss at psar
                                         stop_loss = df['psar'][-1] 
@@ -217,15 +217,15 @@ def main(i):
                                         look_for_exit(df,sym,stop_loss,target_price,'LONG',stock_amnt)
                 #Short check
                 elif trend=='clear_down':
-                    print(f'[{datetime.now()}] [CHECK 1] {sym} [SHORT] adx= {adx}')
+                    print(f'[{datetime.now()}] [CHECK 1 1] {sym} [SHORT] adx= {adx}')
                     if adx > 25 :  
-                        print(f'[{datetime.now()}] [CHECK 2] {sym} [SHORT] macd= {macd_hist}')  
+                        print(f'[{datetime.now()}] [CHECK 1 2] {sym} [SHORT] macd= {macd_hist}')  
                         if macd_hist < 0:
-                            print(f'[{datetime.now()}] [CHECK 3] {sym} [SHORT] close= {close} psar= {psar}')
+                            print(f'[{datetime.now()}] [CHECK 1 3] {sym} [SHORT] close= {close} psar= {psar}')
                             if close < psar:
-                                print(f'[{datetime.now()}] [CHECK 4] {sym} [SHORT] rsi= {rsi}')
+                                print(f'[{datetime.now()}] [CHECK 1 4] {sym} [SHORT] rsi= {rsi}')
                                 if rsi > 50 :
-                                    print(f'[{datetime.now()}] [CHECK 5] {sym} [SHORT] pdi= {pdi} mdi= {mdi}')
+                                    print(f'[{datetime.now()}] [CHECK 1 5] {sym} [SHORT] pdi= {pdi} mdi= {mdi}')
                                     if pdi < mdi:
                                         print('got here 6')
                                         #stop loss at psar
@@ -236,7 +236,30 @@ def main(i):
                                         api.submit_order(symbol=sym,qty=stock_amnt,side='sell',type='market',time_in_force='gtc')
                                         print(f'[{datetime.now()}] [ENTER] {sym} [SHORT] target= {target_price} stop= {stop_loss} amnt={stock_amnt} close= {close}')
                                         look_for_exit(df,sym,stop_loss,target_price,'SHORT',stock_amnt)
-
+                print(f'[{datetime.now()}] [CHECK 2 1] {sym} [LONG] rsi= {rsi}')
+                if rsi < 30:
+                    print(f'[{datetime.now()}] [CHECK 2 2] {sym} [LONG] close= {close} psar= {psar}')
+                    if psar < close :
+                        #stop loss at psar
+                        stop_loss = df['psar'][-1] 
+                        # 1:1 with risk rewared
+                        target_price = close + (close- df['psar'][-1])                
+                        stock_amnt = stock_amnt_order(df['Close'][-1])
+                        api.submit_order(symbol=sym,qty=stock_amnt,side='buy',type='market',time_in_force='gtc')
+                        print(f'[{datetime.now()}] [ENTER] {sym} [LONG] target= {target_price} stop= {stop_loss} amnt={stock_amnt} close= {close}')
+                        look_for_exit(df,sym,stop_loss,target_price,'LONG',stock_amnt)
+                print(f'[{datetime.now()}] [CHECK 2 1] {sym} [SHORT] rsi= {rsi}')
+                if rsi > 70:
+                    print(f'[{datetime.now()}] [CHECK 2 2] {sym} [SHORT] close= {close} psar= {psar}')
+                    if psar > close:
+                        #stop loss at psar
+                        stop_loss = df['psar'][-1] 
+                        # 1:1 with risk rewared
+                        target_price = close - (df['psar'][-1] - close )                
+                        stock_amnt = stock_amnt_order(df['Close'][-1])
+                        api.submit_order(symbol=sym,qty=stock_amnt,side='sell',type='market',time_in_force='gtc')
+                        print(f'[{datetime.now()}] [ENTER] {sym} [SHORT] target= {target_price} stop= {stop_loss} amnt={stock_amnt} close= {close}')
+                        look_for_exit(df,sym,stop_loss,target_price,'SHORT',stock_amnt)
         print(f'[{datetime.now()}] [SUMMERY] {worker_num} %s' % (time.time() - start_time)) 
         print(f'[{datetime.now()}] [SUMMERY] down_fail_c= {down_fail_c } not_in_time_c= {not_in_time_c} to_short_c= {to_short_c}  -  worker: {worker_num}')
         print(f"[{datetime.now()}] [SUMMERY] total fails: {down_fail_c+not_in_time_c+to_short_c}")                                                         

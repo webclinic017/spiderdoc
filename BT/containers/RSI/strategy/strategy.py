@@ -225,16 +225,9 @@ def enter_long(i):
     global df
     df=df
     close     = df['Close'][i]
-    trend     = df['trend'][i]
     psar      = df['psar'][i]
     rsi       = df['rsi'][i]
-    adx       = df['adx'][i] 
-    pdi       = df['pdi'][i] 
-    mdi       = df['mdi'][i] 
-    
-    au        = df['aroonup'][i]
-    ad       = df['aroondown'][i]
-      
+
     if rsi < 30:
         if psar < close:
             return True
@@ -263,16 +256,8 @@ def enter_short(i):
     global df
     df=df
     close     = df['Close'][i]
-    trend     = df['trend'][i]
     psar      = df['psar'][i]
     rsi       = df['rsi'][i]
-    adx       = df['adx'][i] 
-    pdi       = df['pdi'][i] 
-    mdi       = df['mdi'][i] 
-    
-    au        = df['aroonup'][i]
-    ad        = df['aroondown'][i]
-        
     if rsi > 70:
         if psar > close:
             return True

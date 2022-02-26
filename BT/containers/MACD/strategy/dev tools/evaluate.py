@@ -10,8 +10,8 @@ trades_won=pd.DataFrame(columns=['Timestamp_start','Timestamp_end','Value','Inte
 trades_lost=pd.DataFrame(columns=['Timestamp_start','Timestamp_end','Value','Intent'])
 def concat_positions():
     #get all data from csv into a single df - 0 rows deleted - open positions deleted
-    #path = "C:\\Users\\nolys\\Desktop\\results\\" # TODO:CHANGE PATH TO RELEVANT PATH FOR PROJECT
-    path = '/output/'
+    path = "C:\\Users\\nolys\\Desktop\\results\\" # TODO:CHANGE PATH TO RELEVANT PATH FOR PROJECT
+    #path = '/output/'
     all_files = glob.glob(path + "*.csv")
     li = []
     for filename in all_files:
