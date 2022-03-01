@@ -26,7 +26,7 @@ def stock_amnt_order(close):
     global api
     account = api.get_account()
     balance = account.buying_power
-    amount = int(balance / close) -1 
+    amount = int(float(balance) / float(close)) -1 
     return amount
 
 def look_for_exit(df,sym,stop_loss,target_price,type,amnt):
