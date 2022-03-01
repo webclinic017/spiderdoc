@@ -12,6 +12,7 @@ import talib
 from itertools import compress
 import alpaca_trade_api as tradeapi
 import gc
+import logging
 
 def is_time_between(begin_time, end_time, check_time=None):
     # If check time is not given, default to current UTC time
@@ -30,6 +31,7 @@ def stock_amnt_order(close):
 
 def look_for_exit(df,sym,stop_loss,target_price,type,amnt):
     global api
+    df = pd.DataFrame()
     while True:
         try:
             #download data
@@ -37,9 +39,9 @@ def look_for_exit(df,sym,stop_loss,target_price,type,amnt):
             #remove unfinished candle
             df['Datetime'] = pd.to_datetime(df.index)
             df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume']]
-            print(f'[{datetime.now()}] [INFO] {sym} Downloaded [IN]')
+            logging.info(f'{sym} Downloaded [IN]')
         except :
-            print(f'[{datetime.now()}] [WARNING] {sym} Was not Found [IN]')
+            logging.warning(f'{sym} Was not Found [IN]')
             continue
             
         curr_minute = datetime.now().minute
@@ -47,40 +49,40 @@ def look_for_exit(df,sym,stop_loss,target_price,type,amnt):
         
         ts_minutes = df['Datetime'][-1].minute
         if ts_minutes != curr_minute:
-            print(f'[{datetime.now()}] [WARNING] {sym} Is not to date')
+            logging.info(f'{sym} Is not to date')
             continue
         else:
-            print(f'[{datetime.now()}] [INFO] {sym} Is up to date')
+            logging.info(f'{sym} Is up to date')
         
         close     = df['Close'][-1]
     
         if type == 'LONG':
             if close > target_price:
                 api.close_position(symbol=sym)
-                print(f'[{datetime.now()}] [EXIT PLUS] {sym} [LONG] target={target_price} close={close} amnt={amnt}')
-                print(f'[{datetime.now()}] [BUY POWER] {api.get_account().buying_power}')
-                print(f'[{datetime.now()}] [EQUITY] {api.get_account().equity}')
+                logging.info(f'{sym} LONG target={target_price} close={close} amnt={amnt}')
+                logging.info(f' BUY POWER=  {api.get_account().buying_power}')
+                logging.info(f'EQUITY={api.get_account().equity}')
                 return True
             
             if close < stop_loss:
                 api.close_position(symbol=sym)
-                print(f'[{datetime.now()}] [EXIT MINUS] {sym} [LONG] target={target_price} close={close} amnt={amnt}')
-                print(f'[{datetime.now()}] [BUY POWER] {api.get_account().buying_power}')
-                print(f'[{datetime.now()}] [EQUITY] {api.get_account().equity}')
+                logging.info(f'{sym} LONG target={target_price} close={close} amnt={amnt}')
+                logging.info(f' BUY POWER=  {api.get_account().buying_power}')
+                logging.info(f'EQUITY={api.get_account().equity}')
                 return True
         elif type == 'SHORT':
             if close < target_price:
                 api.close_position(symbol=sym)
-                print(f'[{datetime.now()}] [EXIT PLUS] {sym} [SHORT] target={target_price} close={close} amnt={amnt}')
-                print(f'[{datetime.now()}] [BUY POWER] {api.get_account().buying_power}')
-                print(f'[{datetime.now()}] [EQUITY] {api.get_account().equity}')
+                logging.info(f'{sym} SHORT target={target_price} close={close} amnt={amnt}')
+                logging.info(f' BUY POWER=  {api.get_account().buying_power}')
+                logging.info(f'EQUITY={api.get_account().equity}')
                 return True
             
             if close > stop_loss:
                 api.close_position(symbol=sym)
-                print(f'[{datetime.now()}] [EXIT MINUS] {sym} [SHORT] target={target_price} close={close} amnt={amnt}')
-                print(f'[{datetime.now()}] [BUY POWER] {api.get_account().buying_power}')
-                print(f'[{datetime.now()}] [EQUITY] {api.get_account().equity}')
+                logging.info(f'{sym} SHORT target={target_price} close={close} amnt={amnt}')
+                logging.info(f' BUY POWER=  {api.get_account().buying_power}')
+                logging.info(f'EQUITY={api.get_account().equity}')
                 return True
         gc.collect()
         time.sleep(10)
@@ -101,7 +103,7 @@ def main(i):
 
     while True:
     #this is whre we get out symbols from 
-    
+        df = pd.DataFrame()
         file_path = '/input/symbols_'+str(worker_num)+'_'+str(i)+'.txt'
         #file_path = 'C:\DEVOPS\python apps\spiderdoc\spiderdoc\Preprod\Trader\input\symbols_'+str(worker_num)+'_'+str(i)+'.txt'
         Sym_file = open(file_path,"r")
@@ -118,9 +120,9 @@ def main(i):
                 df = df.resample('1T').interpolate(method='linear', limit_direction='forward', axis=0)
                 df['Datetime'] = pd.to_datetime(df.index)
                 df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume']]
-                print(f'[{datetime.now()}] [INFO] {sym} Downloaded')
+                logging.info(f'{sym} Downloaded')
             except :
-                print(f'[{datetime.now()}] [WARNING] {sym} Was not Found')
+                logging.info(f'{sym} Was not Found')
                 down_fail_c += 1
                 continue
             
@@ -138,12 +140,12 @@ def main(i):
 
                 if ts_minutes != curr_minute and ts_hour != curr_hour:
                     not_in_time_c += 1
-                    print(f'[{datetime.now()}] [WARNING] {sym} Is not to date')
+                    logging.warning(f'{sym} Is not to date')
                     continue
                 else:
-                    print(f'[{datetime.now()}] [INFO] {sym} Is up to date')
+                    logging.info(f'{sym} Is up to date')
             else:
-                print(f'[{datetime.now()}] [INFO] {sym} Is up to date')
+                logging.info(f'{sym} Is up to date')
 
             if len(df.index) < 60:
                 to_short_c +=1
@@ -163,9 +165,9 @@ def main(i):
                 
                 df['pdi'] = talib.PLUS_DI(df['High'].to_numpy(),df['Low'].to_numpy(), df['Close'].to_numpy(), timeperiod=14)
 
-                print(f'[{datetime.now()}] [INFO] {sym} Indicators are ready')
+                logging.info(f'{sym} Indicators are ready')
             except:
-                print(f'[{datetime.now()}] [ERROR] {sym} Indicators Failed')
+                logging.error(f'{sym} Indicators Failed')
                 continue
 
             #fill trend column
@@ -190,22 +192,21 @@ def main(i):
 
             ema_60 = df['ema60'][-1]
             
-            print(f'[{datetime.now()}] [INFO] {sym} Checking Conds') 
-            #check aroon is not parallel and not in 100 / 0 (up or down)   
+            logging.info(f'{sym} Checking Conds') 
             now = datetime.now().time()
             tm0=tm(16,0,0)
             if  now < tm0:  
-                print(f'[{datetime.now()}] [CHECK 1 0] {sym} Checking Conds')         
+                logging.debug(f' [CHECK 1 0] {sym} Checking Conds')         
                 if trend == 'clear_up':
-                    print(f'[{datetime.now()}] [CHECK 1 1] {sym} [LONG] adx= {adx}')
+                    logging.debug(f' [CHECK 1 1] {sym} [LONG] adx= {adx}')
                     if adx > 25 : 
-                        print(f'[{datetime.now()}] [CHECK 1 2] {sym} [LONG] macd= {macd_hist}')  
+                        logging.debug(f' [CHECK 1 2] {sym} [LONG] macd= {macd_hist}')  
                         if macd_hist > 0:
-                            print(f'[{datetime.now()}] [CHECK 1 3] {sym} [LONG] close= {close} psar= {psar}')
+                            logging.debug(f' [CHECK 1 3] {sym} [LONG] close= {close} psar= {psar}')
                             if close > psar:
-                                print(f'[{datetime.now()}] [CHECK 1 4] {sym} [LONG] rsi= {rsi}')
+                                logging.debug(f' [CHECK 1 4] {sym} [LONG] rsi= {rsi}')
                                 if rsi < 50 :
-                                    print(f'[{datetime.now()}] [CHECK 1 5] {sym} [LONG] pdi= {pdi} mdi= {mdi}')
+                                    logging.debug(f' [CHECK 1 5] {sym} [LONG] pdi= {pdi} mdi= {mdi}')
                                     if pdi > mdi:
                                         #stop loss at psar
                                         stop_loss = df['psar'][-1] 
@@ -213,32 +214,32 @@ def main(i):
                                         target_price = close + (close- df['psar'][-1])                
                                         stock_amnt = stock_amnt_order(df['Close'][-1])
                                         api.submit_order(symbol=sym,qty=stock_amnt,side='buy',type='market',time_in_force='gtc')
-                                        print(f'[{datetime.now()}] [ENTER] {sym} [LONG] target= {target_price} stop= {stop_loss} amnt={stock_amnt} close= {close}')
+                                        logging.info(f' [ENTER] {sym} [LONG] target= {target_price} stop= {stop_loss} amnt={stock_amnt} close= {close}')
                                         look_for_exit(df,sym,stop_loss,target_price,'LONG',stock_amnt)
                 #Short check
                 elif trend=='clear_down':
-                    print(f'[{datetime.now()}] [CHECK 1 1] {sym} [SHORT] adx= {adx}')
+                    logging.debug(f' [CHECK 1 1] {sym} [SHORT] adx= {adx}')
                     if adx > 25 :  
-                        print(f'[{datetime.now()}] [CHECK 1 2] {sym} [SHORT] macd= {macd_hist}')  
+                        logging.debug(f' [CHECK 1 2] {sym} [SHORT] macd= {macd_hist}')  
                         if macd_hist < 0:
-                            print(f'[{datetime.now()}] [CHECK 1 3] {sym} [SHORT] close= {close} psar= {psar}')
+                            logging.debug(f' [CHECK 1 3] {sym} [SHORT] close= {close} psar= {psar}')
                             if close < psar:
-                                print(f'[{datetime.now()}] [CHECK 1 4] {sym} [SHORT] rsi= {rsi}')
+                                logging.debug(f' [CHECK 1 4] {sym} [SHORT] rsi= {rsi}')
                                 if rsi > 50 :
-                                    print(f'[{datetime.now()}] [CHECK 1 5] {sym} [SHORT] pdi= {pdi} mdi= {mdi}')
+                                    logging.debug(f' [CHECK 1 5] {sym} [SHORT] pdi= {pdi} mdi= {mdi}')
                                     if pdi < mdi:
-                                        print('got here 6')
+                                        logging.debug('got here 6')
                                         #stop loss at psar
                                         stop_loss = df['psar'][-1] 
                                         # 1:1 with risk rewared
                                         target_price = close - (df['psar'][-1] - close )                
                                         stock_amnt = stock_amnt_order(df['Close'][-1])
                                         api.submit_order(symbol=sym,qty=stock_amnt,side='sell',type='market',time_in_force='gtc')
-                                        print(f'[{datetime.now()}] [ENTER] {sym} [SHORT] target= {target_price} stop= {stop_loss} amnt={stock_amnt} close= {close}')
+                                        logging.info(f' [ENTER] {sym} [SHORT] target= {target_price} stop= {stop_loss} amnt={stock_amnt} close= {close}')
                                         look_for_exit(df,sym,stop_loss,target_price,'SHORT',stock_amnt)
-                print(f'[{datetime.now()}] [CHECK 2 1] {sym} [LONG] rsi= {rsi}')
+                logging.debug(f' [CHECK 2 1] {sym} [LONG] rsi= {rsi}')
                 if rsi < 30:
-                    print(f'[{datetime.now()}] [CHECK 2 2] {sym} [LONG] close= {close} psar= {psar}')
+                    logging.debug(f' [CHECK 2 2] {sym} [LONG] close= {close} psar= {psar}')
                     if psar < close :
                         #stop loss at psar
                         stop_loss = df['psar'][-1] 
@@ -246,11 +247,11 @@ def main(i):
                         target_price = close + (close- df['psar'][-1])                
                         stock_amnt = stock_amnt_order(df['Close'][-1])
                         api.submit_order(symbol=sym,qty=stock_amnt,side='buy',type='market',time_in_force='gtc')
-                        print(f'[{datetime.now()}] [ENTER] {sym} [LONG] target= {target_price} stop= {stop_loss} amnt={stock_amnt} close= {close}')
+                        logging.info(f' [ENTER] {sym} [LONG] target= {target_price} stop= {stop_loss} amnt={stock_amnt} close= {close}')
                         look_for_exit(df,sym,stop_loss,target_price,'LONG',stock_amnt)
-                print(f'[{datetime.now()}] [CHECK 2 1] {sym} [SHORT] rsi= {rsi}')
+                logging.debug(f' [CHECK 2 1] {sym} [SHORT] rsi= {rsi}')
                 if rsi > 70:
-                    print(f'[{datetime.now()}] [CHECK 2 2] {sym} [SHORT] close= {close} psar= {psar}')
+                    logging.debug(f' [CHECK 2 2] {sym} [SHORT] close= {close} psar= {psar}')
                     if psar > close:
                         #stop loss at psar
                         stop_loss = df['psar'][-1] 
@@ -258,11 +259,11 @@ def main(i):
                         target_price = close - (df['psar'][-1] - close )                
                         stock_amnt = stock_amnt_order(df['Close'][-1])
                         api.submit_order(symbol=sym,qty=stock_amnt,side='sell',type='market',time_in_force='gtc')
-                        print(f'[{datetime.now()}] [ENTER] {sym} [SHORT] target= {target_price} stop= {stop_loss} amnt={stock_amnt} close= {close}')
+                        logging.info(f' [ENTER] {sym} [SHORT] target= {target_price} stop= {stop_loss} amnt={stock_amnt} close= {close}')
                         look_for_exit(df,sym,stop_loss,target_price,'SHORT',stock_amnt)
-        print(f'[{datetime.now()}] [SUMMERY] {worker_num} %s' % (time.time() - start_time)) 
-        print(f'[{datetime.now()}] [SUMMERY] down_fail_c= {down_fail_c } not_in_time_c= {not_in_time_c} to_short_c= {to_short_c}  -  worker: {worker_num}')
-        print(f"[{datetime.now()}] [SUMMERY] total fails: {down_fail_c+not_in_time_c+to_short_c}")                                                         
+        logging.info(f' [SUMMERY] {worker_num} %s' % (time.time() - start_time)) 
+        logging.info(f' [SUMMERY] down_fail_c= {down_fail_c } not_in_time_c= {not_in_time_c} to_short_c= {to_short_c}  -  worker: {worker_num}')
+        logging.info(f" [SUMMERY] total fails: {down_fail_c+not_in_time_c+to_short_c}")                                                         
 
 
             
@@ -278,8 +279,12 @@ parallel_proc_amnt = sys.argv[2] """
 worker_num = sys.argv[1]
 parallel_proc_amnt = 32
 
+LOG_FORMAT = '%(asctime)s %(levelname)s %(message)s'
+logging.basicConfig(level=logging.DEBUG,
+filename=f"/log/{datetime.now()}.log",
+format=LOG_FORMAT)
 
 if __name__ == '__main__':
     # start n worker processes
     with multiprocessing.Pool(processes=parallel_proc_amnt) as pool:
-        pool.map_async(main,iterable=range(1,parallel_proc_amnt+1)).get() 
+        pool.map(main,iterable=range(1,parallel_proc_amnt+1))
