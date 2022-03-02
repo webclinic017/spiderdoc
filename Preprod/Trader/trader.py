@@ -29,7 +29,7 @@ def stock_amnt_order(close):
     amount = int(float(balance) / float(close)) -1 
     return amount
 
-def look_for_exit(df,sym,stop_loss,target_price,type,amnt):
+def look_for_exit(df,sym,stop_loss,target_price,pos_type,amnt):
     global api
     df = pd.DataFrame()
     while True:
@@ -49,14 +49,14 @@ def look_for_exit(df,sym,stop_loss,target_price,type,amnt):
         
         ts_minutes = df['Datetime'][-1].minute
         if ts_minutes != curr_minute:
-            logging.info(f'{sym} Is not to date')
+            logging.info(f'{sym} Is not to date , last cdl,{df["Datetime"][-1]} ')
             continue
         else:
-            logging.info(f'{sym} Is up to date')
+            logging.info(f'{sym} Is up to date , last cdl,{df["Datetime"][-1]} ')
         
         close     = df['Close'][-1]
-    
-        if type == 'LONG':
+        logging.info(f'{sym} tp = {target_price} , close = {close} [IN C 0] , pos_type = {pos_type}')
+        if pos_type == 'LONG':
             if close > target_price:
                 api.close_position(symbol=sym)
                 logging.info(f'{sym} LONG target={target_price} close={close} amnt={amnt}')
@@ -70,7 +70,7 @@ def look_for_exit(df,sym,stop_loss,target_price,type,amnt):
                 logging.info(f' BUY POWER=  {api.get_account().buying_power}')
                 logging.info(f'EQUITY={api.get_account().equity}')
                 return True
-        elif type == 'SHORT':
+        elif pos_type == 'SHORT':
             if close < target_price:
                 api.close_position(symbol=sym)
                 logging.info(f'{sym} SHORT target={target_price} close={close} amnt={amnt}')
@@ -94,8 +94,8 @@ def main(i):
     global worker_num,api
 
     ########## account info ############################
-    API_ID = 'PKXUYUQ3MW6VTMMHHJFE'
-    API_KEY = '5BXvFpDm5uSkJX89JvdBgaZcF10lc2dwSi4Eg5Bu'
+    API_ID = 'PKDFI1CW15B78WND3AJ1'
+    API_KEY = 'TpzUdqKreikuV8g7MGI5bZrd3TQkSxX8viwfaXo9'
     api_endpoint = 'https://paper-api.alpaca.markets'
     ####################################################
     api = tradeapi.REST(key_id = API_ID,secret_key = API_KEY,base_url = api_endpoint)
@@ -127,23 +127,15 @@ def main(i):
                 continue
             
             #check if sym is up to date
-            curr_minute = datetime.now().minute -1
-            ts_minutes = df['Datetime'][-1].minute
-            
+            curr_minute = datetime.now().minute -1            
             curr_hour = datetime.now().hour
-            ts_hour = df['Datetime'][-1].hour
+            ts_minutes = df['Datetime'][-2].minute
+            ts_hour = df['Datetime'][-2].hour
 
             if ts_minutes != curr_minute and ts_hour != curr_hour:
-                
-                ts_minutes = df['Datetime'][-2].minute
-                ts_hour = df['Datetime'][-2].hour
-
-                if ts_minutes != curr_minute and ts_hour != curr_hour:
-                    not_in_time_c += 1
-                    logging.warning(f'{sym} Is not to date')
-                    continue
-                else:
-                    logging.info(f'{sym} Is up to date')
+                not_in_time_c += 1
+                logging.warning(f'{sym} Is not to date')
+                continue
             else:
                 logging.info(f'{sym} Is up to date')
 
@@ -237,30 +229,7 @@ def main(i):
                                         api.submit_order(symbol=sym,qty=stock_amnt,side='sell',type='market',time_in_force='gtc')
                                         logging.info(f' [ENTER] {sym} [SHORT] target= {target_price} stop= {stop_loss} amnt={stock_amnt} close= {close}')
                                         look_for_exit(df,sym,stop_loss,target_price,'SHORT',stock_amnt)
-                logging.debug(f' [CHECK 2 1] {sym} [LONG] rsi= {rsi}')
-                if rsi < 30:
-                    logging.debug(f' [CHECK 2 2] {sym} [LONG] close= {close} psar= {psar}')
-                    if psar < close :
-                        #stop loss at psar
-                        stop_loss = df['psar'][-1] 
-                        # 1:1 with risk rewared
-                        target_price = close + (close- df['psar'][-1])                
-                        stock_amnt = stock_amnt_order(df['Close'][-1])
-                        api.submit_order(symbol=sym,qty=stock_amnt,side='buy',type='market',time_in_force='gtc')
-                        logging.info(f' [ENTER] {sym} [LONG] target= {target_price} stop= {stop_loss} amnt={stock_amnt} close= {close}')
-                        look_for_exit(df,sym,stop_loss,target_price,'LONG',stock_amnt)
-                logging.debug(f' [CHECK 2 1] {sym} [SHORT] rsi= {rsi}')
-                if rsi > 70:
-                    logging.debug(f' [CHECK 2 2] {sym} [SHORT] close= {close} psar= {psar}')
-                    if psar > close:
-                        #stop loss at psar
-                        stop_loss = df['psar'][-1] 
-                        # 1:1 with risk rewared
-                        target_price = close - (df['psar'][-1] - close )                
-                        stock_amnt = stock_amnt_order(df['Close'][-1])
-                        api.submit_order(symbol=sym,qty=stock_amnt,side='sell',type='market',time_in_force='gtc')
-                        logging.info(f' [ENTER] {sym} [SHORT] target= {target_price} stop= {stop_loss} amnt={stock_amnt} close= {close}')
-                        look_for_exit(df,sym,stop_loss,target_price,'SHORT',stock_amnt)
+
         logging.info(f' [SUMMERY] {worker_num} %s' % (time.time() - start_time)) 
         logging.info(f' [SUMMERY] down_fail_c= {down_fail_c } not_in_time_c= {not_in_time_c} to_short_c= {to_short_c}  -  worker: {worker_num}')
         logging.info(f" [SUMMERY] total fails: {down_fail_c+not_in_time_c+to_short_c}")                                                         
