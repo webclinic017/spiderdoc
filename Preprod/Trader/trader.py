@@ -43,20 +43,11 @@ def look_for_exit(df,sym,stop_loss,target_price,pos_type,amnt):
         except :
             logging.warning(f'{sym} Was not Found [IN]')
             continue
-            
-        curr_minute = datetime.now().minute
-        curr_minute -= 1
-        
-        ts_minutes = df['Datetime'][-1].minute
-        if ts_minutes != curr_minute:
-            logging.info(f'{sym} Is not to date , last cdl,{df["Datetime"][-1]} ')
-            continue
-        else:
-            logging.info(f'{sym} Is up to date , last cdl,{df["Datetime"][-1]} ')
         
         close     = df['Close'][-1]
         logging.info(f'{sym} tp = {target_price} , close = {close} [IN C 0] , pos_type = {pos_type}')
         if pos_type == 'LONG':
+            logging.debug('got here long')
             if close > target_price:
                 api.close_position(symbol=sym)
                 logging.info(f'{sym} LONG target={target_price} close={close} amnt={amnt}')
@@ -71,6 +62,7 @@ def look_for_exit(df,sym,stop_loss,target_price,pos_type,amnt):
                 logging.info(f'EQUITY={api.get_account().equity}')
                 return True
         elif pos_type == 'SHORT':
+            logging.debug('got here SHORT')
             if close < target_price:
                 api.close_position(symbol=sym)
                 logging.info(f'{sym} SHORT target={target_price} close={close} amnt={amnt}')
