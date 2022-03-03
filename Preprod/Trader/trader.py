@@ -176,9 +176,6 @@ def main(i):
             psar      = df['psar'][-1]
             rsi       = df['rsi'][-1]
             adx       = df['adx'][-1] 
-            pdi       = df['pdi'][-1] 
-            mdi       = df['mdi'][-1]
-
             ema_60 = df['ema60'][-1]
             
             logging.info(f'{sym} Checking Conds') 
