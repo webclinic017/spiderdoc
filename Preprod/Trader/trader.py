@@ -35,7 +35,7 @@ def look_for_exit(df,sym,stop_loss,target_price,pos_type,amnt):
     while True:
         try:
             #download data
-            df = yf.download(tickers=sym,period='3m',interval='1m', progress=False,show_errors=False)
+            df = yf.download(tickers=sym,period='70m',interval='1m', progress=False,show_errors=False)
             #remove unfinished candle
             df['Datetime'] = pd.to_datetime(df.index)
             df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume']]
@@ -43,6 +43,10 @@ def look_for_exit(df,sym,stop_loss,target_price,pos_type,amnt):
         except :
             logging.warning(f'{sym} Was not Found [IN]')
             continue
+
+        if len(df) < 1:
+                logging.info(f'{sym} Was not Found')
+                continue
         
         close     = df['Close'][-1]
         logging.info(f'{sym} tp = {target_price} , close = {close} [IN C 0] , pos_type = {pos_type}')
@@ -114,10 +118,12 @@ def main(i):
                 df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume']]
                 logging.info(f'{sym} Downloaded')
             except :
-                logging.info(f'{sym} Was not Found')
+                logging.warning(f'{sym} Was not Found')
                 down_fail_c += 1
                 continue
-            
+            if len(df) < 60:
+                logging.info(f'{sym} Was not Found')
+                continue
             #check if sym is up to date
             curr_minute = datetime.now().minute -1            
             curr_hour = datetime.now().hour
