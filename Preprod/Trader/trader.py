@@ -112,7 +112,7 @@ def main(i):
             sym = sym.strip('\n')
             try:
                 #download data
-                df = yf.download(tickers=sym,period='2d',interval='1m', progress=False,show_errors=False)
+                df = yf.download(tickers=sym,period='24h',interval='1m', progress=False,show_errors=False)
                 df['Datetime'] = pd.to_datetime(df.index)
                 df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume']]
                 logging.info(f'{sym} Downloaded')
