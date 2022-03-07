@@ -150,6 +150,10 @@ def main(i):
             
                 df['adx'] = talib.ADX(df['High'].to_numpy(), df['Low'].to_numpy(), df['Close'].to_numpy(), timeperiod=14)
 
+                df['mdi'] = talib.MINUS_DI(df['High'].to_numpy(),df['Low'].to_numpy(), df['Close'].to_numpy(), timeperiod=14)
+                
+                df['pdi'] = talib.PLUS_DI(df['High'].to_numpy(),df['Low'].to_numpy(), df['Close'].to_numpy(), timeperiod=14)
+
 
                 logging.info(f'{sym} Indicators are ready')
             except:
@@ -173,6 +177,10 @@ def main(i):
             psar      = df['psar'][-1]
             rsi       = df['rsi'][-1]
             adx       = df['adx'][-1] 
+
+            pdi       = df['pdi'][-1] 
+            mdi       = df['mdi'][-1]
+
             ema_60 = df['ema60'][-1]
             
             logging.info(f'{sym} Checking Conds') 
@@ -189,14 +197,16 @@ def main(i):
                             if close > psar:
                                 logging.debug(f' [CHECK 1 4] {sym} [LONG] rsi= {rsi}')
                                 if rsi < 50 :
-                                    #stop loss at psar
-                                    stop_loss = df['psar'][-1] 
-                                    # 1:1 with risk rewared
-                                    target_price = close + (close- df['psar'][-1])                
-                                    stock_amnt = stock_amnt_order(df['Close'][-1])
-                                    api.submit_order(symbol=sym,qty=stock_amnt,side='buy',type='market',time_in_force='gtc')
-                                    logging.info(f' [ENTER] {sym} [LONG] target= {target_price} stop= {stop_loss} amnt={stock_amnt} close= {close}')
-                                    look_for_exit(df,sym,stop_loss,target_price,'LONG',stock_amnt)
+                                    logging.debug(f' [CHECK 1 5] {sym} [LONG] pdi= {pdi} mdi= {mdi}')
+                                    if pdi > mdi:
+                                        #stop loss at psar
+                                        stop_loss = df['psar'][-1] 
+                                        # 1:1 with risk rewared
+                                        target_price = close + (close- df['psar'][-1])                
+                                        stock_amnt = stock_amnt_order(df['Close'][-1])
+                                        api.submit_order(symbol=sym,qty=stock_amnt,side='buy',type='market',time_in_force='gtc')
+                                        logging.info(f' [ENTER] {sym} [LONG] target= {target_price} stop= {stop_loss} amnt={stock_amnt} close= {close}')
+                                        look_for_exit(df,sym,stop_loss,target_price,'LONG',stock_amnt)
                 #Short check
                 elif trend=='clear_down':
                     logging.debug(f' [CHECK 1 1] {sym} [SHORT] adx= {adx}')
@@ -208,15 +218,15 @@ def main(i):
                                 logging.debug(f' [CHECK 1 4] {sym} [SHORT] rsi= {rsi}')
                                 if rsi > 50 :
                                     logging.debug(f' [CHECK 1 5] {sym} [SHORT] pdi= {pdi} mdi= {mdi}')
-                                    logging.debug('got here 6')
-                                    #stop loss at psar
-                                    stop_loss = df['psar'][-1] 
-                                    # 1:1 with risk rewared
-                                    target_price = close - (df['psar'][-1] - close )                
-                                    stock_amnt = stock_amnt_order(df['Close'][-1])
-                                    api.submit_order(symbol=sym,qty=stock_amnt,side='sell',type='market',time_in_force='gtc')
-                                    logging.info(f' [ENTER] {sym} [SHORT] target= {target_price} stop= {stop_loss} amnt={stock_amnt} close= {close}')
-                                    look_for_exit(df,sym,stop_loss,target_price,'SHORT',stock_amnt)
+                                    if pdi < mdi:
+                                        #stop loss at psar
+                                        stop_loss = df['psar'][-1] 
+                                        # 1:1 with risk rewared
+                                        target_price = close - (df['psar'][-1] - close )                
+                                        stock_amnt = stock_amnt_order(df['Close'][-1])
+                                        api.submit_order(symbol=sym,qty=stock_amnt,side='sell',type='market',time_in_force='gtc')
+                                        logging.info(f' [ENTER] {sym} [SHORT] target= {target_price} stop= {stop_loss} amnt={stock_amnt} close= {close}')
+                                        look_for_exit(df,sym,stop_loss,target_price,'SHORT',stock_amnt)
 
         logging.info(f' [SUMMERY] {worker_num} %s' % (time.time() - start_time)) 
         logging.info(f' [SUMMERY] down_fail_c= {down_fail_c } not_in_time_c= {not_in_time_c} to_short_c= {to_short_c}  -  worker: {worker_num}')
