@@ -35,7 +35,7 @@ def look_for_exit(df,sym,stop_loss,target_price,pos_type,amnt):
     while True:
         try:
             #download data
-            df = yf.download(tickers=sym,period='70m',interval='1m', progress=False,show_errors=False)
+            df = yf.download(tickers=sym,period='2d',interval='1m', progress=False,show_errors=False)
             #remove unfinished candle
             df['Datetime'] = pd.to_datetime(df.index)
             df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume']]
@@ -90,8 +90,8 @@ def main(i):
     global worker_num,api
 
     ########## account info ############################
-    API_ID = 'PK0YXQJFALUZ89FSIXWM'
-    API_KEY = 'KLIrkSNiHoWoOuqsepGfRgQUgGSZTIlSPCcehcoM'
+    API_ID = 'PKOTTIO2XJQHVEMWAISE'
+    API_KEY = 'HK7Vj4BnUgEjlJpZmVnEtqM1Ng6GspY4zmryiSgS'
     api_endpoint = 'https://paper-api.alpaca.markets'
     ####################################################
     api = tradeapi.REST(key_id = API_ID,secret_key = API_KEY,base_url = api_endpoint)
@@ -112,8 +112,7 @@ def main(i):
             sym = sym.strip('\n')
             try:
                 #download data
-                df = yf.download(tickers=sym,period='70m',interval='1m', progress=False,show_errors=False)
-                df = df.resample('1T').interpolate(method='linear', limit_direction='forward', axis=0)
+                df = yf.download(tickers=sym,period='2d',interval='1m', progress=False,show_errors=False)
                 df['Datetime'] = pd.to_datetime(df.index)
                 df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume']]
                 logging.info(f'{sym} Downloaded')
