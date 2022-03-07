@@ -169,7 +169,7 @@ def main(i):
             choices = ['clear_up','clear_down']
             df['trend'] = np.select(conditions, choices, default=0 )
 
-            df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume','trend','psar','macd_hist','rsi','adx','ema60']]
+            df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume','trend','psar','macd_hist','rsi','adx','ema60','pdi','mdi']]
 
             close     = df['Close'][-1]
             trend     = df['trend'][-1]
