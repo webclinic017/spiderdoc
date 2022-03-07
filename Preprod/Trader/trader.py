@@ -90,8 +90,8 @@ def main(i):
     global worker_num,api
 
     ########## account info ############################
-    API_ID = 'PKOTTIO2XJQHVEMWAISE'
-    API_KEY = 'HK7Vj4BnUgEjlJpZmVnEtqM1Ng6GspY4zmryiSgS'
+    API_ID = 'PKARTCVR4RC5LM89ONGB'
+    API_KEY = 'e7vl958Rgz7ZV4yUmcxXH9NbSG9tkN8L6eJSEigU'
     api_endpoint = 'https://paper-api.alpaca.markets'
     ####################################################
     api = tradeapi.REST(key_id = API_ID,secret_key = API_KEY,base_url = api_endpoint)
@@ -171,17 +171,17 @@ def main(i):
 
             df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume','trend','psar','macd_hist','rsi','adx','ema60','pdi','mdi']]
 
-            close     = df['Close'][-1]
-            trend     = df['trend'][-1]
-            macd_hist = df['macd_hist'][-1]
-            psar      = df['psar'][-1]
-            rsi       = df['rsi'][-1]
-            adx       = df['adx'][-1] 
+            close     = df['Close'][-2]
+            trend     = df['trend'][-2]
+            macd_hist = df['macd_hist'][-2]
+            psar      = df['psar'][-2]
+            rsi       = df['rsi'][-2]
+            adx       = df['adx'][-2] 
 
-            pdi       = df['pdi'][-1] 
-            mdi       = df['mdi'][-1]
+            pdi       = df['pdi'][-2] 
+            mdi       = df['mdi'][-2]
 
-            ema_60 = df['ema60'][-1]
+            ema_60 = df['ema60'][-2]
             
             logging.info(f'{sym} Checking Conds') 
             now = datetime.now().time()
