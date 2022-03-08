@@ -22,11 +22,27 @@ def is_time_between(begin_time, end_time, check_time=None):
     else: # crosses midnight
         return check_time >= begin_time or check_time <= end_time
 
-def stock_amnt_order(close):
+def stock_amnt_order(close,stop_loss,order_type):
     global api
     account = api.get_account()
     balance = account.buying_power
-    amount = int(float(balance) / float(close)) -1 
+    amount = int(float(balance) / float(close))
+    if order_type=='LONG':
+        delta=close - stop_loss
+        #how much money are we risking
+    elif order_type=='SHORT':
+        delta = stop_loss- close
+
+    risk = float(delta) * int(amount)
+    one_percent = float(balance) / 100
+    
+    if risk > one_percent:
+        factor =   float(one_percent) / float(risk)
+        amount = amount * float(factor)
+    else:
+        amount -= 1 
+
+
     return amount
 
 def look_for_exit(df,sym,stop_loss,target_price,pos_type,amnt):
@@ -203,7 +219,7 @@ def main(i):
                                         stop_loss = df['psar'][-2] 
                                         # 1:1 with risk rewared
                                         target_price = close + (close- df['psar'][-2])                
-                                        stock_amnt = stock_amnt_order(df['Close'][-2])
+                                        stock_amnt = stock_amnt_order(df['Close'][-2],stop_loss,'LONG')
                                         api.submit_order(symbol=sym,qty=stock_amnt,side='buy',type='market',time_in_force='gtc')
                                         logging.info(f' [ENTER] {sym} [LONG] target= {target_price} stop= {stop_loss} amnt={stock_amnt} close= {close}')
                                         logging.debug(df)
@@ -224,7 +240,7 @@ def main(i):
                                         stop_loss = df['psar'][-2] 
                                         # 1:1 with risk rewared
                                         target_price = close - (df['psar'][-2] - close )                
-                                        stock_amnt = stock_amnt_order(df['Close'][-2])
+                                        stock_amnt = stock_amnt_order(df['Close'][-2],stop_loss,'SHORT')
                                         api.submit_order(symbol=sym,qty=stock_amnt,side='sell',type='market',time_in_force='gtc')
                                         logging.info(f' [ENTER] {sym} [SHORT] target= {target_price} stop= {stop_loss} amnt={stock_amnt} close= {close}')
                                         logging.debug(df)
