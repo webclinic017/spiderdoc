@@ -18,7 +18,7 @@ i= 0
 for asset in list2:
     try:
         df = yf.download(tickers=asset.symbol,period='60m',interval='1m')
-        if len(df) > 1:
+        if len(df) > 1 and df['Close'][1] > 5:
             Sym_file.write(asset.symbol+'\n')
             print(f"symbol {asset.symbol} Added - {k}/{i}")
             k += 1
