@@ -90,8 +90,8 @@ def main(i):
     global worker_num,api
 
     ########## account info ############################
-    API_ID = 'PKHW70NPV9ZRQIMD3CAU'
-    API_KEY = 'AhOaFiwPVIPUGhyvmG44eP9r8fTg49zkwk7vipdw'
+    API_ID = 'PK3BQ4TLCJJM83IPNZZH'
+    API_KEY = 'QjlpIoEOnOV6hbQ7m86DKKd1rIwXWutB43kVAfxs'
     api_endpoint = 'https://paper-api.alpaca.markets'
     ####################################################
     api = tradeapi.REST(key_id = API_ID,secret_key = API_KEY,base_url = api_endpoint)
@@ -129,7 +129,7 @@ def main(i):
             ts_minutes = df['Datetime'][-2].minute
             ts_hour = df['Datetime'][-2].hour
 
-            if ts_minutes != curr_minute and ts_hour != curr_hour:
+            if ts_minutes != curr_minute or ts_hour != curr_hour:
                 not_in_time_c += 1
                 logging.warning(f'{sym} Is not to date')
                 continue
