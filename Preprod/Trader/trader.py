@@ -43,20 +43,15 @@ def look_for_exit(df,sym,stop_loss,target_price,pos_type,amnt):
         except :
             logging.warning(f'{sym} Was not Found [IN]')
             continue
-            
-        curr_minute = datetime.now().minute
-        curr_minute -= 1
-        
-        ts_minutes = df['Datetime'][-1].minute
-        if ts_minutes != curr_minute:
-            logging.info(f'{sym} Is not to date , last cdl,{df["Datetime"][-1]} ')
-            continue
-        else:
-            logging.info(f'{sym} Is up to date , last cdl,{df["Datetime"][-1]} ')
+
+        if len(df) < 1:
+                logging.info(f'{sym} Was not Found')
+                continue
         
         close     = df['Close'][-1]
         logging.info(f'{sym} tp = {target_price} , close = {close} [IN C 0] , pos_type = {pos_type}')
         if pos_type == 'LONG':
+            logging.debug('got here long')
             if close > target_price:
                 api.close_position(symbol=sym)
                 logging.info(f'{sym} LONG target={target_price} close={close} amnt={amnt}')
@@ -71,6 +66,7 @@ def look_for_exit(df,sym,stop_loss,target_price,pos_type,amnt):
                 logging.info(f'EQUITY={api.get_account().equity}')
                 return True
         elif pos_type == 'SHORT':
+            logging.debug('got here SHORT')
             if close < target_price:
                 api.close_position(symbol=sym)
                 logging.info(f'{sym} SHORT target={target_price} close={close} amnt={amnt}')
@@ -94,8 +90,8 @@ def main(i):
     global worker_num,api
 
     ########## account info ############################
-    API_ID = 'PKDFI1CW15B78WND3AJ1'
-    API_KEY = 'TpzUdqKreikuV8g7MGI5bZrd3TQkSxX8viwfaXo9'
+    API_ID = 'PKARTCVR4RC5LM89ONGB'
+    API_KEY = 'e7vl958Rgz7ZV4yUmcxXH9NbSG9tkN8L6eJSEigU'
     api_endpoint = 'https://paper-api.alpaca.markets'
     ####################################################
     api = tradeapi.REST(key_id = API_ID,secret_key = API_KEY,base_url = api_endpoint)
@@ -116,16 +112,17 @@ def main(i):
             sym = sym.strip('\n')
             try:
                 #download data
-                df = yf.download(tickers=sym,period='70m',interval='1m', progress=False,show_errors=False)
-                df = df.resample('1T').interpolate(method='linear', limit_direction='forward', axis=0)
+                df = yf.download(tickers=sym,period='24h',interval='1m', progress=False,show_errors=False)
                 df['Datetime'] = pd.to_datetime(df.index)
                 df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume']]
                 logging.info(f'{sym} Downloaded')
             except :
-                logging.info(f'{sym} Was not Found')
+                logging.warning(f'{sym} Was not Found')
                 down_fail_c += 1
                 continue
-            
+            if len(df) < 60:
+                logging.info(f'{sym} Was not Found')
+                continue
             #check if sym is up to date
             curr_minute = datetime.now().minute -1            
             curr_hour = datetime.now().hour
@@ -157,6 +154,7 @@ def main(i):
                 
                 df['pdi'] = talib.PLUS_DI(df['High'].to_numpy(),df['Low'].to_numpy(), df['Close'].to_numpy(), timeperiod=14)
 
+
                 logging.info(f'{sym} Indicators are ready')
             except:
                 logging.error(f'{sym} Indicators Failed')
@@ -171,18 +169,19 @@ def main(i):
             choices = ['clear_up','clear_down']
             df['trend'] = np.select(conditions, choices, default=0 )
 
-            df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume','trend','psar','macd_hist','rsi','adx','pdi','mdi','ema60']]
+            df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume','trend','psar','macd_hist','rsi','adx','ema60','pdi','mdi']]
 
-            close     = df['Close'][-1]
-            trend     = df['trend'][-1]
-            macd_hist = df['macd_hist'][-1]
-            psar      = df['psar'][-1]
-            rsi       = df['rsi'][-1]
-            adx       = df['adx'][-1] 
-            pdi       = df['pdi'][-1] 
-            mdi       = df['mdi'][-1]
+            close     = df['Close'][-2]
+            trend     = df['trend'][-2]
+            macd_hist = df['macd_hist'][-2]
+            psar      = df['psar'][-2]
+            rsi       = df['rsi'][-2]
+            adx       = df['adx'][-2] 
 
-            ema_60 = df['ema60'][-1]
+            pdi       = df['pdi'][-2] 
+            mdi       = df['mdi'][-2]
+
+            ema_60 = df['ema60'][-2]
             
             logging.info(f'{sym} Checking Conds') 
             now = datetime.now().time()
@@ -220,7 +219,6 @@ def main(i):
                                 if rsi > 50 :
                                     logging.debug(f' [CHECK 1 5] {sym} [SHORT] pdi= {pdi} mdi= {mdi}')
                                     if pdi < mdi:
-                                        logging.debug('got here 6')
                                         #stop loss at psar
                                         stop_loss = df['psar'][-1] 
                                         # 1:1 with risk rewared
