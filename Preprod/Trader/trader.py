@@ -140,7 +140,7 @@ def main(i):
                 to_short_c +=1
 
             try:  
-                df['ema60']= talib.SMA(df['Close'].to_numpy(),timeperiod=60)
+                df['ema60']= talib.EMA(df['Close'].to_numpy(),timeperiod=60)
 
                 df['psar'] = talib.SAR(df['High'].to_numpy(), df['Low'].to_numpy(), acceleration=0.02, maximum=0.2)
 
@@ -200,12 +200,13 @@ def main(i):
                                     logging.debug(f' [CHECK 1 5] {sym} [LONG] pdi= {pdi} mdi= {mdi}')
                                     if pdi > mdi:
                                         #stop loss at psar
-                                        stop_loss = df['psar'][-1] 
+                                        stop_loss = df['psar'][-2] 
                                         # 1:1 with risk rewared
-                                        target_price = close + (close- df['psar'][-1])                
-                                        stock_amnt = stock_amnt_order(df['Close'][-1])
+                                        target_price = close + (close- df['psar'][-2])                
+                                        stock_amnt = stock_amnt_order(df['Close'][-2])
                                         api.submit_order(symbol=sym,qty=stock_amnt,side='buy',type='market',time_in_force='gtc')
                                         logging.info(f' [ENTER] {sym} [LONG] target= {target_price} stop= {stop_loss} amnt={stock_amnt} close= {close}')
+                                        logging.debug(df)
                                         look_for_exit(df,sym,stop_loss,target_price,'LONG',stock_amnt)
                 #Short check
                 elif trend=='clear_down':
@@ -220,12 +221,13 @@ def main(i):
                                     logging.debug(f' [CHECK 1 5] {sym} [SHORT] pdi= {pdi} mdi= {mdi}')
                                     if pdi < mdi:
                                         #stop loss at psar
-                                        stop_loss = df['psar'][-1] 
+                                        stop_loss = df['psar'][-2] 
                                         # 1:1 with risk rewared
-                                        target_price = close - (df['psar'][-1] - close )                
-                                        stock_amnt = stock_amnt_order(df['Close'][-1])
+                                        target_price = close - (df['psar'][-2] - close )                
+                                        stock_amnt = stock_amnt_order(df['Close'][-2])
                                         api.submit_order(symbol=sym,qty=stock_amnt,side='sell',type='market',time_in_force='gtc')
                                         logging.info(f' [ENTER] {sym} [SHORT] target= {target_price} stop= {stop_loss} amnt={stock_amnt} close= {close}')
+                                        logging.debug(df)
                                         look_for_exit(df,sym,stop_loss,target_price,'SHORT',stock_amnt)
 
         logging.info(f' [SUMMERY] {worker_num} %s' % (time.time() - start_time)) 
@@ -244,12 +246,14 @@ global worker_num
 parallel_proc_amnt = sys.argv[2] """
 
 worker_num = sys.argv[1]
-parallel_proc_amnt = 32
+parallel_proc_amnt = 48
 
 LOG_FORMAT = '%(asctime)s %(levelname)s %(message)s'
 logging.basicConfig(level=logging.DEBUG,
 filename=f"/log/{datetime.now()}.log",
 format=LOG_FORMAT)
+pd.set_option("display.max_rows", None, "display.max_columns", None)
+
 
 if __name__ == '__main__':
     # start n worker processes

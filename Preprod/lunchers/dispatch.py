@@ -6,7 +6,7 @@ def gen_sym_files():
     number_of_procs = 48
     sym_per_worker = 3450
     
-    file_path = '/home/ubuntu/spiderdc/Preprod/Trader/symbols.txt'
+    file_path = '/home/ubuntu/spiderdoc/Preprod/Trader/symbols.txt'
     #file_path = 'C:\DEVOPS\python apps\spiderdoc\spiderdoc\Preprod\symbols.txt'
     Sym_file = open(file_path,"r")
     x = len(Sym_file.readlines())
