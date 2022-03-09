@@ -26,8 +26,8 @@ def stock_amnt_order(close,stop_loss,order_type):
     global api
     account = api.get_account()
     balance = account.buying_power
-    amount = int(float(balance) / float(close))
     balance = float(balance) / 3
+    amount = int(float(balance) / float(close))
     if order_type=='LONG':
         delta=close - stop_loss
         #how much money are we risking
