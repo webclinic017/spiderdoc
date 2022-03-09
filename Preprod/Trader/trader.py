@@ -51,7 +51,7 @@ def look_for_exit(df,sym,stop_loss,target_price,pos_type,amnt):
     while True:
         try:
             #download data
-            df = yf.download(tickers=sym,period='3m',interval='1m', progress=False,show_errors=False)
+            df = yf.download(tickers=sym,period='24h',interval='1m', progress=False,show_errors=False)
             #remove unfinished candle
             df['Datetime'] = pd.to_datetime(df.index)
             df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume']]
