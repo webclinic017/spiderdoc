@@ -64,7 +64,7 @@ def look_for_exit(df,sym,stop_loss,target_price,pos_type,amnt):
                 logging.info(f'{sym} Was not Found')
                 continue
         
-        close     = df['Close'][-1]
+        close     = df['Close'][-2]
         logging.info(f'{sym} tp = {target_price} , close = {close} [IN C 0] , pos_type = {pos_type}')
         if pos_type == 'LONG':
             logging.debug('got here long')
