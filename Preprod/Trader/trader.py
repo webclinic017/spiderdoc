@@ -27,6 +27,7 @@ def stock_amnt_order(close,stop_loss,order_type):
     account = api.get_account()
     balance = account.buying_power
     amount = int(float(balance) / float(close))
+    balance = float(balance) / 3
     if order_type=='LONG':
         delta=close - stop_loss
         #how much money are we risking
@@ -39,8 +40,8 @@ def stock_amnt_order(close,stop_loss,order_type):
     if risk > one_percent:
         factor =   float(one_percent) / float(risk)
         amount = amount * float(factor)
-    else:
-        amount -= 1 
+    
+
 
 
     return amount
@@ -198,7 +199,7 @@ def main(i):
             mdi       = df['mdi'][-2]
 
             ema_60 = df['ema60'][-2]
-            
+            live_close= df['close'][-1]
             logging.info(f'{sym} Checking Conds') 
             now = datetime.now().time()
             tm0=tm(16,0,0)
@@ -220,10 +221,17 @@ def main(i):
                                         # 1:1 with risk rewared
                                         target_price = close + ((close- df['psar'][-2]) * 0.7)                
                                         stock_amnt = stock_amnt_order(df['Close'][-2],stop_loss,'LONG')
-                                        api.submit_order(symbol=sym,qty=stock_amnt,side='buy',type='market',time_in_force='gtc')
-                                        logging.info(f' [ENTER] {sym} [LONG] target= {target_price} stop= {stop_loss} amnt={stock_amnt} close= {close}')
-                                        logging.debug(df)
-                                        look_for_exit(df,sym,stop_loss,target_price,'LONG',stock_amnt)
+
+                                        #is the live_close closer to target > buy
+                                        tp_delta = target_price - live_close
+                                        sl_delta = live_close - stop_loss
+
+                                        if sl_delta > 0:
+                                            if sl_delta > tp_delta:
+                                                api.submit_order(symbol=sym,qty=stock_amnt,side='buy',type='market',time_in_force='gtc')
+                                                logging.info(f' [ENTER] {sym} [LONG] target= {target_price} stop= {stop_loss} amnt={stock_amnt} close= {close}')
+                                                logging.debug(df)
+                                                look_for_exit(df,sym,stop_loss,target_price,'LONG',stock_amnt)
                 #Short check
                 elif trend=='clear_down':
                     logging.debug(f' [CHECK 1 1] {sym} [SHORT] adx= {adx}')
@@ -241,10 +249,16 @@ def main(i):
                                         # 1:1 with risk rewared
                                         target_price = close - ((df['psar'][-2] - close ) * 0.7)                
                                         stock_amnt = stock_amnt_order(df['Close'][-2],stop_loss,'SHORT')
-                                        api.submit_order(symbol=sym,qty=stock_amnt,side='sell',type='market',time_in_force='gtc')
-                                        logging.info(f' [ENTER] {sym} [SHORT] target= {target_price} stop= {stop_loss} amnt={stock_amnt} close= {close}')
-                                        logging.debug(df)
-                                        look_for_exit(df,sym,stop_loss,target_price,'SHORT',stock_amnt)
+
+                                        tp_delta = live_close - target_price 
+                                        sl_delta = stop_loss - live_close
+
+                                        if sl_delta > 0:
+                                            if sl_delta > tp_delta:
+                                                api.submit_order(symbol=sym,qty=stock_amnt,side='sell',type='market',time_in_force='gtc')
+                                                logging.info(f' [ENTER] {sym} [SHORT] target= {target_price} stop= {stop_loss} amnt={stock_amnt} close= {close}')
+                                                logging.debug(df)
+                                                look_for_exit(df,sym,stop_loss,target_price,'SHORT',stock_amnt)
 
         logging.info(f' [SUMMERY] {worker_num} %s' % (time.time() - start_time)) 
         logging.info(f' [SUMMERY] down_fail_c= {down_fail_c } not_in_time_c= {not_in_time_c} to_short_c= {to_short_c}  -  worker: {worker_num}')
