@@ -199,7 +199,7 @@ def main(i):
             mdi       = df['mdi'][-2]
 
             ema_60 = df['ema60'][-2]
-            live_close= df['close'][-1]
+            live_close= df['Close'][-1]
             logging.info(f'{sym} Checking Conds') 
             now = datetime.now().time()
             tm0=tm(16,0,0)
