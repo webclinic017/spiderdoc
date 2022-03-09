@@ -178,8 +178,8 @@ def main(i):
 
             #fill trend column
             conditions = [
-                (df['ema60'].lt(df['Close'])),
-                (df['ema60'].gt(df['Close']))
+                (df['ema60'].lt(df['Low'])),
+                (df['ema60'].gt(df['High']))
                         ]    
         
             choices = ['clear_up','clear_down']
@@ -218,7 +218,7 @@ def main(i):
                                         #stop loss at psar
                                         stop_loss = df['psar'][-2] 
                                         # 1:1 with risk rewared
-                                        target_price = close + (close- df['psar'][-2])                
+                                        target_price = close + ((close- df['psar'][-2]) * 0.7)                
                                         stock_amnt = stock_amnt_order(df['Close'][-2],stop_loss,'LONG')
                                         api.submit_order(symbol=sym,qty=stock_amnt,side='buy',type='market',time_in_force='gtc')
                                         logging.info(f' [ENTER] {sym} [LONG] target= {target_price} stop= {stop_loss} amnt={stock_amnt} close= {close}')
@@ -239,7 +239,7 @@ def main(i):
                                         #stop loss at psar
                                         stop_loss = df['psar'][-2] 
                                         # 1:1 with risk rewared
-                                        target_price = close - (df['psar'][-2] - close )                
+                                        target_price = close - ((df['psar'][-2] - close ) * 0.7)                
                                         stock_amnt = stock_amnt_order(df['Close'][-2],stop_loss,'SHORT')
                                         api.submit_order(symbol=sym,qty=stock_amnt,side='sell',type='market',time_in_force='gtc')
                                         logging.info(f' [ENTER] {sym} [SHORT] target= {target_price} stop= {stop_loss} amnt={stock_amnt} close= {close}')
