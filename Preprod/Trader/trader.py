@@ -106,8 +106,8 @@ def main(i):
     global worker_num,api
 
     ########## account info ############################
-    API_ID = 'PK3BQ4TLCJJM83IPNZZH'
-    API_KEY = 'QjlpIoEOnOV6hbQ7m86DKKd1rIwXWutB43kVAfxs'
+    API_ID = 'PKSGEEH8V41B1ZIG9KRW'
+    API_KEY = 'lBtD7mCdYAW8PPlTPYJ8JFduoyqON2kahZi679UQ'
     api_endpoint = 'https://paper-api.alpaca.markets'
     ####################################################
     api = tradeapi.REST(key_id = API_ID,secret_key = API_KEY,base_url = api_endpoint)
