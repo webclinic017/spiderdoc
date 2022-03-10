@@ -207,7 +207,7 @@ def main(i):
                 logging.debug(f' [CHECK 1 0] {sym} Checking Conds')         
                 if trend == 'clear_up':
                     logging.debug(f' [CHECK 1 1] {sym} [LONG] adx= {adx}')
-                    if adx > 30 : 
+                    if adx > 25 and pdi > 25: 
                         logging.debug(f' [CHECK 1 2] {sym} [LONG] macd= {macd_hist}')  
                         if macd_hist > 0:
                             logging.debug(f' [CHECK 1 3] {sym} [LONG] close= {close} psar= {psar}')
@@ -231,7 +231,7 @@ def main(i):
                 #Short check
                 elif trend=='clear_down':
                     logging.debug(f' [CHECK 1 1] {sym} [SHORT] adx= {adx}')
-                    if adx > 25 :  
+                    if adx > 25 and mdi > 25 :  
                         logging.debug(f' [CHECK 1 2] {sym} [SHORT] macd= {macd_hist}')  
                         if macd_hist < 0:
                             logging.debug(f' [CHECK 1 3] {sym} [SHORT] close= {close} psar= {psar}')
