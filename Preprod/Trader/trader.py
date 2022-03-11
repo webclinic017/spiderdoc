@@ -211,7 +211,7 @@ def main(i):
             live_mdi       = df['mdi'][-1]
             logging.info(f'{sym} Checking Conds') 
             now = datetime.now().time()
-            tm0=tm(15,45,0)
+            tm0=tm(16,00,0)
             if  now < tm0:  
                 logging.debug(f' [CHECK 1 0] {sym} Checking Conds')         
                 if trend == 'clear_up' and live_trend == 'clear_up':
@@ -261,6 +261,10 @@ def main(i):
                                         logging.debug(df)
                                         look_for_exit(df,sym,stop_loss,target_price,'SHORT',stock_amnt)
 
+        tm0=tm(16,20,0)
+        if  now < tm0:
+            api.cancel_all_orders()
+            api.close_all_positions
         logging.info(f' [SUMMERY] {worker_num} %s' % (time.time() - start_time)) 
         logging.info(f' [SUMMERY] down_fail_c= {down_fail_c } not_in_time_c= {not_in_time_c} to_short_c= {to_short_c}  -  worker: {worker_num}')
         logging.info(f" [SUMMERY] total fails: {down_fail_c+not_in_time_c+to_short_c}")                                                         
