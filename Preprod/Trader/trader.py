@@ -107,8 +107,8 @@ def main(i):
     global worker_num,api
 
     ########## account info ############################
-    API_ID = 'PKN6VGAII877LDQWDKKT'
-    API_KEY = 'N8Qas6cjyG8EArYa8pwgcYkkZwCpRUUDru8OnNlV'
+    API_ID = 'PKHHTZDMPCPNB4BIH9VL'
+    API_KEY = 'w2voy8ennAXVwLpCnRpsaPcV1rxBYyoXdl8sj9dY'
     api_endpoint = 'https://paper-api.alpaca.markets'
     ####################################################
     api = tradeapi.REST(key_id = API_ID,secret_key = API_KEY,base_url = api_endpoint)
@@ -199,23 +199,32 @@ def main(i):
             mdi       = df['mdi'][-2]
 
             ema_60 = df['ema60'][-2]
+
             live_close= df['Close'][-1]
+            live_trend     = df['trend'][-1]
+            live_macd_hist = df['macd_hist'][-1]
+            live_psar      = df['psar'][-1]
+            live_rsi       = df['rsi'][-1]
+            live_adx       = df['adx'][-1] 
+
+            live_pdi       = df['pdi'][-1] 
+            live_mdi       = df['mdi'][-1]
             logging.info(f'{sym} Checking Conds') 
             now = datetime.now().time()
             tm0=tm(15,45,0)
             if  now < tm0:  
                 logging.debug(f' [CHECK 1 0] {sym} Checking Conds')         
-                if trend == 'clear_up':
+                if trend == 'clear_up' and live_trend == 'clear_up':
                     logging.debug(f' [CHECK 1 1] {sym} [LONG] adx= {adx}')
-                    if adx > 25 and pdi > 25: 
+                    if adx > 25 and pdi > 25 and live_adx > 25 and live_pdi > 25: 
                         logging.debug(f' [CHECK 1 2] {sym} [LONG] macd= {macd_hist}')  
-                        if macd_hist > 0:
+                        if macd_hist > 0 and live_macd_hist > 0:
                             logging.debug(f' [CHECK 1 3] {sym} [LONG] close= {close} psar= {psar}')
-                            if close > psar:
+                            if close > psar and live_close > live_psar:
                                 logging.debug(f' [CHECK 1 4] {sym} [LONG] rsi= {rsi}')
-                                if rsi < 50 :
+                                if rsi < 50:
                                     logging.debug(f' [CHECK 1 5] {sym} [LONG] pdi= {pdi} mdi= {mdi}')
-                                    if pdi > mdi:
+                                    if pdi > mdi and live_pdi > live_mdi:
                                         #stop loss at psar
                                         stop_loss = df['psar'][-2] 
                                         # 1:1 with risk rewared
@@ -229,17 +238,17 @@ def main(i):
                                         logging.debug(df)
                                         look_for_exit(df,sym,stop_loss,target_price,'LONG',stock_amnt)
                 #Short check
-                elif trend=='clear_down':
+                elif trend=='clear_down' and live_trend=='clear_down':
                     logging.debug(f' [CHECK 1 1] {sym} [SHORT] adx= {adx}')
-                    if adx > 25 and mdi > 25 :  
+                    if adx > 25 and mdi > 25 and live_adx > 25 and live_mdi > 25 :  
                         logging.debug(f' [CHECK 1 2] {sym} [SHORT] macd= {macd_hist}')  
-                        if macd_hist < 0:
+                        if macd_hist < 0 and live_macd_hist < 0:
                             logging.debug(f' [CHECK 1 3] {sym} [SHORT] close= {close} psar= {psar}')
-                            if close < psar:
+                            if close < psar and live_close < live_psar:
                                 logging.debug(f' [CHECK 1 4] {sym} [SHORT] rsi= {rsi}')
                                 if rsi > 50 :
                                     logging.debug(f' [CHECK 1 5] {sym} [SHORT] pdi= {pdi} mdi= {mdi}')
-                                    if pdi < mdi:
+                                    if pdi < mdi and live_pdi < live_mdi:
                                         #stop loss at psar
                                         stop_loss = df['psar'][-2] 
                                         # 1:1 with risk rewared
