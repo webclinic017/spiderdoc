@@ -13,6 +13,8 @@ from itertools import compress
 import alpaca_trade_api as tradeapi
 import gc
 import logging
+from scipy.signal import argrelextrema
+
 
 def is_time_between(begin_time, end_time, check_time=None):
     # If check time is not given, default to current UTC time
@@ -188,6 +190,12 @@ def main(i):
 
             df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume','trend','psar','macd_hist','rsi','adx','ema60','pdi','mdi']]
 
+            n=7
+            df_min = df.iloc[argrelextrema(df.Close.values, np.less_equal,
+            order=n)[0]]['Low']
+            df_max = df.iloc[argrelextrema(df.Close.values, np.greater_equal,
+            order=n)[0]]['High']     
+            
             close     = df['Close'][-2]
             trend     = df['trend'][-2]
             macd_hist = df['macd_hist'][-2]
@@ -222,7 +230,7 @@ def main(i):
                             logging.debug(f' [CHECK 1 3] {sym} [LONG] close= {close} psar= {psar}')
                             if close > psar and live_close > live_psar:
                                 logging.debug(f' [CHECK 1 4] {sym} [LONG] rsi= {rsi}')
-                                if rsi < 50:
+                                if df_max[-3] < df_max[-2] and df_min[-3] < df_min[-2]:    
                                     logging.debug(f' [CHECK 1 5] {sym} [LONG] pdi= {pdi} mdi= {mdi}')
                                     if pdi > mdi and live_pdi > live_mdi:
                                         #stop loss at psar
@@ -246,7 +254,7 @@ def main(i):
                             logging.debug(f' [CHECK 1 3] {sym} [SHORT] close= {close} psar= {psar}')
                             if close < psar and live_close < live_psar:
                                 logging.debug(f' [CHECK 1 4] {sym} [SHORT] rsi= {rsi}')
-                                if rsi > 50 :
+                                if df_max[-3] > df_max[-2] and df_min[-3] > df_min[-2]:    
                                     logging.debug(f' [CHECK 1 5] {sym} [SHORT] pdi= {pdi} mdi= {mdi}')
                                     if pdi < mdi and live_pdi < live_mdi:
                                         #stop loss at psar

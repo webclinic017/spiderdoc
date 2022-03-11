@@ -18,8 +18,8 @@ end_date_range = sys.argv[3]
 run_type = sys.argv[4]
 prallel_proc_amnt = sys.argv[5] """
 
-start_date_range = '2022-02-01'
-end_date_range = '2022-02-25'
+start_date_range = '2022-02-10'
+end_date_range = '2022-03-08'
 run_type = 'REAL'
 prallel_proc_amnt = 16
 
@@ -70,7 +70,6 @@ def show_plt(minute_ran,stock,start_date):
     df_1 =df_bkp.iloc[0:minute_ran,:]
     df = df_bkp.iloc[:minute_ran+1,:]
     df['Datetime'] = pd.to_datetime(df.index)
-    df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close']]
     
 
     n=7
@@ -231,8 +230,10 @@ def  get_pos_delta(close):
 
 def enter_long(i):
     global df
-    df=df
+    global df_min,df_max 
+       
     close     = df['Close'][i]
+    p_close   = df['Close'][i-1]
     trend     = df['trend'][i]
     macd_hist = df['macd_hist'][i]
     psar      = df['psar'][i]
@@ -240,12 +241,13 @@ def enter_long(i):
     adx       = df['adx'][i] 
     pdi       = df['pdi'][i] 
     mdi       = df['mdi'][i] 
+    ema       = df['ema60'][i]
       
     if trend == 'clear_up':
-        if adx > 25 :   
+        if df_max[-3] < df_max[-2] and df_min[-3] < df_min[-2]:    
             if macd_hist > 0:
                 if close > psar:
-                    if rsi < 50 :
+                    if adx > 25:
                         if pdi > mdi:
                             return True
        
@@ -255,8 +257,6 @@ def enter_long(i):
     
 def exit_long(i,stop_loss,target_price):
     global df
-    df=df
-    
     close     = df['Close'][i]
     
     if close > target_price:
@@ -273,6 +273,7 @@ def enter_short(i):
     global df
     df=df
     close     = df['Close'][i]
+    p_close   = df['Close'][i-1]
     trend     = df['trend'][i]
     macd_hist = df['macd_hist'][i]
     psar      = df['psar'][i]
@@ -280,13 +281,15 @@ def enter_short(i):
     adx       = df['adx'][i] 
     pdi       = df['pdi'][i] 
     mdi       = df['mdi'][i] 
+    ema       = df['ema60'][i]
+
       
     if trend == 'clear_down':
-        if adx > 25 :   
+        if df_max[-3] > df_max[-2] and df_min[-3] > df_min[-2]:    
             if macd_hist < 0:
                 if close < psar:
-                    if rsi > 50 :
-                        if pdi < mdi:
+                    if adx > 25:
+                        if mdi > pdi:
                             return True
        
         
@@ -328,6 +331,7 @@ def run_simulation(stock_to_trade):
     global candle_rankings
     global positions
     global s
+    global df_min,df_max
     stock_to_trade=stock_to_trade.strip('\n')
    
     a = datetime.strptime(start_date_range, "%Y-%m-%d")
@@ -395,16 +399,14 @@ def run_simulation(stock_to_trade):
         df['pdi'] = talib.PLUS_DI(df['High'],df['Low'], df['Close'], timeperiod=14)
         #fill trend column
         conditions = [
-            (df['ema60'].lt(df['Close'])),
-            (df['ema60'].gt(df['Close']))
+            (df['ema60'].lt(df['Low'])),
+            (df['ema60'].gt(df['High']))
                     ]    
     
         choices = ['clear_up','clear_down']
         df['trend'] = np.select(conditions, choices, default=0 )
-        levels = []
-        
-        df_bkp = df
-                
+        levels = []        
+                        
         #for patter recognition (global to feach it ones only)    
         
         df['Datetime'] = pd.to_datetime(df.index)
@@ -413,14 +415,21 @@ def run_simulation(stock_to_trade):
         ##########################################################################################################################
         #                                       RUN THROUGH DAY                                                                  #   
         ##########################################################################################################################
-
+        df_bkp =df
         for i in range(df.shape[0]):
             #search for snr live
      
             #what was the intent of the previos trade in positions
             last_intent = positions.iloc[-1]['Intent']    
             #current close
-            close=df['Close'][i]                
+            close=df['Close'][i]    
+            
+            n=7
+            df_1 = df.iloc[0:i,:]
+            df_min = df_1.iloc[argrelextrema(df_1.Close.values, np.less_equal,
+            order=n)[0]]['Low']
+            df_max = df_1.iloc[argrelextrema(df_1.Close.values, np.greater_equal,
+            order=n)[0]]['High']            
             #show current state # TODO : remove            
                 
                 #print(positions)  
@@ -435,7 +444,7 @@ def run_simulation(stock_to_trade):
                     position_is_open = True
                     stock_amnt_to_order = stock_amnt_order(close,df['psar'][i])
                     #PSAR is stop loss
-                    target_price = close + (close- df['psar'][i])              
+                    target_price = close + ((close- df['psar'][i]) * 0.7)             
                     stop_loss = df['psar'][i]
                     buy_long(i,stock_amnt_to_order)
                     print( ' +++++++++++++++++++ ')
@@ -444,7 +453,7 @@ def run_simulation(stock_to_trade):
                     position_is_open = True
                     stock_amnt_to_order = stock_amnt_order(close,df['psar'][i])
                     #PSAR is stop loss
-                    target_price = close - (df['psar'][i] - close)             
+                    target_price = close - ((df['psar'][i] - close) * 0.7)             
                     stop_loss = df['psar'][i]
                     sell_short(i,stock_amnt_to_order)
                     print( ' +++++++++++++++++++ ')
@@ -481,7 +490,7 @@ def run_simulation(stock_to_trade):
         outdir = 'C:\\Users\\nolys\\Desktop\\results\\'
         fullname =  outdir + outname
         #print("--- %s seconds ---" % (time.time() - start_time))
-
+        
         if len(positions) > 1:
             positions.to_csv(fullname)
             #show_plt(i,stock_to_trade,start_date_range)
@@ -498,11 +507,11 @@ def run_simulation(stock_to_trade):
 
                 
                     
-sim_scope = 0            
+sim_scope = 0        
 if sim_scope == 1:               
     stock_to_trade = 'XL'
-    start_date_range = '2022-02-04'
-    end_date_range = '2022-02-05'
+    start_date_range = '2022-03-04'
+    end_date_range = '2022-03-05'
     run_type = 'ADJ' 
     run_simulation(stock_to_trade)     
 else :
