@@ -195,14 +195,7 @@ def main(i):
             ema_60 = df['ema60'][-2]
 
             live_close= df['Close'][-1]
-            live_trend     = df['trend'][-1]
-            live_macd_hist = df['macd_hist'][-1]
-            live_psar      = df['psar'][-1]
-            live_rsi       = df['rsi'][-1]
-            live_adx       = df['adx'][-1] 
 
-            live_pdi       = df['pdi'][-1] 
-            live_mdi       = df['mdi'][-1]
             logging.info(f'{sym} Checking Conds') 
             now = datetime.now().time()
             tm0=tm(16,00,0)
