@@ -229,7 +229,7 @@ def main(i):
                                         logging.info(f' [ENTER] {sym} [LONG] target= {target_price} stop= {stop_loss} amnt={stock_amnt} close= {close}')
                                         logging.debug(df)
                 #Short check
-                elif trend=='clear_down' and live_trend=='clear_down':
+                elif trend=='clear_down':
                     logging.debug(f' [CHECK 1 1] {sym} [SHORT] adx= {adx}')
                     if adx > 25:  
                         logging.debug(f' [CHECK 1 2] {sym} [SHORT] macd= {macd_hist}')  

@@ -5,7 +5,7 @@ import alpaca_trade_api as tradeapi
 def gen_sym_files():
     
     number_of_procs = 48
-    sym_per_worker = 3450
+    sym_per_worker = 6917
     
     file_path = '/home/ubuntu/spiderdoc/Preprod/Trader/symbols.txt'
     #file_path = 'C:\DEVOPS\python apps\spiderdoc\spiderdoc\Preprod\symbols.txt'
@@ -99,16 +99,4 @@ for host in active_hosts:
 
 """ df = yf.download(tickers='AAPl',period='15m',interval='1m')
 print(df) """
-#gen_sym_files()
-
-########## account info ############################
-API_ID = 'PKF7LATHEP3YM9AK1RNH'
-API_KEY = 'YSV3deLqI8JBaJkLhL4BXtJe3sXoznJW0jrNAs2f'
-api_endpoint = 'https://paper-api.alpaca.markets'
-####################################################
-api = tradeapi.REST(key_id = API_ID,secret_key = API_KEY,base_url = api_endpoint)
-api.submit_order(symbol='AAPL',
-                 qty=1,side='buy',
-                 type='market',time_in_force='gtc',order_class='bracket',
-                 stop_loss={'stop_price': 140},
-                 take_profit={'limit_price': 180})
+gen_sym_files()
