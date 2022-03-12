@@ -131,7 +131,7 @@ def main(i):
             sym = sym.strip('\n')
             try:
                 #download data
-                df = yf.download(tickers=sym,period='24h',interval='1m', progress=False,show_errors=False)
+                df = yf.download(tickers=sym,period='10d',interval='30m', progress=False,show_errors=False)
                 df['Datetime'] = pd.to_datetime(df.index)
                 df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume']]
                 logging.info(f'{sym} Downloaded')
@@ -139,23 +139,9 @@ def main(i):
                 logging.warning(f'{sym} Was not Found')
                 down_fail_c += 1
                 continue
-            if len(df) < 60:
-                logging.info(f'{sym} Was not Found')
-                continue
-            #check if sym is up to date
-            curr_minute = datetime.now().minute -1            
-            curr_hour = datetime.now().hour
-            ts_minutes = df['Datetime'][-2].minute
-            ts_hour = df['Datetime'][-2].hour
-
-            if ts_minutes != curr_minute or ts_hour != curr_hour:
-                not_in_time_c += 1
-                logging.warning(f'{sym} Is not to date')
-                continue
-            else:
-                logging.info(f'{sym} Is up to date')
 
             if len(df.index) < 60:
+                logging.info(f'{sym} Was not Found')
                 to_short_c +=1
 
             try:  
@@ -222,17 +208,17 @@ def main(i):
             tm0=tm(16,00,0)
             if  now < tm0:  
                 logging.debug(f' [CHECK 1 0] {sym} Checking Conds')         
-                if trend == 'clear_up' and live_trend == 'clear_up':
+                if trend == 'clear_up':
                     logging.debug(f' [CHECK 1 1] {sym} [LONG] adx= {adx}')
-                    if adx > 25 and pdi > 25 and live_adx > 25 and live_pdi > 25: 
+                    if adx > 25: 
                         logging.debug(f' [CHECK 1 2] {sym} [LONG] macd= {macd_hist}')  
-                        if macd_hist > 0 and live_macd_hist > 0:
+                        if macd_hist > 0 :
                             logging.debug(f' [CHECK 1 3] {sym} [LONG] close= {close} psar= {psar}')
-                            if close > psar and live_close > live_psar:
+                            if close > psar:
                                 logging.debug(f' [CHECK 1 4] {sym} [LONG] rsi= {rsi}')
-                                if df_max[-3] < df_max[-2] and df_min[-3] < df_min[-2]:    
+                                if rsi < 50:
                                     logging.debug(f' [CHECK 1 5] {sym} [LONG] pdi= {pdi} mdi= {mdi}')
-                                    if pdi > mdi and live_pdi > live_mdi:
+                                    if pdi > mdi:
                                         #stop loss at psar
                                         stop_loss = df['psar'][-2] 
                                         # 1:1 with risk rewared
@@ -241,22 +227,26 @@ def main(i):
                                         if live_close <= stop_loss:
                                             continue
                                         #is the live_close closer to target > buy
-                                        api.submit_order(symbol=sym,qty=stock_amnt,side='buy',type='market',time_in_force='gtc')
+                                        api.submit_order(symbol=sym,
+                                            qty=stock_amnt,side='buy',
+                                            type='market',time_in_force='gtc',order_class='bracket',
+                                            stop_loss={'stop_price': stop_loss},
+                                            take_profit={'limit_price': target_price})
+                                        
                                         logging.info(f' [ENTER] {sym} [LONG] target= {target_price} stop= {stop_loss} amnt={stock_amnt} close= {close}')
                                         logging.debug(df)
-                                        look_for_exit(df,sym,stop_loss,target_price,'LONG',stock_amnt)
                 #Short check
                 elif trend=='clear_down' and live_trend=='clear_down':
                     logging.debug(f' [CHECK 1 1] {sym} [SHORT] adx= {adx}')
-                    if adx > 25 and mdi > 25 and live_adx > 25 and live_mdi > 25 :  
+                    if adx > 25:  
                         logging.debug(f' [CHECK 1 2] {sym} [SHORT] macd= {macd_hist}')  
-                        if macd_hist < 0 and live_macd_hist < 0:
+                        if macd_hist < 0:
                             logging.debug(f' [CHECK 1 3] {sym} [SHORT] close= {close} psar= {psar}')
-                            if close < psar and live_close < live_psar:
+                            if close < psar :
                                 logging.debug(f' [CHECK 1 4] {sym} [SHORT] rsi= {rsi}')
-                                if df_max[-3] > df_max[-2] and df_min[-3] > df_min[-2]:    
+                                if rsi > 50:    
                                     logging.debug(f' [CHECK 1 5] {sym} [SHORT] pdi= {pdi} mdi= {mdi}')
-                                    if pdi < mdi and live_pdi < live_mdi:
+                                    if pdi < mdi:
                                         #stop loss at psar
                                         stop_loss = df['psar'][-2] 
                                         # 1:1 with risk rewared
@@ -264,15 +254,14 @@ def main(i):
                                         stock_amnt = stock_amnt_order(df['Close'][-2],stop_loss,'SHORT')
                                         if live_close >= stop_loss:
                                             continue
-                                        api.submit_order(symbol=sym,qty=stock_amnt,side='sell',type='market',time_in_force='gtc')
+                                        api.submit_order(symbol=sym,
+                                            qty=stock_amnt,side='sell',
+                                            type='market',time_in_force='gtc',order_class='bracket',
+                                            stop_loss={'stop_price': stop_loss},
+                                            take_profit={'limit_price': target_price})
+                                        
                                         logging.info(f' [ENTER] {sym} [SHORT] target= {target_price} stop= {stop_loss} amnt={stock_amnt} close= {close}')
                                         logging.debug(df)
-                                        look_for_exit(df,sym,stop_loss,target_price,'SHORT',stock_amnt)
-
-        tm0=tm(16,20,0)
-        if  now < tm0:
-            api.cancel_all_orders()
-            api.close_all_positions
         logging.info(f' [SUMMERY] {worker_num} %s' % (time.time() - start_time)) 
         logging.info(f' [SUMMERY] down_fail_c= {down_fail_c } not_in_time_c= {not_in_time_c} to_short_c= {to_short_c}  -  worker: {worker_num}')
         logging.info(f" [SUMMERY] total fails: {down_fail_c+not_in_time_c+to_short_c}")                                                         

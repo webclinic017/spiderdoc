@@ -231,6 +231,7 @@ def  get_pos_delta(close):
 def enter_long(i):
     global df
     global df_min,df_max 
+    global rsi_min
        
     close     = df['Close'][i]
     p_close   = df['Close'][i-1]
@@ -242,15 +243,17 @@ def enter_long(i):
     pdi       = df['pdi'][i] 
     mdi       = df['mdi'][i] 
     ema       = df['ema60'][i]
+
       
     if trend == 'clear_up':
-        if df_max[-3] < df_max[-2] and df_min[-3] < df_min[-2]:    
-            if macd_hist > 0:
-                if close > psar:
+        if macd_hist > 0:
+            if close > psar:
+                if rsi <50:
                     if adx > 25:
                         if pdi > mdi:
                             return True
        
+                
         
     
     return False 
@@ -271,6 +274,8 @@ def exit_long(i,stop_loss,target_price):
 
 def enter_short(i):
     global df
+    global df_min,df_max 
+    global rsi_max
     df=df
     close     = df['Close'][i]
     p_close   = df['Close'][i-1]
@@ -282,16 +287,15 @@ def enter_short(i):
     pdi       = df['pdi'][i] 
     mdi       = df['mdi'][i] 
     ema       = df['ema60'][i]
-
       
     if trend == 'clear_down':
-        if df_max[-3] > df_max[-2] and df_min[-3] > df_min[-2]:    
-            if macd_hist < 0:
-                if close < psar:
+        if macd_hist < 0:
+            if close < psar:
+                if rsi > 50:
                     if adx > 25:
-                        if mdi > pdi:
+                        if pdi < mdi:
                             return True
-       
+        
         
     
     return False
@@ -332,6 +336,7 @@ def run_simulation(stock_to_trade):
     global positions
     global s
     global df_min,df_max
+    global rsi_min,rsi_max
     stock_to_trade=stock_to_trade.strip('\n')
    
     a = datetime.strptime(start_date_range, "%Y-%m-%d")
@@ -343,157 +348,136 @@ def run_simulation(stock_to_trade):
     curr_date=curr_date - timedelta(days=1) 
     balance = 10000
 
-    for day in range(delta_date.days):
-    #########################################################################################################################
-    #                                           New Day initilazion
-    #                                           ==================
-    #########################################################################################################################                                            
-        positions              = pd.DataFrame(columns=['Timestamp','Action','Amount','Price','TValue','Intent','Balance'])
-        #for eval 
-        #positions['Timestamp'] = pd.to_datetime(positions.index)
-        positions = positions.loc[:,['Timestamp','Action','Amount','Price','TValue','Intent',"Balance"]]
+#########################################################################################################################
+#                                           New Day initilazion
+#                                           ==================
+#########################################################################################################################                                            
+    positions              = pd.DataFrame(columns=['Timestamp','Action','Amount','Price','TValue','Intent','Balance'])
+    #for eval 
+    #positions['Timestamp'] = pd.to_datetime(positions.index)
+    positions = positions.loc[:,['Timestamp','Action','Amount','Price','TValue','Intent',"Balance"]]
 
-        curr_date=curr_date + timedelta(days=1) 
-        if run_type != 'REAL' :
-            balance=10000
-        update_pos(0,'0000-00-00 00:00:00-00:00','NA',0,0,0,'NA',balance)
+    if run_type != 'REAL' :
+        balance=10000
+    update_pos(0,'0000-00-00 00:00:00-00:00','NA',0,0,0,'NA',balance)
 
-        tommorow_date =curr_date + timedelta(days=1)
-        get_rid_of_position = False 
-        #skips loop run if staurday
-        if curr_date.weekday() == 5 or curr_date.weekday() == 6 :
-            continue
-            #define up and down prices
-        ########################################################################################################################
-        #                                      Data and Metrics for this day are calculated Here
-        #                                     ===================================================
-        ########################################################################################################################
-        #get historical data from yfinance for this day
-        #start_time = time.time()
+    ########################################################################################################################
+    #                                      Data and Metrics for this day are calculated Here
+    #                                     ===================================================
+    ########################################################################################################################
+    #get historical data from yfinance for this day
+    #start_time = time.time()
 
-        try:
-            print(curr_date.strftime('%Y-%m-%d') + ' - ' + stock_to_trade)
-            df = yf.download(stock_to_trade,curr_date,tommorow_date,interval='1m')
-        except:
-            stock_not_avail = True
-            continue
-        
-        if df.isnull().values.any() or len(df) < 1:
-            continue
-
-        #ema 100
-        
-        df['ema60']= talib.SMA(df['Close'],timeperiod=60)
-        
-
-        df['psar'] = talib.SAR(df['High'], df['Low'], acceleration=0.02, maximum=0.2)
-
-        df['macd'],df['macd_signal'],df['macd_hist'] = talib.MACD(df['Close'], fastperiod=12, slowperiod=26, signalperiod=9)
-        
-        df['rsi'] = talib.RSI(df['Close'], timeperiod=14)
-        
-        df['adx'] = talib.ADX(df['High'], df['Low'], df['Close'], timeperiod=14)
-
-        df['mdi'] = talib.MINUS_DI(df['High'],df['Low'], df['Close'], timeperiod=14)
-        
-        df['pdi'] = talib.PLUS_DI(df['High'],df['Low'], df['Close'], timeperiod=14)
-        #fill trend column
-        conditions = [
-            (df['ema60'].lt(df['Low'])),
-            (df['ema60'].gt(df['High']))
-                    ]    
+    try:
+        #print(curr_date.strftime('%Y-%m-%d') + ' - ' + stock_to_trade)
+        df = yf.download(stock_to_trade,start_date_range,end_date_range,interval='30m', progress=False,show_errors=False)
+    except:
+        stock_not_avail = True
+    #ema 100
+    df['ema60']= talib.SMA(df['Close'],timeperiod=60)
     
-        choices = ['clear_up','clear_down']
-        df['trend'] = np.select(conditions, choices, default=0 )
-        levels = []        
-                        
-        #for patter recognition (global to feach it ones only)    
-        
-        df['Datetime'] = pd.to_datetime(df.index)
 
-        df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume','ema60','trend','psar','macd','macd_signal','macd_hist','rsi','adx','pdi','mdi']]
-        ##########################################################################################################################
-        #                                       RUN THROUGH DAY                                                                  #   
-        ##########################################################################################################################
-        df_bkp =df
-        for i in range(df.shape[0]):
-            #search for snr live
-     
-            #what was the intent of the previos trade in positions
-            last_intent = positions.iloc[-1]['Intent']    
-            #current close
-            close=df['Close'][i]    
-            
-            n=7
-            df_1 = df.iloc[0:i,:]
-            df_min = df_1.iloc[argrelextrema(df_1.Close.values, np.less_equal,
-            order=n)[0]]['Low']
-            df_max = df_1.iloc[argrelextrema(df_1.Close.values, np.greater_equal,
-            order=n)[0]]['High']            
-            #show current state # TODO : remove            
-                
-                #print(positions)  
-            #############################################################
-            #                     STRATEGY                              #
-            #############################################################
-            
+    df['psar'] = talib.SAR(df['High'], df['Low'], acceleration=0.02, maximum=0.2)
 
-            #possible to enter osotion only between 10:30 - 15:30 and when no positions are open
-            if (position_is_open==False and i < 400 and i > 60):
-                if(enter_long(i) == True):
-                    position_is_open = True
-                    stock_amnt_to_order = stock_amnt_order(close,df['psar'][i])
-                    #PSAR is stop loss
-                    target_price = close + ((close- df['psar'][i]) * 0.7)             
-                    stop_loss = df['psar'][i]
-                    buy_long(i,stock_amnt_to_order)
-                    print( ' +++++++++++++++++++ ')
-                    exit_select = 1
-                elif(enter_short(i) == True):
-                    position_is_open = True
-                    stock_amnt_to_order = stock_amnt_order(close,df['psar'][i])
-                    #PSAR is stop loss
-                    target_price = close - ((df['psar'][i] - close) * 0.7)             
-                    stop_loss = df['psar'][i]
-                    sell_short(i,stock_amnt_to_order)
-                    print( ' +++++++++++++++++++ ')
-                    exit_select = -1
+    df['macd'],df['macd_signal'],df['macd_hist'] = talib.MACD(df['Close'], fastperiod=12, slowperiod=26, signalperiod=9)
+    
+    df['rsi'] = talib.RSI(df['Close'], timeperiod=14)
+    
+    df['adx'] = talib.ADX(df['High'], df['Low'], df['Close'], timeperiod=14)
+
+    df['mdi'] = talib.MINUS_DI(df['High'],df['Low'], df['Close'], timeperiod=14)
+    
+    df['pdi'] = talib.PLUS_DI(df['High'],df['Low'], df['Close'], timeperiod=14)
+    #fill trend column
+    conditions = [
+        (df['ema60'].lt(df['Low'])),
+        (df['ema60'].gt(df['High']))
+                ]    
+
+    choices = ['clear_up','clear_down']
+    df['trend'] = np.select(conditions, choices, default=0 )
+    levels = []        
                     
-            elif ( position_is_open ==True):
-                if exit_select == 1:
-                    if (exit_long(i,stop_loss,target_price) == True):
-                        position_is_open=False
-                        close_long(i)
-                        print( ' ============ ')
-                        exit_select == 0
-                        #DAY FINISHED COMPUTING
-                elif  exit_select == -1:
-                    if (exit_short(i,stop_loss,target_price) == True):
-                        position_is_open=False
-                        close_short(i)
-                        print( ' ============ ')
-                        exit_select == 0
-                        #DAY FINISHED COMPUTING
-                    
+    #for patter recognition (global to feach it ones only)    
+    
+    df['Datetime'] = pd.to_datetime(df.index)
 
+    df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume','ema60','trend','psar','macd','macd_signal','macd_hist','rsi','adx','pdi','mdi']]
+    ##########################################################################################################################
+    #                                       RUN THROUGH DAY                                                                  #   
+    ##########################################################################################################################
+    df_bkp =df
+    for i in range(df.shape[0]):
+        #search for snr live
+    
+        #what was the intent of the previos trade in positions
         last_intent = positions.iloc[-1]['Intent']    
-        if last_intent == 'LONG':
-            close_long(i)
-            position_is_open = False
+        #current close
+        close=df['Close'][i]    
+            #show current state # TODO : remove            
             
-        if last_intent == 'SHORT':
-            close_short(i)
-            position_is_open = False
-            
-        outname = "ROC_1-"+stock_to_trade+"-X-"+datetime.strftime(curr_date,"%Y-%m-%d")+".csv"
-        #outdir = '/output/'
-        outdir = 'C:\\Users\\nolys\\Desktop\\results\\'
-        fullname =  outdir + outname
-        #print("--- %s seconds ---" % (time.time() - start_time))
+            #print(positions)  
+        #############################################################
+        #                     STRATEGY                              #
+        #############################################################
         
-        if len(positions) > 1:
-            positions.to_csv(fullname)
-            #show_plt(i,stock_to_trade,start_date_range)
+        #possible to enter osotion only between 10:30 - 15:30 and when no positions are open
+        if (position_is_open==False and i > 60 ):
+            if(enter_long(i) == True):
+                position_is_open = True
+                stock_amnt_to_order = stock_amnt_order(close,df['psar'][i])
+                #PSAR is stop loss
+                target_price = close + ((close- df['psar'][i]) * 1)             
+                stop_loss = df['psar'][i]
+                buy_long(i,stock_amnt_to_order)
+                print( ' +++++++++++++++++++ ')
+                exit_select = 1
+            elif(enter_short(i) == True):
+                position_is_open = True
+                stock_amnt_to_order = stock_amnt_order(close,df['psar'][i])
+                #PSAR is stop loss
+                target_price = close - ((df['psar'][i] - close) * 1)             
+                stop_loss = df['psar'][i]
+                sell_short(i,stock_amnt_to_order)
+                print( ' --------------------- ')
+                exit_select = -1
+                
+        elif ( position_is_open ==True):
+            if exit_select == 1:
+                if (exit_long(i,stop_loss,target_price) == True):
+                    position_is_open=False
+                    close_long(i)
+                    print( ' ============ ')
+                    exit_select == 0
+                    #DAY FINISHED COMPUTING
+            elif  exit_select == -1:
+                if (exit_short(i,stop_loss,target_price) == True):
+                    position_is_open=False
+                    close_short(i)
+                    print( ' ============ ')
+                    exit_select == 0
+                    #DAY FINISHED COMPUTING
+                
+
+    last_intent = positions.iloc[-1]['Intent']    
+    if last_intent == 'LONG':
+        close_long(i)
+        position_is_open = False
+        
+    if last_intent == 'SHORT':
+        close_short(i)
+        position_is_open = False
+        
+    
+    outname = "ROC_1-"+stock_to_trade+"-X-"+datetime.strftime(curr_date,"%Y-%m-%d")+".csv"
+    #outdir = '/output/'
+    outdir = 'C:\\Users\\nolys\\Desktop\\results\\'
+    fullname =  outdir + outname
+    #print("--- %s seconds ---" % (time.time() - start_time))
+    
+    if len(positions) > 1:
+        positions.to_csv(fullname)
+        #show_plt(i,stock_to_trade,start_date_range)
 
         """ outname = "ROC_1-"+stock_to_trade+"-X-"+datetime.strftime(curr_date,"%Y-%m-%d")+"-STOCK.csv"
         #outdir = '/output/'
@@ -507,11 +491,11 @@ def run_simulation(stock_to_trade):
 
                 
                     
-sim_scope = 0        
+sim_scope = 0
 if sim_scope == 1:               
-    stock_to_trade = 'XL'
-    start_date_range = '2022-03-04'
-    end_date_range = '2022-03-05'
+    stock_to_trade = 'D'
+    start_date_range = '2022-02-08'
+    end_date_range = '2022-02-09'
     run_type = 'ADJ' 
     run_simulation(stock_to_trade)     
 else :
