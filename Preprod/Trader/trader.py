@@ -278,7 +278,7 @@ global worker_num
 parallel_proc_amnt = sys.argv[2] """
 
 worker_num = sys.argv[1]
-parallel_proc_amnt = 48
+parallel_proc_amnt = 16
 
 LOG_FORMAT = '%(asctime)s %(levelname)s %(message)s'
 logging.basicConfig(level=logging.DEBUG,
