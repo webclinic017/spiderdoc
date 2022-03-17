@@ -99,4 +99,16 @@ for host in active_hosts:
 
 """ df = yf.download(tickers='AAPl',period='15m',interval='1m')
 print(df) """
-gen_sym_files()
+#gen_sym_files()
+
+########## account info ############################
+API_ID = 'PKFZO082H28QNDUQTHKK'
+API_KEY = 'ZOFAh3LFePD13ZYUi19KMcQJHcyBDd5pMEIXJa4P'
+api_endpoint = 'https://paper-api.alpaca.markets'
+####################################################
+api = tradeapi.REST(key_id = API_ID,secret_key = API_KEY,base_url = api_endpoint)
+api.submit_order(symbol="IPGP",
+    qty=1,side='sell',
+    type='market',time_in_force='gtc',order_class='bracket',
+    stop_loss={'stop_price': 110},
+    take_profit={'limit_price': 108})

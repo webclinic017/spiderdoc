@@ -14,7 +14,7 @@ import alpaca_trade_api as tradeapi
 import gc
 import logging
 from scipy.signal import argrelextrema
-
+import math
 
 def is_time_between(begin_time, end_time, check_time=None):
     # If check time is not given, default to current UTC time
@@ -30,7 +30,7 @@ def stock_amnt_order(close,stop_loss,order_type):
     balance = account.buying_power
     balance = float(balance) / 1
     amount = int(float(balance) / float(close))
-    if order_type=='LONG':
+    """ if order_type=='LONG':
         delta=close - stop_loss
         #how much money are we risking
     elif order_type=='SHORT':
@@ -41,10 +41,11 @@ def stock_amnt_order(close,stop_loss,order_type):
     
     if risk > one_percent:
         factor =   float(one_percent) / float(risk)
-        amount = amount * float(factor)
+        amount = amount * float(factor) """
     
+    amount = math.floor(amount)
 
-
+    amount = int(amount) - 1
 
     return amount
 
@@ -175,12 +176,7 @@ def main(i):
             df['trend'] = np.select(conditions, choices, default=0 )
 
             df = df.loc[:,['Datetime', 'Open', 'High', 'Low', 'Close','Volume','trend','psar','macd_hist','rsi','adx','ema60','pdi','mdi']]
-
-            n=7
-            df_min = df.iloc[argrelextrema(df.Close.values, np.less_equal,
-            order=n)[0]]['Low']
-            df_max = df.iloc[argrelextrema(df.Close.values, np.greater_equal,
-            order=n)[0]]['High']     
+   
             
             close     = df['Close'][-2]
             trend     = df['trend'][-2]
@@ -215,17 +211,22 @@ def main(i):
                                         #stop loss at psar
                                         stop_loss = df['psar'][-2] 
                                         # 1:1 with risk rewared
-                                        target_price = close + ((close- df['psar'][-2]) * 1)                
-                                        stock_amnt = stock_amnt_order(df['Close'][-2],stop_loss,'LONG')
+                                        target_price = close + ((psar) * 1)                
+                                        stock_amnt = stock_amnt_order(live_close,stop_loss,'LONG')
                                         if live_close <= stop_loss:
                                             continue
                                         #is the live_close closer to target > buy
-                                        api.submit_order(symbol=sym,
-                                            qty=stock_amnt,side='buy',
-                                            type='market',time_in_force='gtc',order_class='bracket',
-                                            stop_loss={'stop_price': stop_loss},
-                                            take_profit={'limit_price': target_price})
-                                        
+                                        try:
+                                            api.submit_order(symbol=sym,
+                                                qty=stock_amnt,side='buy',
+                                                type='market',time_in_force='gtc',order_class='bracket',
+                                                stop_loss={'stop_price': stop_loss},
+                                                take_profit={'limit_price': target_price})
+                                        except:
+                                            logging.exception("LONG POSITION FAILED")
+                                            logging.info(f'[EXCEPT] qty={stock_amnt} stop_loss={stop_loss} close={close} live_close={live_close} profit={target_price}')
+
+                                            raise                                        
                                         logging.info(f' [ENTER] {sym} [LONG] target= {target_price} stop= {stop_loss} amnt={stock_amnt} close= {close}')
                                         logging.debug(df)
                 #Short check
@@ -243,15 +244,21 @@ def main(i):
                                         #stop loss at psar
                                         stop_loss = df['psar'][-2] 
                                         # 1:1 with risk rewared
-                                        target_price = close - ((df['psar'][-2] - close ) * 1)                
-                                        stock_amnt = stock_amnt_order(df['Close'][-2],stop_loss,'SHORT')
+                                        target_price = close - (psar - close ) * 1)                
+                                        stock_amnt = stock_amnt_order(live_close,stop_loss,'SHORT')
                                         if live_close >= stop_loss:
                                             continue
-                                        api.submit_order(symbol=sym,
-                                            qty=stock_amnt,side='sell',
-                                            type='market',time_in_force='gtc',order_class='bracket',
-                                            stop_loss={'stop_price': stop_loss},
-                                            take_profit={'limit_price': target_price})
+                                       
+                                        try:    
+                                            api.submit_order(symbol=sym,
+                                                qty=stock_amnt,side='sell',
+                                                type='market',time_in_force='gtc',order_class='bracket',
+                                                stop_loss={'stop_price': stop_loss},
+                                                take_profit={'limit_price': target_price})
+                                        except:
+                                            logging.exception("SHORT POSITION FAILED")
+                                            logging.info(f'[EXCEPT] qty={stock_amnt} stop_loss={stop_loss} close={close} live_close={live_close} profit={target_price}')
+                                            raise
                                         
                                         logging.info(f' [ENTER] {sym} [SHORT] target= {target_price} stop= {stop_loss} amnt={stock_amnt} close= {close}')
                                         logging.debug(df)
