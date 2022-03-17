@@ -244,7 +244,7 @@ def main(i):
                                         #stop loss at psar
                                         stop_loss = df['psar'][-2] 
                                         # 1:1 with risk rewared
-                                        target_price = close - (psar - close ) * 1)                
+                                        target_price = close - ((psar - close ) * 1)                
                                         stock_amnt = stock_amnt_order(live_close,stop_loss,'SHORT')
                                         if live_close >= stop_loss:
                                             continue
