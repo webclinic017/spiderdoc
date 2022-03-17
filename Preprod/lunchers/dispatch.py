@@ -4,7 +4,7 @@ import alpaca_trade_api as tradeapi
 
 def gen_sym_files():
     
-    number_of_procs = 16
+    number_of_procs = 48
     sym_per_worker = 6917
     
     file_path = '/home/ubuntu/spiderdoc/Preprod/Trader/symbols.txt'

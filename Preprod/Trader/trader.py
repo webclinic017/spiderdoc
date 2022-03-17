@@ -270,7 +270,6 @@ def main(i):
             
             #these values will be put in to a sperate table
         gc.collect()   
-        time.sleep(600)
         
 global worker_num
 
